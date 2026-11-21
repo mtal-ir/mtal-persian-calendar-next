@@ -1119,7 +1119,7 @@
 	 * The server remains authoritative; this is a visual countdown only.
 	 */
 	function startBookingCountdown(form, response) {
-		if (!form || !form.querySelector('#form-field-mtal_post_id, input[name="form_fields[mtal_post_id]"]')) return;
+		if (!form || !form.querySelector('#form-field-mtal_qty, input[name*="mtal_qty"]')) return;
 		const data = response && response.data ? response.data : {};
 		const orderId = data.mtal_booking_order_id || data.data && data.data.mtal_booking_order_id || '';
 		const key = 'mtal_booking_deadline_' + (orderId || form.id || 'latest');
