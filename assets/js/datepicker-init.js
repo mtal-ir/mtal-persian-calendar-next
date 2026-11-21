@@ -135,11 +135,21 @@
 
 	function setElementValue(el, outVal) {
 		if (!el) return;
-		const strVal = outVal !== undefined && outVal !== null ? String(outVal) : '';
+		let strVal = outVal !== undefined && outVal !== null ? String(outVal) : '';
 		if (
 			'value' in el &&
 			(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')
 		) {
+			// Numeric Elementor fields must never receive the human-readable guest summary.
+			if (el.tagName === 'INPUT' && el.type === 'number' && strVal !== '') {
+				const numericMatch = strVal.trim().match(/^-?\\d+(?:\\.\\d+)?/);
+				if (!numericMatch) return;
+				strVal = numericMatch[0];
+				const numericValue = Number(strVal);
+				if ((el.min !== '' && numericValue < Number(el.min)) || (el.max !== '' && numericValue > Number(el.max))) {
+					return;
+				}
+			}
 			if (el.value !== strVal) {
 				el.value = strVal;
 				el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -1092,7 +1102,7 @@
 
 	if (window.jQuery) {
 		window.jQuery(document).on(
-			'submit_success elementor/popup/show jet-engine/ajax-filters/applied ajaxComplete',
+			'submit_success elementor/popup/show jet-engine/ajax-filters/applied',
 			function (event, xhr) {
 				if (xhr && xhr.responseText) {
 					try {
@@ -1120,27 +1130,54 @@
 	 * Refresh temporary holds so rejected/expired requests become selectable
 	 * without requiring visitors to reload the page.
 	 */
+	const availabilitySnapshots = new Map();
+	let availabilityRefreshInFlight = false;
+
 	function refreshServerAvailability() {
-		if (!cfg.ajaxUrl || !calendarEntries.length) return;
+		if (
+			!cfg.ajaxUrl ||
+			!calendarEntries.length ||
+			availabilityRefreshInFlight ||
+			document.visibilityState === 'hidden' ||
+			!navigator.onLine
+		) return;
+
 		const postIds = Array.from(new Set(calendarEntries.map((entry) => Number(entry.postId)).filter(Boolean)));
-		postIds.forEach((postId) => {
+		if (!postIds.length) return;
+
+		availabilityRefreshInFlight = true;
+		Promise.all(postIds.map((postId) => {
 			const fd = new FormData();
 			fd.append('action', 'mtal_get_suite_calendar_rules');
 			fd.append('post_id', String(postId));
-			fetch(cfg.ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
-				.then((r) => r.json())
+			return fetch(cfg.ajaxUrl, {
+				method: 'POST',
+				body: fd,
+				credentials: 'same-origin'
+			})
+				.then((response) => {
+					if (!response.ok) throw new Error('Availability refresh failed');
+					return response.json();
+				})
 				.then((result) => {
-					if (result && result.success && result.data) {
-						applyRulesToSuiteCalendars(postId, result.data);
-					}
+					if (!result || !result.success || !result.data) return;
+					const snapshot = JSON.stringify(result.data);
+					if (availabilitySnapshots.get(postId) === snapshot) return;
+					availabilitySnapshots.set(postId, snapshot);
+					applyRulesToSuiteCalendars(postId, result.data);
 				})
 				.catch(() => {});
+		})).finally(() => {
+			availabilityRefreshInFlight = false;
 		});
 	}
-	window.setInterval(refreshServerAvailability, 30000);
+
+	// Poll less often, avoid duplicate requests, and do no background work while offline/hidden.
+	window.setInterval(refreshServerAvailability, 120000);
 	document.addEventListener('visibilitychange', () => {
 		if (document.visibilityState === 'visible') refreshServerAvailability();
 	});
+	window.addEventListener('online', refreshServerAvailability);
 
 	/**
 	 * Show the server workflow's 30-minute request window after Elementor succeeds.
