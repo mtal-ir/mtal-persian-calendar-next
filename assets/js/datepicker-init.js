@@ -202,8 +202,9 @@
 
 		// شناسه سوئیت برای اتصال امن درخواست Elementor به قیمت‌گذاری سمت سرور.
 		const suiteId = host.getAttribute('data-mtal-post-id') || '';
-		const suiteIdInput = container.querySelector('#form-field-mtal_post_id, input[name="form_fields[mtal_post_id]"]');
-		if (suiteIdInput && suiteId) setElementValue(suiteIdInput, suiteId);
+		if (suiteId) {
+			writeValueToSelector('#form-field-mtal_post_id, input[name="form_fields[mtal_post_id]"]', suiteId, container);
+		}
 
 		// ۴. فیلد تعداد نفرات کل
 		const qtyInputs = container.querySelectorAll('#form-field-mtal_qty, input[name*="mtal_qty"]');
