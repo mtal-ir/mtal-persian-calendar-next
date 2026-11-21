@@ -56,6 +56,7 @@ The booking workflow uses WooCommerce order-status changes, not SMS commands. In
 
 - Enable the **admin** notification for **در انتظار تأیید مدیر** to notify the manager when a request is submitted.
 - Enable the **customer** notification for **در انتظار پرداخت** to notify the customer after manager approval.
+- Optionally enable the **customer** notification for **لغو شده** so a rejected or expired request also generates an SMS.
 - Include `%payment_url%` in the customer message for the WooCommerce payment link. FarazSMS 3.22.320 supports this order variable.
 
 No FarazSMS API credentials are copied into this plugin. SMS delivery remains controlled by the existing FarazSMS configuration.
@@ -64,5 +65,6 @@ No FarazSMS API credentials are copied into this plugin. SMS delivery remains co
 
 - The Elementor Pro form must contain the `mtal_qty` field. If the form is not on the suite page, it must also contain `mtal_post_id`.
 - Make sure the form's phone field ID contains `phone`, `mobile`, or `tel` so WooCommerce can populate the billing phone used by FarazSMS.
+- Configure WooCommerce's store currency/price unit consistently with the calendar's configured prices (the calendar price fields are documented in toman).
 - The admin decision controls are available on the WooCommerce order detail screen. The workflow supports the classic order editor and the HPOS order details screen.
 - Test the complete process on a staging site with the actual Elementor form, WooCommerce payment gateway, and FarazSMS settings before using it for live reservations.
