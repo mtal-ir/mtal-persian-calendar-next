@@ -204,7 +204,9 @@ final class MTAL_Persian_Calendar {
 		$m = intdiv( 5 * $e + 2, 153 );
 		$gy = 100 * $b + $d - 4800 + intdiv( $m, 10 );
 		$jy = $gy - 621;
-		if ( $jdn >= self::jalali_to_jdn( $jy + 1, 1, 1 ) ) {
+		if ( $jdn < self::jalali_to_jdn( $jy, 1, 1 ) ) {
+			--$jy;
+		} elseif ( $jdn >= self::jalali_to_jdn( $jy + 1, 1, 1 ) ) {
 			++$jy;
 		}
 		$offset = $jdn - self::jalali_to_jdn( $jy, 1, 1 );
