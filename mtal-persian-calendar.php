@@ -196,7 +196,13 @@ final class MTAL_Persian_Calendar {
 	}
 
 	private static function jdn_to_jalali( $jdn ) {
-		$gy = (int) wp_date( 'Y' );
+		$a = $jdn + 32044;
+		$b = intdiv( 4 * $a + 3, 146097 );
+		$c = $a - intdiv( 146097 * $b, 4 );
+		$d = intdiv( 4 * $c + 3, 1461 );
+		$e = $c - intdiv( 1461 * $d, 4 );
+		$m = intdiv( 5 * $e + 2, 153 );
+		$gy = 100 * $b + $d - 4800 + intdiv( $m, 10 );
 		$jy = $gy - 621;
 		if ( $jdn >= self::jalali_to_jdn( $jy + 1, 1, 1 ) ) {
 			++$jy;
