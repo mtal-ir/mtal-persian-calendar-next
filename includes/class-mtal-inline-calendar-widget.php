@@ -144,7 +144,7 @@ class MTAL_Inline_Calendar_Widget extends Widget_Base {
 			data-mtal-target-extra-guest="<?php echo $target_extra_guest; ?>"
 			data-mtal-storage-scope="<?php echo esc_attr( $storage_scope ); ?>"
 			data-mtal-trigger-label="<?php echo $trigger_label; ?>"
-			data-mtal-blocked-dates="<?php echo esc_attr( wp_json_encode( $suite_data['blockedDates'] ) ); ?>"
+			data-mtal-blocked-dates="<?php echo esc_attr( wp_json_encode( $visible_blocked_dates ) ); ?>"
 			data-mtal-holiday-dates="<?php echo esc_attr( wp_json_encode( $suite_data['holidayDates'] ) ); ?>"
 			data-mtal-manual-prices="<?php echo esc_attr( wp_json_encode( $suite_data['manualPrices'] ) ); ?>"
 			data-mtal-regular-price="<?php echo esc_attr( $suite_data['regularPrice'] ); ?>"

@@ -200,6 +200,12 @@
 				.forEach((el) => setElementValue(el, extraGuestSummary));
 		}
 
+		// شناسه سوئیت برای اتصال امن درخواست Elementor به قیمت‌گذاری سمت سرور.
+		const suiteId = host.getAttribute('data-mtal-post-id') || '';
+		if (suiteId) {
+			writeValueToSelector('#form-field-mtal_post_id, input[name="form_fields[mtal_post_id]"]', suiteId, container);
+		}
+
 		// ۴. فیلد تعداد نفرات کل
 		const qtyInputs = container.querySelectorAll('#form-field-mtal_qty, input[name*="mtal_qty"]');
 		qtyInputs.forEach((input) => {
@@ -1108,4 +1114,75 @@
 			}
 		);
 	}
+
+
+	/**
+	 * Refresh temporary holds so rejected/expired requests become selectable
+	 * without requiring visitors to reload the page.
+	 */
+	function refreshServerAvailability() {
+		if (!cfg.ajaxUrl || !calendarEntries.length) return;
+		const postIds = Array.from(new Set(calendarEntries.map((entry) => Number(entry.postId)).filter(Boolean)));
+		postIds.forEach((postId) => {
+			const fd = new FormData();
+			fd.append('action', 'mtal_get_suite_calendar_rules');
+			fd.append('post_id', String(postId));
+			fetch(cfg.ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
+				.then((r) => r.json())
+				.then((result) => {
+					if (result && result.success && result.data) {
+						applyRulesToSuiteCalendars(postId, result.data);
+					}
+				})
+				.catch(() => {});
+		});
+	}
+	window.setInterval(refreshServerAvailability, 30000);
+	document.addEventListener('visibilitychange', () => {
+		if (document.visibilityState === 'visible') refreshServerAvailability();
+	});
+
+	/**
+	 * Show the server workflow's 30-minute request window after Elementor succeeds.
+	 * The server remains authoritative; this is a visual countdown only.
+	 */
+	function startBookingCountdown(form, response) {
+		if (!form || !form.querySelector('#form-field-mtal_qty, input[name*="mtal_qty"]')) return;
+		const data = response && response.data ? response.data : {};
+		const orderId = data.mtal_booking_order_id || data.data && data.data.mtal_booking_order_id || '';
+		const key = 'mtal_booking_deadline_' + (orderId || form.id || 'latest');
+		const serverExpiry = parseInt(data.mtal_booking_expires_at || data.data && data.data.mtal_booking_expires_at || '0', 10);
+		const deadline = serverExpiry > 0 ? serverExpiry * 1000 : Date.now() + 30 * 60 * 1000;
+		try { window.localStorage.setItem(key, String(deadline)); } catch (e) {}
+		let timer = form.querySelector('.mtal-booking-countdown');
+		if (!timer) {
+			timer = document.createElement('div');
+			timer.className = 'mtal-booking-countdown';
+			timer.setAttribute('role', 'status');
+			const success = form.querySelector('.elementor-message-success, .elementor-form-fields-wrapper') || form;
+			success.appendChild(timer);
+		}
+		if (timer._mtalInterval) window.clearInterval(timer._mtalInterval);
+		const render = () => {
+			const remaining = Math.max(0, deadline - Date.now());
+			const minutes = Math.floor(remaining / 60000);
+			const seconds = Math.floor((remaining % 60000) / 1000);
+			if (remaining <= 0) {
+				timer.textContent = 'مهلت درخواست به پایان رسید؛ لطفاً درخواست رزرو جدید ثبت کنید.';
+				window.clearInterval(timer._mtalInterval);
+				return;
+			}
+			timer.textContent = 'مهلت بررسی و پرداخت درخواست: ' + toPersianDigits(String(minutes).padStart(2, '0')) + ':' + toPersianDigits(String(seconds).padStart(2, '0'));
+		};
+		render();
+		timer._mtalInterval = window.setInterval(render, 1000);
+	}
+
+	if (window.jQuery) {
+		window.jQuery(document).on('submit_success', function (event, response) {
+			const form = event.target && event.target.closest ? event.target.closest('form') : null;
+			if (form) startBookingCountdown(form, response || {});
+		});
+	}
+
 })();

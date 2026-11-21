@@ -1,0 +1,26 @@
+name: Plugin syntax checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feature/booking-approval-30m-workflow]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+      - name: PHP syntax
+        run: find . -name '*.php' -print0 | xargs -0 -n1 php -l
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: JavaScript syntax
+        run: |
+          node --check assets/js/datepicker-init.js
+          node --check assets/js/persian-calendar-standalone.js
