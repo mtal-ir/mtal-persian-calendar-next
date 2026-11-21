@@ -1115,6 +1115,33 @@
 		);
 	}
 
+
+	/**
+	 * Refresh temporary holds so rejected/expired requests become selectable
+	 * without requiring visitors to reload the page.
+	 */
+	function refreshServerAvailability() {
+		if (!cfg.ajaxUrl || !calendarEntries.length) return;
+		const postIds = Array.from(new Set(calendarEntries.map((entry) => Number(entry.postId)).filter(Boolean)));
+		postIds.forEach((postId) => {
+			const fd = new FormData();
+			fd.append('action', 'mtal_get_suite_calendar_rules');
+			fd.append('post_id', String(postId));
+			fetch(cfg.ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
+				.then((r) => r.json())
+				.then((result) => {
+					if (result && result.success && result.data) {
+						applyRulesToSuiteCalendars(postId, result.data);
+					}
+				})
+				.catch(() => {});
+		});
+	}
+	window.setInterval(refreshServerAvailability, 30000);
+	document.addEventListener('visibilitychange', () => {
+		if (document.visibilityState === 'visible') refreshServerAvailability();
+	});
+
 	/**
 	 * Show the server workflow's 30-minute request window after Elementor succeeds.
 	 * The server remains authoritative; this is a visual countdown only.
