@@ -644,6 +644,8 @@
 					if (payload && payload.checkIn && payload.checkOut && cfg.ajaxUrl && postId) {
 						const requestId = (host._mtalPriceRequestId || 0) + 1;
 						host._mtalPriceRequestId = requestId;
+						payload.totalPrice = 0;
+						syncAllHiddenFormFields(host, cal, payload);
 						const fd = new FormData();
 						fd.append('action', 'mtal_calculate_suite_price');
 						fd.append('nonce', cfg.nonce || '');
