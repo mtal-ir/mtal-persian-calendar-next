@@ -2,7 +2,7 @@
 /**
  * Plugin Name: MTAL Persian Calendar
  * Description: افزونه مستقل تقویم جلالی برای انتخاب بازه دو تاریخی، مدیریت روزهای بسته/تعطیلات و قیمت‌گذاری در المنتور.
- * Version: 0.4.0
+ * Version: 0.5.0
  * Author: MTAL
  * Text Domain: mtal-persian-calendar
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MTAL_PC_VERSION', '0.4.0' );
+define( 'MTAL_PC_VERSION', '0.5.0' );
 define( 'MTAL_PC_PATH', plugin_dir_path( __FILE__ ) );
 define( 'MTAL_PC_URL', plugin_dir_url( __FILE__ ) );
 
@@ -34,6 +34,8 @@ final class MTAL_Persian_Calendar {
 		add_action( 'wp_ajax_mtal_save_suite_calendar_rules', array( $this, 'ajax_save_suite_calendar_rules' ) );
 		add_action( 'wp_ajax_mtal_get_suite_calendar_rules', array( $this, 'ajax_get_suite_calendar_rules' ) );
 		add_action( 'wp_ajax_nopriv_mtal_get_suite_calendar_rules', array( $this, 'ajax_get_suite_calendar_rules' ) );
+		add_action( 'wp_ajax_mtal_calculate_suite_price', array( $this, 'ajax_calculate_suite_price' ) );
+		add_action( 'wp_ajax_nopriv_mtal_calculate_suite_price', array( $this, 'ajax_calculate_suite_price' ) );
 	}
 
 	public static function normalize_date_list( $raw ) {
@@ -169,6 +171,131 @@ final class MTAL_Persian_Calendar {
 				'extraGuestPrice' => $suite_data['extraGuestPrice'],
 			)
 		);
+	}
+
+	/**
+	 * Convert a valid Jalali date to the same JDN used by the JavaScript calendar.
+	 */
+	private static function jalali_to_jdn( $jy, $jm, $jd ) {
+		$epbase = $jy - ( $jy >= 0 ? 474 : 473 );
+		$epyear = 474 + ( ( $epbase % 2820 ) + 2820 ) % 2820;
+		return $jd
+			+ ( $jm <= 7 ? ( $jm - 1 ) * 31 : ( $jm - 1 ) * 30 + 6 )
+			+ intdiv( $epyear * 682 - 110, 2816 )
+			+ ( $epyear - 1 ) * 365
+			+ intdiv( $epbase, 2820 ) * 1029983
+			+ 1948320;
+	}
+
+	private static function gregorian_to_jdn( $year, $month, $day ) {
+		$a = intdiv( 14 - $month, 12 );
+		$y = $year + 4800 - $a;
+		$m = $month + 12 * $a - 3;
+		return $day + intdiv( 153 * $m + 2, 5 ) + 365 * $y
+			+ intdiv( $y, 4 ) - intdiv( $y, 100 ) + intdiv( $y, 400 ) - 32045;
+	}
+
+	private static function jdn_to_jalali( $jdn ) {
+		$gy = (int) wp_date( 'Y' );
+		$jy = $gy - 621;
+		if ( $jdn >= self::jalali_to_jdn( $jy + 1, 1, 1 ) ) {
+			++$jy;
+		}
+		$offset = $jdn - self::jalali_to_jdn( $jy, 1, 1 );
+		if ( $offset < 186 ) {
+			$jm = 1 + intdiv( $offset, 31 );
+			$jd = ( $offset % 31 ) + 1;
+		} else {
+			$offset -= 186;
+			$jm = 7 + intdiv( $offset, 30 );
+			$jd = ( $offset % 30 ) + 1;
+		}
+		return array( $jy, $jm, $jd );
+	}
+
+	private static function normalize_jalali_input( $value ) {
+		$value = strtr( (string) $value, array(
+			'۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9',
+			'٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9',
+		) );
+		if ( ! preg_match( '/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/', trim( $value ), $m ) ) {
+			return false;
+		}
+		$jy = (int) $m[1]; $jm = (int) $m[2]; $jd = (int) $m[3];
+		if ( $jy < 1300 || $jy > 1500 || $jm < 1 || $jm > 12 ) {
+			return false;
+		}
+		$leap = self::jalali_to_jdn( $jy + 1, 1, 1 ) - self::jalali_to_jdn( $jy, 1, 1 ) === 366;
+		$month_days = $jm <= 6 ? 31 : ( $jm <= 11 ? 30 : ( $leap ? 30 : 29 ) );
+		if ( $jd < 1 || $jd > $month_days ) {
+			return false;
+		}
+		return array( 'jy' => $jy, 'jm' => $jm, 'jd' => $jd, 'jdn' => self::jalali_to_jdn( $jy, $jm, $jd ), 'slash' => sprintf( '%04d/%02d/%02d', $jy, $jm, $jd ) );
+	}
+
+	public function ajax_calculate_suite_price() {
+		check_ajax_referer( 'mtal_calendar_rules_nonce', 'nonce' );
+		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
+		$post = $post_id ? get_post( $post_id ) : null;
+		if ( ! $post || ( 'publish' !== $post->post_status && ! current_user_can( 'edit_post', $post_id ) ) ) {
+			wp_send_json_error( array( 'message' => 'سوئیت معتبر یا در دسترس نیست.' ), 404 );
+		}
+
+		$start = self::normalize_jalali_input( isset( $_POST['check_in'] ) ? wp_unslash( $_POST['check_in'] ) : '' );
+		$end   = self::normalize_jalali_input( isset( $_POST['check_out'] ) ? wp_unslash( $_POST['check_out'] ) : '' );
+		$guests = isset( $_POST['guests'] ) ? absint( $_POST['guests'] ) : 0;
+		if ( ! $start || ! $end || $guests < 1 || $end['jdn'] <= $start['jdn'] ) {
+			wp_send_json_error( array( 'message' => 'تاریخ ورود، خروج یا تعداد مهمان معتبر نیست.' ), 400 );
+		}
+
+		$today = current_datetime();
+		$today_jdn = self::gregorian_to_jdn( (int) $today->format( 'Y' ), (int) $today->format( 'n' ), (int) $today->format( 'j' ) );
+		$max_months = isset( $_POST['max_months'] ) ? min( 3, max( 1, absint( $_POST['max_months'] ) ) ) : 3;
+		$max_jdn = $today_jdn + ( $max_months * 31 );
+		if ( $start['jdn'] < $today_jdn || $end['jdn'] < $today_jdn || $start['jdn'] > $max_jdn || $end['jdn'] > $max_jdn ) {
+			wp_send_json_error( array( 'message' => 'بازه انتخابی خارج از محدوده مجاز تقویم است.' ), 400 );
+		}
+
+		$data = self::get_suite_calendar_data( $post_id );
+		$blocked = array_fill_keys( $data['blockedDates'], true );
+		if ( isset( $blocked[ $start['slash'] ] ) ) {
+			wp_send_json_error( array( 'message' => 'تاریخ ورود مسدود است.' ), 400 );
+		}
+
+		$nights = $end['jdn'] - $start['jdn'];
+		if ( $nights > 94 ) {
+			wp_send_json_error( array( 'message' => 'بازه اقامت بیش از حد مجاز است.' ), 400 );
+		}
+		$base_total = 0;
+		$breakdown = array();
+		for ( $jdn = $start['jdn']; $jdn < $end['jdn']; $jdn++ ) {
+			$day = self::jdn_to_jalali( $jdn );
+			$key = sprintf( '%04d/%02d/%02d', $day[0], $day[1], $day[2] );
+			if ( isset( $blocked[ $key ] ) ) {
+				wp_send_json_error( array( 'message' => 'در بازه انتخابی روز مسدود وجود دارد: ' . $key ), 400 );
+			}
+			$weekday = ( ( $jdn + 2 ) % 7 + 7 ) % 7;
+			if ( isset( $data['manualPrices'][ $key ] ) ) {
+				$price = (int) $data['manualPrices'][ $key ]; $source = 'manual';
+			} elseif ( ( 4 === $weekday || 5 === $weekday ) && $data['weekendPrice'] > 0 ) {
+				$price = (int) $data['weekendPrice']; $source = 'weekend';
+			} else {
+				$price = (int) $data['regularPrice']; $source = 'regular';
+			}
+			$base_total += $price;
+			$breakdown[] = array( 'date' => $key, 'price' => $price, 'source' => $source );
+		}
+
+		$extra_guests = max( 0, $guests - (int) $data['baseCapacity'] );
+		$extra_per_night = $extra_guests * (int) $data['extraGuestPrice'];
+		$extra_total = $nights * $extra_per_night;
+		wp_send_json_success( array(
+			'postId' => $post_id, 'nights' => $nights, 'guests' => $guests,
+			'baseCapacity' => (int) $data['baseCapacity'], 'extraGuests' => $extra_guests,
+			'nightsBaseTotal' => $base_total, 'extraGuestsPerNightTotal' => $extra_per_night,
+			'extraGuestsTotal' => $extra_total, 'totalPrice' => $base_total + $extra_total,
+			'breakdown' => $breakdown,
+		) );
 	}
 
 	public function ajax_get_suite_calendar_rules() {
