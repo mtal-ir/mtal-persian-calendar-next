@@ -1,0 +1,894 @@
+/* MTAL Persian Calendar - Inline (Single & 2-Col Horizontal), 3-Month Stacked Modal & Admin Panel */
+.mtal-cal-root,
+.mtal-cal-panel,
+.mtal-cal-panel *,
+.mtal-cal-modal-backdrop,
+.mtal-cal-modal-backdrop *,
+.mtal-admin-panel,
+.mtal-admin-panel *,
+.mtal-guests-box,
+.mtal-guests-box * {
+	box-sizing: border-box;
+	font-family: inherit;
+}
+
+html.mtal-modal-open {
+	overflow: hidden;
+}
+
+.mtal-cal-inline-host,
+.mtal-cal-modal-host,
+.mtal-admin-cal-host,
+.mtal-cal-root.mtal-cal-mode-inline,
+.mtal-cal-root.mtal-cal-mode-inline_2col,
+.mtal-cal-inline-mount {
+	width: 100%;
+	min-width: 0;
+}
+
+.mtal-cal-panel,
+.mtal-admin-panel {
+	--mtal-primary: #637426;
+	--mtal-primary-dark: #4f5d1e;
+	--mtal-range-bg: rgba(99, 116, 38, 0.16);
+	--mtal-accent: #fe9d02;
+	--mtal-accent-soft: rgba(254, 157, 2, 0.14);
+	--mtal-red: #dc2626;
+	--mtal-red-soft: rgba(220, 38, 38, 0.1);
+
+	width: 100%;
+	background: #ffffff;
+	border: 1px solid #e5e7eb;
+	border-radius: 16px;
+	padding: 16px;
+	box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+	color: #111827;
+	user-select: none;
+}
+
+/* چیدمان ماه‌ها */
+.mtal-cal-months-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 20px;
+}
+
+@media (min-width: 768px) {
+	.mtal-cal-mode-inline_2col .mtal-cal-months-grid.is-two-col {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 24px;
+		align-items: start;
+	}
+
+	.mtal-cal-mode-inline_2col .mtal-cal-months-grid.is-two-col .mtal-cal-month-block + .mtal-cal-month-block {
+		padding-inline-start: 20px;
+		border-inline-start: 1px dashed #e2e8f0;
+	}
+}
+
+@media (max-width: 767px) {
+	.mtal-cal-mode-inline_2col .mtal-cal-months-grid.is-two-col .mtal-cal-month-block + .mtal-cal-month-block {
+		padding-top: 18px;
+		border-top: 1px dashed #e2e8f0;
+	}
+}
+
+.mtal-cal-panel-stacked .mtal-cal-month-block + .mtal-cal-month-block {
+	margin-top: 22px;
+	padding-top: 18px;
+	border-top: 1px dashed #e5e7eb;
+}
+
+.mtal-cal-month-block {
+	min-width: 0;
+	width: 100%;
+}
+
+.mtal-cal-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.mtal-cal-nav-spacer {
+	width: 32px;
+	height: 32px;
+	flex-shrink: 0;
+}
+
+.mtal-cal-title-wrap {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	flex: 1;
+}
+
+.mtal-cal-month-title {
+	font-weight: 700;
+	font-size: 14px;
+	color: #111827;
+	background: #f8fafc;
+	padding: 5px 14px;
+	border-radius: 999px;
+	border: 1px solid #e2e8f0;
+}
+
+.mtal-cal-horizon-badge {
+	font-size: 11px;
+	padding: 3px 9px;
+	border-radius: 999px;
+	background: var(--mtal-accent-soft);
+	color: #9a5b00;
+	font-weight: 700;
+}
+
+.mtal-cal-nav {
+	width: 32px;
+	height: 32px;
+	border-radius: 9px;
+	border: 1px solid #e5e7eb;
+	background: #f9fafb;
+	color: #111827;
+	font-size: 18px;
+	line-height: 1;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.mtal-cal-nav:hover:not(:disabled) {
+	background: var(--mtal-range-bg);
+	border-color: var(--mtal-primary);
+	color: var(--mtal-primary);
+}
+
+.mtal-cal-nav:disabled {
+	opacity: 0.35;
+	cursor: not-allowed;
+}
+
+/* تثبیت عرض ۷ ستون برابر در تمام حالت‌ها (اینلاین، مودال، ادمین) */
+.mtal-cal-weekdays,
+.mtal-cal-days {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	gap: 4px;
+	text-align: center;
+	width: 100%;
+}
+
+.mtal-cal-weekdays {
+	margin-bottom: 6px;
+}
+
+.mtal-cal-weekday {
+	font-size: 12px;
+	font-weight: 700;
+	color: #6b7280;
+	padding: 4px 0;
+	min-width: 0;
+}
+
+.mtal-cal-weekday.is-friday-col {
+	color: var(--mtal-red);
+}
+
+.mtal-cal-day {
+	min-width: 0;
+	max-width: 100%;
+	width: 100%;
+	min-height: 44px;
+	padding: 3px 2px;
+	border: 0;
+	border-radius: 9px;
+	background: transparent;
+	color: #111827;
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 1px;
+	position: relative;
+	transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.mtal-day-num {
+	line-height: 1.15;
+}
+
+.mtal-day-price {
+	font-size: 10px;
+	line-height: 1.1;
+	font-weight: 600;
+	color: #64748b;
+}
+
+.mtal-cal-day:hover:not(:disabled):not(.is-empty):not(.is-selected):not(.is-start):not(.is-end) {
+	background: var(--mtal-range-bg);
+	color: var(--mtal-primary-dark);
+}
+
+.mtal-cal-day.is-empty {
+	pointer-events: none;
+	background: transparent;
+}
+
+/* قرمز شدن روزهای جمعه و تعطیلات رسمی */
+.mtal-cal-day.is-friday:not(:disabled):not(.is-selected),
+.mtal-cal-day.is-holiday:not(:disabled):not(.is-selected) {
+	color: var(--mtal-red);
+	font-weight: 700;
+}
+
+.mtal-cal-day.is-friday:not(:disabled):not(.is-selected) .mtal-day-price,
+.mtal-cal-day.is-holiday:not(:disabled):not(.is-selected) .mtal-day-price {
+	color: var(--mtal-red);
+}
+
+.mtal-cal-day.is-holiday:not(:disabled):not(.is-selected) {
+	background: var(--mtal-red-soft);
+}
+
+.mtal-cal-day.is-disabled {
+	color: #cbd5e1;
+	cursor: not-allowed;
+	text-decoration: line-through;
+}
+
+.mtal-cal-day.is-blocked {
+	background: #f1f5f9;
+	color: #94a3b8;
+	text-decoration: line-through;
+}
+
+.mtal-cal-day.has-manual-price::after {
+	content: '';
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: var(--mtal-accent);
+	position: absolute;
+	bottom: 2px;
+}
+
+.mtal-cal-day.is-today:not(.is-selected) {
+	outline: 1.5px solid var(--mtal-accent);
+	font-weight: 700;
+}
+
+/* نوار میانی انتخاب‌شده با عرض کامل خانه */
+.mtal-cal-day.is-in-range {
+	width: 100%;
+	max-width: 100%;
+	background: var(--mtal-range-bg);
+	color: var(--mtal-primary-dark);
+	border-radius: 0;
+}
+
+/* حالت پرانتزی در RTL با عرض یکسان خانه */
+.mtal-cal-day.is-start,
+.mtal-cal-day.is-start:hover,
+.mtal-cal-day.is-start:focus {
+	width: 100%;
+	max-width: 100%;
+	background: var(--mtal-primary) !important;
+	color: #ffffff !important;
+	font-weight: 700;
+	border-start-start-radius: 10px;
+	border-end-start-radius: 10px;
+	border-start-end-radius: 0;
+	border-end-end-radius: 0;
+}
+
+.mtal-cal-day.is-end,
+.mtal-cal-day.is-end:hover,
+.mtal-cal-day.is-end:focus {
+	width: 100%;
+	max-width: 100%;
+	background: var(--mtal-primary) !important;
+	color: #ffffff !important;
+	font-weight: 700;
+	border-start-end-radius: 10px;
+	border-end-end-radius: 10px;
+	border-start-start-radius: 0;
+	border-end-start-radius: 0;
+}
+
+/* ثابت ماندن رنگ روز انتخاب‌شده موقع هاور */
+.mtal-cal-day.is-selected,
+.mtal-cal-day.is-selected:hover,
+.mtal-cal-day.is-selected:focus {
+	width: 100%;
+	max-width: 100%;
+	background: var(--mtal-primary) !important;
+	color: #ffffff !important;
+	font-weight: 700;
+}
+
+.mtal-cal-day.is-selected .mtal-day-price,
+.mtal-cal-day.is-selected:hover .mtal-day-price,
+.mtal-cal-day.is-start:hover .mtal-day-price,
+.mtal-cal-day.is-end:hover .mtal-day-price {
+	color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.mtal-cal-day.is-start.is-end,
+.mtal-cal-day.is-start.is-end:hover {
+	border-radius: 10px;
+}
+
+/* باکس انتخاب تعداد مسافران با دکمه‌های مینیمال + و - */
+.mtal-guests-box {
+	margin-top: 12px;
+	padding: 12px 14px;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+	background: #ffffff;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.mtal-guests-info {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+
+.mtal-guests-icon {
+	font-size: 18px;
+	line-height: 1;
+	color: #374151;
+	flex-shrink: 0;
+}
+
+.mtal-guests-texts {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.mtal-guests-title {
+	font-size: 13px;
+	font-weight: 700;
+	color: #111827;
+}
+
+.mtal-guests-sub {
+	font-size: 12px;
+	font-weight: 600;
+	color: #4b5563;
+}
+
+.mtal-guests-controls {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	flex-shrink: 0;
+}
+
+.mtal-qty-btn {
+	width: 30px;
+	height: 30px;
+	border-radius: 999px;
+	border: 1px solid #d1d5db;
+	background: #ffffff;
+	color: #111827;
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 1;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transition: border-color 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.mtal-qty-btn:hover:not(:disabled) {
+	border-color: #637426;
+	background: rgba(99, 116, 38, 0.08);
+	color: #4f5d1e;
+}
+
+.mtal-qty-btn:disabled {
+	opacity: 0.35;
+	cursor: not-allowed;
+}
+
+.mtal-qty-val {
+	min-width: 20px;
+	text-align: center;
+	font-size: 14px;
+	font-weight: 700;
+	color: #111827;
+}
+
+/* راهنما و هشدار */
+.mtal-cal-legend {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	flex-wrap: wrap;
+	font-size: 11px;
+	color: #4b5563;
+}
+
+.mtal-legend-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.mtal-legend-item .dot {
+	width: 9px;
+	height: 9px;
+	border-radius: 50%;
+	display: inline-block;
+}
+
+.mtal-legend-item .dot.is-red {
+	background: var(--mtal-red);
+}
+
+.mtal-legend-item .dot.is-blocked {
+	background: #94a3b8;
+}
+
+.mtal-cal-warning {
+	background: #fef2f2;
+	border: 1px solid #fecaca;
+	color: #b91c1c;
+	border-radius: 9px;
+	padding: 8px 10px;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+/* باکس خلاصه و فوتر */
+.mtal-cal-summary-boxes {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 8px;
+}
+
+.mtal-cal-date-box {
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 10px;
+	padding: 8px 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.mtal-cal-date-box .lbl {
+	font-size: 11px;
+	color: #64748b;
+}
+
+.mtal-cal-date-box .val {
+	font-size: 12px;
+	color: #0f172a;
+	font-weight: 700;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.mtal-cal-footer-unified {
+	margin-top: 16px;
+	padding-top: 14px;
+	border-top: 1px solid #e5e7eb;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.mtal-cal-footer-bottom {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.mtal-cal-nights-badge {
+	display: inline-flex;
+	align-items: center;
+	font-size: 12px;
+	font-weight: 700;
+	padding: 4px 10px;
+	border-radius: 999px;
+	background: var(--mtal-accent-soft);
+	color: #9a5b00;
+	border: 1px solid rgba(254, 157, 2, 0.35);
+}
+
+.mtal-cal-clear-btn {
+	border: 1px solid #e5e7eb;
+	background: #ffffff;
+	color: #4b5563;
+	border-radius: 9px;
+	padding: 7px 14px;
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.mtal-cal-clear-btn:hover {
+	background: var(--mtal-accent-soft);
+	color: #9a5b00;
+	border-color: var(--mtal-accent);
+}
+
+/* کنترل‌های پنل ادمین */
+.mtal-admin-modes {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+	margin-bottom: 12px;
+}
+
+.mtal-admin-mode-btn {
+	border: 1px solid #e5e7eb;
+	background: #f8fafc;
+	color: #334155;
+	border-radius: 8px;
+	padding: 6px 10px;
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.mtal-admin-mode-btn.is-active {
+	background: var(--mtal-primary);
+	border-color: var(--mtal-primary);
+	color: #ffffff;
+}
+
+.mtal-admin-prices {
+	margin-top: 14px;
+	padding-top: 12px;
+	border-top: 1px solid #e5e7eb;
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 10px;
+	font-size: 12px;
+}
+
+.mtal-admin-prices label {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	font-weight: 600;
+}
+
+.mtal-admin-prices input {
+	border: 1px solid #cbd5e1;
+	border-radius: 8px;
+	padding: 6px 8px;
+	font-size: 13px;
+}
+
+.mtal-admin-save-row {
+	margin-top: 12px;
+	display: flex;
+}
+
+.mtal-admin-status {
+	margin-top: 8px;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--mtal-primary-dark);
+}
+
+/* دکمه و مودال ۳ ماهه */
+.mtal-cal-modal-trigger {
+	--mtal-primary: #637426;
+	--mtal-primary-dark: #4f5d1e;
+	width: 100%;
+	padding: 11px 16px;
+	border-radius: 10px;
+	border: 1px solid #d1d5db;
+	background: #ffffff;
+	color: #111827;
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.mtal-cal-modal-trigger:hover,
+.mtal-cal-modal-trigger.has-selection {
+	border-color: var(--mtal-primary);
+	background: rgba(99, 116, 38, 0.06);
+	color: var(--mtal-primary-dark);
+}
+
+.mtal-cal-modal-backdrop {
+	--mtal-primary: #637426;
+	--mtal-primary-dark: #4f5d1e;
+	--mtal-accent: #fe9d02;
+	--mtal-accent-soft: rgba(254, 157, 2, 0.14);
+
+	position: fixed;
+	inset: 0;
+	z-index: 999999;
+	background: rgba(15, 23, 42, 0.55);
+	backdrop-filter: blur(2px);
+	display: none;
+	align-items: center;
+	justify-content: center;
+	padding: 14px;
+}
+
+.mtal-cal-modal-backdrop.is-open {
+	display: flex;
+}
+
+.mtal-cal-modal-sheet {
+	width: 100%;
+	max-width: 460px;
+	max-height: 90vh;
+	background: #ffffff;
+	border-radius: 16px;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+}
+
+.mtal-cal-modal-header {
+	padding: 14px 16px;
+	border-bottom: 1px solid #e5e7eb;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	background: #ffffff;
+}
+
+.mtal-cal-modal-title {
+	font-size: 15px;
+	font-weight: 700;
+	color: #111827;
+}
+
+.mtal-cal-modal-close {
+	width: 34px;
+	height: 34px;
+	border-radius: 8px;
+	border: 1px solid #e5e7eb;
+	background: #f9fafb;
+	color: #111827;
+	font-size: 22px;
+	line-height: 1;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.mtal-cal-modal-body {
+	padding: 12px;
+	overflow-y: auto;
+	flex: 1 1 auto;
+	background: #f8fafc;
+}
+
+.mtal-cal-panel-stacked {
+	border: 0;
+	box-shadow: none;
+	padding: 8px;
+	background: transparent;
+}
+
+.mtal-cal-modal-footer {
+	padding: 12px 16px;
+	border-top: 1px solid #e5e7eb;
+	background: #ffffff;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.mtal-cal-modal-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.mtal-cal-confirm-btn {
+	flex: 1;
+	padding: 10px 14px;
+	border-radius: 10px;
+	border: 0;
+	background: var(--mtal-primary);
+	color: #ffffff;
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.mtal-cal-confirm-btn:hover:not(:disabled) {
+	background: var(--mtal-primary-dark);
+}
+
+.mtal-cal-confirm-btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+
+/* تمام‌عرض شدن تقویم‌های اینلاین در موبایل مشابه مودال */
+@media (max-width: 767px) {
+	.mtal-cal-inline-host,
+	.mtal-cal-root.mtal-cal-mode-inline,
+	.mtal-cal-root.mtal-cal-mode-inline_2col,
+	.mtal-cal-inline-mount,
+	.mtal-cal-panel-unified {
+		width: 100% !important;
+		max-width: 100% !important;
+		border-radius: 0;
+	}
+}
+
+@media (max-width: 480px) {
+	.mtal-cal-modal-backdrop {
+		padding: 0;
+		align-items: flex-end;
+	}
+
+	.mtal-cal-modal-sheet {
+		max-width: 100%;
+		max-height: 92vh;
+		border-radius: 18px 18px 0 0;
+	}
+
+	.mtal-cal-panel,
+	.mtal-admin-panel {
+		padding: 12px;
+	}
+
+	.mtal-cal-day {
+		min-height: 40px;
+		font-size: 12px;
+	}
+
+	.mtal-admin-prices {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+/* باکس ریزمحاسبه شب‌های عادی، آخر هفته و نفرات اضافه با راست‌به‌چپ دقیق */
+.mtal-pricing-breakdown {
+	direction: rtl;
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 10px;
+	padding: 10px 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.mtal-breakdown-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	font-size: 12px;
+	color: #334155;
+	direction: rtl;
+}
+
+.mtal-breakdown-row span {
+	text-align: right;
+}
+
+.mtal-breakdown-row strong {
+	font-weight: 700;
+	color: #0f172a;
+	direction: rtl;
+	unicode-bidi: isolate;
+	text-align: left;
+}
+
+.mtal-breakdown-row.is-stay {
+	padding-bottom: 6px;
+	border-bottom: 1px dashed #cbd5e1;
+}
+
+.mtal-breakdown-row.is-extra {
+	color: #9a5b00;
+}
+
+.mtal-breakdown-row.is-total {
+	margin-top: 2px;
+	padding-top: 8px;
+	border-top: 1px solid #cbd5e1;
+	font-size: 13px;
+	color: var(--mtal-primary-dark);
+}
+
+.mtal-breakdown-row.is-total strong {
+	color: var(--mtal-primary-dark);
+}
+
+.mtal-guest-modal-sheet {
+	max-width: 390px;
+}
+
+.mtal-guests-box.is-inside-modal {
+	margin-top: 0;
+}
+/* استایل هاشور مورب روزهای مسدود و مرز نیمه‌مسدود مشابه عکس اول */
+.mtal-cal-day.is-blocked {
+	background-image: repeating-linear-gradient(
+		-45deg,
+		rgba(148, 163, 184, 0.24),
+		rgba(148, 163, 184, 0.24) 6px,
+		rgba(241, 245, 249, 0.92) 6px,
+		rgba(241, 245, 249, 0.92) 12px
+	) !important;
+	color: #94a3b8 !important;
+}
+
+.mtal-cal-day.is-blocked-edge-after:not(.is-blocked) {
+	background-image: linear-gradient(
+		90deg,
+		rgba(148, 163, 184, 0.22) 0%,
+		rgba(148, 163, 184, 0.22) 50%,
+		transparent 50%,
+		transparent 100%
+	);
+}
+
+.mtal-cal-day.is-blocked-edge-checkout.is-selected {
+	background-image: linear-gradient(
+		90deg,
+		#556b2f 0%,
+		#556b2f 50%,
+		rgba(148, 163, 184, 0.26) 50%,
+		rgba(148, 163, 184, 0.26) 100%
+	) !important;
+}
+
+.mtal-cal-handover-note {
+	margin: 8px 0 10px;
+	padding: 8px 12px;
+	border-radius: 10px;
+	background: #f8fafc;
+	border-right: 3px solid #556b2f;
+	font-size: 12.5px;
+	line-height: 1.7;
+	color: #334155;
+}
+
+.mtal-cal-warning {
+	margin: 8px 0;
+	padding: 9px 12px;
+	border-radius: 10px;
+	background: #fef2f2;
+	border: 1px solid #fecaca;
+	color: #b91c1c;
+	font-size: 12.5px;
+	line-height: 1.65;
+}
