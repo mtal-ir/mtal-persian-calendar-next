@@ -142,7 +142,7 @@
 		) {
 			// Numeric Elementor fields must never receive the human-readable guest summary.
 			if (el.tagName === 'INPUT' && el.type === 'number' && strVal !== '') {
-				const numericMatch = strVal.trim().match(/^-?\\d+(?:\\.\\d+)?/);
+				const numericMatch = strVal.trim().match(/^-?\d+(?:\.\d+)?/);
 				if (!numericMatch) return;
 				strVal = numericMatch[0];
 				const numericValue = Number(strVal);
