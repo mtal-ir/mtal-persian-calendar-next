@@ -65,18 +65,10 @@ final class MTAL_Booking_Workflow {
 			'show_in_admin_status_list' => true,
 			'label_count' => _n_noop( 'در انتظار تأیید مدیر <span class="count">(%s)</span>', 'در انتظار تأیید مدیر <span class="count">(%s)</span>' ),
 		) );
-		register_post_status( 'wc-mtal-awaiting-payment', array(
-			'label' => 'در انتظار پرداخت رزرو',
-			'public' => false,
-			'show_in_admin_all_list' => true,
-			'show_in_admin_status_list' => true,
-			'label_count' => _n_noop( 'در انتظار پرداخت رزرو <span class="count">(%s)</span>', 'در انتظار پرداخت رزرو <span class="count">(%s)</span>' ),
-		) );
 	}
 
 	public static function add_order_statuses( $statuses ) {
 		$statuses['wc-mtal-pending-admin'] = 'در انتظار تأیید مدیر';
-		$statuses['wc-mtal-awaiting-payment'] = 'در انتظار پرداخت رزرو';
 		return $statuses;
 	}
 
@@ -321,7 +313,7 @@ final class MTAL_Booking_Workflow {
 			$order->update_status( 'cancelled', 'درخواست رزرو توسط مدیر رد شد؛ تاریخ‌ها آزاد شدند.' );
 			self::release_order_holds( $order_id );
 		} else {
-			$order->update_status( 'mtal-awaiting-payment', 'درخواست توسط مدیر تأیید شد؛ لینک پرداخت برای مشتری فعال است.' );
+			$order->update_status( 'pending', 'درخواست توسط مدیر تأیید شد؛ لینک پرداخت برای مشتری فعال است.' );
 			$order->add_order_note( 'لینک پرداخت: ' . $order->get_checkout_payment_url() );
 		}
 		wp_safe_redirect( admin_url( 'post.php?post=' . $order_id . '&action=edit' ) );
@@ -333,7 +325,7 @@ final class MTAL_Booking_Workflow {
 		if ( ! $order ) {
 			return;
 		}
-		if ( ! in_array( $order->get_status(), array( 'mtal-pending-admin', 'mtal-awaiting-payment' ), true ) ) {
+		if ( ! in_array( $order->get_status(), array( 'mtal-pending-admin', 'pending' ), true ) ) {
 			return;
 		}
 		$expires = (int) $order->get_meta( '_mtal_booking_expires_at' );
