@@ -257,7 +257,13 @@ final class MTAL_Persian_Calendar {
 		$today = current_datetime();
 		$today_jdn = self::gregorian_to_jdn( (int) $today->format( 'Y' ), (int) $today->format( 'n' ), (int) $today->format( 'j' ) );
 		$max_months = isset( $_POST['max_months'] ) ? min( 3, max( 1, absint( $_POST['max_months'] ) ) ) : 3;
-		$max_jdn = $today_jdn + ( $max_months * 31 );
+		$today_jalali = self::jdn_to_jalali( $today_jdn );
+		$month_index = ( $today_jalali[0] * 12 ) + ( $today_jalali[1] - 1 ) + ( $max_months - 1 );
+		$horizon_year = (int) floor( $month_index / 12 );
+		$horizon_month = ( $month_index % 12 ) + 1;
+		$horizon_leap = self::jalali_to_jdn( $horizon_year + 1, 1, 1 ) - self::jalali_to_jdn( $horizon_year, 1, 1 ) === 366;
+		$horizon_last_day = $horizon_month <= 6 ? 31 : ( $horizon_month <= 11 ? 30 : ( $horizon_leap ? 30 : 29 ) );
+		$max_jdn = self::jalali_to_jdn( $horizon_year, $horizon_month, $horizon_last_day );
 		if ( $start['jdn'] < $today_jdn || $end['jdn'] < $today_jdn || $start['jdn'] > $max_jdn || $end['jdn'] > $max_jdn ) {
 			wp_send_json_error( array( 'message' => 'بازه انتخابی خارج از محدوده مجاز تقویم است.' ), 400 );
 		}
