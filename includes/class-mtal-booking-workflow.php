@@ -12,6 +12,9 @@ final class MTAL_Booking_Workflow {
 
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'register_order_statuses' ) );
+		add_action( 'plugins_loaded', array( __CLASS__, 'maybe_upgrade' ), 5 );
+		add_filter( 'woocommerce_order_needs_payment', array( __CLASS__, 'prevent_expired_payment' ), 10, 3 );
+		add_action( 'woocommerce_admin_order_data_after_order_details', array( __CLASS__, 'render_hpos_order_actions' ) );
 		add_filter( 'wc_order_statuses', array( __CLASS__, 'add_order_statuses' ) );
 		add_action( 'elementor_pro/forms/new_record', array( __CLASS__, 'handle_elementor_submission' ), 20, 2 );
 		add_action( 'add_meta_boxes', array( __CLASS__, 'add_order_metabox' ) );
@@ -45,6 +48,13 @@ final class MTAL_Booking_Workflow {
 			KEY expires_at (expires_at)
 		) {$charset};";
 		dbDelta( $sql );
+		update_option( 'mtal_pc_booking_db_version', '1', false );
+	}
+
+	public static function maybe_upgrade() {
+		if ( '1' !== get_option( 'mtal_pc_booking_db_version' ) ) {
+			self::activate();
+		}
 	}
 
 	public static function register_order_statuses() {
@@ -120,7 +130,9 @@ final class MTAL_Booking_Workflow {
 		}
 		foreach ( $raw as $id => $field ) {
 			$value = is_array( $field ) && isset( $field['value'] ) ? $field['value'] : '';
-			$out[ sanitize_key( $id ) ] = is_scalar( $value ) ? trim( (string) $value ) : '';
+			$value = is_scalar( $value ) ? trim( (string) $value ) : '';
+			$value = strtr( $value, array( '۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9' ) );
+			$out[ sanitize_key( $id ) ] = $value;
 		}
 		return $out;
 	}
@@ -149,6 +161,9 @@ final class MTAL_Booking_Workflow {
 		}
 		$fields = self::extract_fields( $record );
 		$suite_id = isset( $fields['mtal_post_id'] ) ? absint( $fields['mtal_post_id'] ) : 0;
+		if ( ! $suite_id && isset( $_POST['post_id'] ) ) {
+			$suite_id = absint( wp_unslash( $_POST['post_id'] ) );
+		}
 		$range = self::find_date_range( $fields );
 		$guests = isset( $fields['mtal_qty'] ) ? absint( $fields['mtal_qty'] ) : 0;
 		if ( ! $suite_id || ! $range || $guests < 1 ) {
@@ -261,6 +276,29 @@ final class MTAL_Booking_Workflow {
 		echo '<p><a class="button" href="' . esc_url( add_query_arg( array( 'decision' => 'reject', '_wpnonce' => $nonce ), $url ) ) . '" onclick="return confirm(\'درخواست رد و تاریخ‌ها آزاد شوند؟\')">رد درخواست و آزادسازی تاریخ‌ها</a></p>';
 	}
 
+
+	public static function render_hpos_order_actions( $order ) {
+		if ( ! $order || ! is_a( $order, 'WC_Order' ) || ! $order->get_meta( '_mtal_booking_suite_id' ) || 'mtal-pending-admin' !== $order->get_status() ) {
+			return;
+		}
+		$order_id = $order->get_id();
+		$base = admin_url( 'admin-post.php?action=mtal_booking_decision&order_id=' . $order_id );
+		$nonce = wp_create_nonce( 'mtal_booking_decision_' . $order_id );
+		echo '<p><strong>درخواست رزرو MTAL</strong></p>';
+		echo '<p><a class="button button-primary" href="' . esc_url( add_query_arg( array( 'decision' => 'approve', '_wpnonce' => $nonce ), $base ) ) . '">تأیید و ارسال لینک پرداخت</a> ';
+		echo '<a class="button" href="' . esc_url( add_query_arg( array( 'decision' => 'reject', '_wpnonce' => $nonce ), $base ) ) . '">رد و آزادسازی تاریخ‌ها</a></p>';
+	}
+
+	public static function prevent_expired_payment( $needs_payment, $order, $valid_statuses ) {
+		if ( $order && $order->get_meta( '_mtal_booking_suite_id' ) ) {
+			$expires = (int) $order->get_meta( '_mtal_booking_expires_at' );
+			if ( $expires && $expires <= time() ) {
+				return false;
+			}
+		}
+		return $needs_payment;
+	}
+
 	public static function handle_admin_decision() {
 		$order_id = isset( $_GET['order_id'] ) ? absint( $_GET['order_id'] ) : 0;
 		$decision = isset( $_GET['decision'] ) ? sanitize_key( wp_unslash( $_GET['decision'] ) ) : '';
@@ -310,6 +348,15 @@ final class MTAL_Booking_Workflow {
 	public static function confirm_paid_booking( $order_id ) {
 		$order = wc_get_order( absint( $order_id ) );
 		if ( ! $order || ! $order->get_meta( '_mtal_booking_suite_id' ) ) {
+			return;
+		}
+		$expires = (int) $order->get_meta( '_mtal_booking_expires_at' );
+		if ( $expires && $expires <= time() ) {
+			$order->add_order_note( 'پرداخت پس از پایان مهلت ۳۰ دقیقه‌ای دریافت شد؛ رزرو به‌صورت خودکار قطعی نشد و نیازمند بررسی مدیر است.' );
+			$order->update_status( 'on-hold' );
+			self::release_order_holds( $order->get_id() );
+			$order->update_meta_data( '_mtal_booking_late_payment', 'yes' );
+			$order->save();
 			return;
 		}
 		global $wpdb;
