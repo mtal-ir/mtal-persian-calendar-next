@@ -892,3 +892,16 @@ html.mtal-modal-open {
 	font-size: 12.5px;
 	line-height: 1.65;
 }
+
+
+.mtal-booking-countdown {
+	margin: 14px 0;
+	padding: 12px 16px;
+	border: 1px solid #e6b85c;
+	border-radius: 8px;
+	background: #fff8e8;
+	color: #6b4b12;
+	font-weight: 700;
+	text-align: center;
+	direction: rtl;
+}
