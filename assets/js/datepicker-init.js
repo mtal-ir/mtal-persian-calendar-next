@@ -666,6 +666,7 @@
 								payload.totalPrice = Number(result.data.totalPrice) || 0;
 								payload.serverPricing = result.data;
 								syncAllHiddenFormFields(host, cal, payload);
+								syncSiblings(groupKey, cal, payload, storageKey, guestsStorageKey);
 								host.dispatchEvent(new CustomEvent('mtal:serverPriceCalculated', { detail: result.data, bubbles: true }));
 							})
 							.catch(() => {
