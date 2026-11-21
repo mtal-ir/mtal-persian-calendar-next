@@ -1123,14 +1123,9 @@
 		const data = response && response.data ? response.data : {};
 		const orderId = data.mtal_booking_order_id || data.data && data.data.mtal_booking_order_id || '';
 		const key = 'mtal_booking_deadline_' + (orderId || form.id || 'latest');
-		let deadline = 0;
-		try {
-			deadline = parseInt(window.localStorage.getItem(key) || '0', 10);
-		} catch (e) {}
-		if (!deadline || deadline < Date.now()) {
-			deadline = Date.now() + 30 * 60 * 1000;
-			try { window.localStorage.setItem(key, String(deadline)); } catch (e) {}
-		}
+		const serverExpiry = parseInt(data.mtal_booking_expires_at || data.data && data.data.mtal_booking_expires_at || '0', 10);
+		const deadline = serverExpiry > 0 ? serverExpiry * 1000 : Date.now() + 30 * 60 * 1000;
+		try { window.localStorage.setItem(key, String(deadline)); } catch (e) {}
 		let timer = form.querySelector('.mtal-booking-countdown');
 		if (!timer) {
 			timer = document.createElement('div');
