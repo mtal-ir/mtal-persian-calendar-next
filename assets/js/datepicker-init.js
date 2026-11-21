@@ -641,7 +641,40 @@
 				extraGuestPrice,
 				guestsCount: initialGuests,
 				onChange(payload) {
-					syncAllHiddenFormFields(host, cal, payload);
+					if (payload && payload.checkIn && payload.checkOut && cfg.ajaxUrl && postId) {
+						const requestId = (host._mtalPriceRequestId || 0) + 1;
+						host._mtalPriceRequestId = requestId;
+						const fd = new FormData();
+						fd.append('action', 'mtal_calculate_suite_price');
+						fd.append('nonce', cfg.nonce || '');
+						fd.append('post_id', String(postId));
+						fd.append('check_in', payload.checkInSlash || '');
+						fd.append('check_out', payload.checkOutSlash || '');
+						fd.append('guests', String(cal.guestsCount || 1));
+						fd.append('max_months', String(maxMonths));
+						fetch(cfg.ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
+							.then((response) => response.json())
+							.then((result) => {
+								if (host._mtalPriceRequestId !== requestId) return;
+								if (!result || !result.success || !result.data) {
+									payload.totalPrice = 0;
+									host.dispatchEvent(new CustomEvent('mtal:serverPriceError', { detail: result && result.data ? result.data : {}, bubbles: true }));
+									return;
+								}
+								payload.totalPrice = Number(result.data.totalPrice) || 0;
+								payload.serverPricing = result.data;
+								syncAllHiddenFormFields(host, cal, payload);
+								host.dispatchEvent(new CustomEvent('mtal:serverPriceCalculated', { detail: result.data, bubbles: true }));
+							})
+							.catch(() => {
+								if (host._mtalPriceRequestId !== requestId) return;
+								payload.totalPrice = 0;
+								host.dispatchEvent(new CustomEvent('mtal:serverPriceError', { detail: { message: 'محاسبه مبلغ در سرور انجام نشد.' }, bubbles: true }));
+							});
+					} else {
+						host._mtalPriceRequestId = (host._mtalPriceRequestId || 0) + 1;
+						syncAllHiddenFormFields(host, cal, payload);
+					}
 					syncSiblings(groupKey, cal, payload, storageKey, guestsStorageKey);
 					syncHostCounterDisplay(host, cal.guestsCount);
 
