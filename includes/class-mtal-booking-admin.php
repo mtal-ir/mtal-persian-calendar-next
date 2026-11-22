@@ -13,11 +13,22 @@ final class MTAL_Booking_Admin {
 		add_action( 'admin_menu', array( __CLASS__, 'register_menu' ) );
 	}
 
+	/**
+	 * Administrators and WooCommerce managers may manage bookings.
+	 */
+	public static function current_user_can_manage_bookings() {
+		return current_user_can( 'manage_options' ) || current_user_can( 'manage_woocommerce' );
+	}
+
 	public static function register_menu() {
+		if ( ! self::current_user_can_manage_bookings() ) {
+			return;
+		}
+
 		add_menu_page(
 			'مدیریت رزروها',
 			'تقویم فارسی MTAL',
-			'manage_woocommerce',
+			'read',
 			'mtal-booking-management',
 			array( __CLASS__, 'render_page' ),
 			'dashicons-calendar-alt',
@@ -26,7 +37,7 @@ final class MTAL_Booking_Admin {
 	}
 
 	public static function render_page() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! self::current_user_can_manage_bookings() ) {
 			wp_die( esc_html__( 'شما اجازه دسترسی به این صفحه را ندارید.', 'mtal-persian-calendar' ) );
 		}
 
