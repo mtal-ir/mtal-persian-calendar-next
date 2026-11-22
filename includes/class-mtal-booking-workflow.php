@@ -306,7 +306,11 @@ final class MTAL_Booking_Workflow {
 		if ( $expires <= time() ) {
 			$order->update_status( 'cancelled', 'مهلت ۳۰ دقیقه‌ای درخواست به پایان رسید.' );
 			self::release_order_holds( $order_id );
-			wp_safe_redirect( admin_url( 'post.php?post=' . $order_id . '&action=edit&mtal_booking_expired=1' ) );
+			$redirect = wp_get_referer();
+			if ( ! $redirect ) {
+				$redirect = admin_url( 'post.php?post=' . $order_id . '&action=edit&mtal_booking_expired=1' );
+			}
+			wp_safe_redirect( $redirect );
 			exit;
 		}
 		if ( 'reject' === $decision ) {
@@ -316,7 +320,11 @@ final class MTAL_Booking_Workflow {
 			$order->update_status( 'pending', 'درخواست توسط مدیر تأیید شد؛ لینک پرداخت برای مشتری فعال است.' );
 			$order->add_order_note( 'لینک پرداخت: ' . $order->get_checkout_payment_url() );
 		}
-		wp_safe_redirect( admin_url( 'post.php?post=' . $order_id . '&action=edit' ) );
+		$redirect = wp_get_referer();
+		if ( ! $redirect ) {
+			$redirect = admin_url( 'post.php?post=' . $order_id . '&action=edit' );
+		}
+		wp_safe_redirect( $redirect );
 		exit;
 	}
 
