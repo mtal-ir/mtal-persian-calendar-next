@@ -2,9 +2,9 @@ name: Plugin syntax checks
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, fix/calendar-form-sync-performance]
   push:
-    branches: [feature/booking-approval-30m-workflow]
+    branches: [main, feature/booking-approval-30m-workflow, feature/booking-management-dashboard]
 
 jobs:
   lint:

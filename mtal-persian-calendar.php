@@ -469,5 +469,6 @@ final class MTAL_Persian_Calendar {
 }
 
 require_once MTAL_PC_PATH . 'includes/class-mtal-booking-workflow.php';
+require_once MTAL_PC_PATH . 'includes/class-mtal-booking-admin.php';
 register_activation_hook( __FILE__, array( 'MTAL_Booking_Workflow', 'activate' ) );
 MTAL_Persian_Calendar::instance();
