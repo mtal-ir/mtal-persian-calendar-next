@@ -53,7 +53,7 @@ final class MTAL_Booking_Admin {
 
 		$status_options = array(
 			'all'               => 'همه وضعیت‌ها',
-			'mtal-pending-admin' => 'در انتظار تأیید مدیر',
+			'mtal-pending' => 'در انتظار تأیید مدیر',
 			'pending'           => 'در انتظار پرداخت',
 			'processing'        => 'در حال انجام',
 			'completed'         => 'تکمیل‌شده',
@@ -144,7 +144,7 @@ final class MTAL_Booking_Admin {
 				echo '<td>' . esc_html( $guests ) . '</td>';
 				echo '<td>' . wp_kses_post( wc_price( $order->get_total(), array( 'currency' => $order->get_currency() ) ) ) . '</td>';
 				echo '<td>' . esc_html( wc_get_order_status_name( $status ) );
-				if ( $expires && in_array( $status, array( 'mtal-pending-admin', 'pending' ), true ) ) {
+				if ( $expires && in_array( $status, array( 'mtal-pending', 'pending' ), true ) ) {
 					echo '<br><small>';
 					echo $expires > time()
 						? esc_html( 'مهلت باقی‌مانده: ' . human_time_diff( time(), $expires ) )
@@ -153,7 +153,7 @@ final class MTAL_Booking_Admin {
 				}
 				echo '</td>';
 				echo '<td><a class="button button-small" href="' . esc_url( $edit_url ) . '">جزئیات</a>';
-				if ( 'mtal-pending-admin' === $status ) {
+				if ( 'mtal-pending' === $status ) {
 					$decision_url = add_query_arg(
 						array(
 							'action'   => 'mtal_booking_decision',
