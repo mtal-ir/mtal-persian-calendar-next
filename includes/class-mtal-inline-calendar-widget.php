@@ -116,7 +116,7 @@ class MTAL_Inline_Calendar_Widget extends Widget_Base {
 
 		$this->end_controls_section();
 
-		if ( current_user_can( 'manage_woocommerce' ) ) {
+		if ( class_exists( 'MTAL_Booking_Admin' ) && MTAL_Booking_Admin::current_user_can_manage_bookings() ) {
 			$this->start_controls_section(
 				'section_booking_management',
 				array(
