@@ -58,7 +58,7 @@ final class MTAL_Booking_Workflow {
 	}
 
 	public static function register_order_statuses() {
-		register_post_status( 'wc-mtal-pending-admin', array(
+		register_post_status( 'wc-mtal-pending', array(
 			'label' => 'در انتظار تأیید مدیر',
 			'public' => false,
 			'show_in_admin_all_list' => true,
@@ -68,7 +68,7 @@ final class MTAL_Booking_Workflow {
 	}
 
 	public static function add_order_statuses( $statuses ) {
-		$statuses['wc-mtal-pending-admin'] = 'در انتظار تأیید مدیر';
+		$statuses['wc-mtal-pending'] = 'در انتظار تأیید مدیر';
 		return $statuses;
 	}
 
@@ -227,7 +227,7 @@ final class MTAL_Booking_Workflow {
 			}
 			return;
 		}
-		$order->update_status( 'mtal-pending-admin', 'درخواست رزرو ثبت شد؛ مهلت تصمیم‌گیری و پرداخت ۳۰ دقیقه است.' );
+		$order->update_status( 'mtal-pending', 'درخواست رزرو ثبت شد؛ مهلت تصمیم‌گیری و پرداخت ۳۰ دقیقه است.' );
 		if ( function_exists( 'wp_schedule_single_event' ) ) {
 			wp_schedule_single_event( $expires, self::CRON_HOOK, array( $order->get_id() ) );
 		}
@@ -258,7 +258,7 @@ final class MTAL_Booking_Workflow {
 		$expires = (int) $order->get_meta( '_mtal_booking_expires_at' );
 		echo '<p>تاریخ: ' . esc_html( $order->get_meta( '_mtal_booking_check_in' ) . ' تا ' . $order->get_meta( '_mtal_booking_check_out' ) ) . '</p>';
 		echo '<p>مهلت: ' . esc_html( $expires ? wp_date( 'Y-m-d H:i:s', $expires ) : 'پایان یافته' ) . '</p>';
-		if ( 'mtal-pending-admin' !== $status ) {
+		if ( 'mtal-pending' !== $status ) {
 			echo '<p>وضعیت فعلی: ' . esc_html( wc_get_order_status_name( $status ) ) . '</p>';
 			return;
 		}
@@ -270,7 +270,7 @@ final class MTAL_Booking_Workflow {
 
 
 	public static function render_hpos_order_actions( $order ) {
-		if ( ! $order || ! is_a( $order, 'WC_Order' ) || ! $order->get_meta( '_mtal_booking_suite_id' ) || 'mtal-pending-admin' !== $order->get_status() ) {
+		if ( ! $order || ! is_a( $order, 'WC_Order' ) || ! $order->get_meta( '_mtal_booking_suite_id' ) || 'mtal-pending' !== $order->get_status() ) {
 			return;
 		}
 		$order_id = $order->get_id();
@@ -299,7 +299,7 @@ final class MTAL_Booking_Workflow {
 		}
 		check_admin_referer( 'mtal_booking_decision_' . $order_id );
 		$order = wc_get_order( $order_id );
-		if ( ! $order || 'mtal-pending-admin' !== $order->get_status() ) {
+		if ( ! $order || 'mtal-pending' !== $order->get_status() ) {
 			wp_die( 'این درخواست دیگر در انتظار تصمیم مدیر نیست.' );
 		}
 		$expires = (int) $order->get_meta( '_mtal_booking_expires_at' );
@@ -333,7 +333,7 @@ final class MTAL_Booking_Workflow {
 		if ( ! $order ) {
 			return;
 		}
-		if ( ! in_array( $order->get_status(), array( 'mtal-pending-admin', 'pending' ), true ) ) {
+		if ( ! in_array( $order->get_status(), array( 'mtal-pending', 'pending' ), true ) ) {
 			return;
 		}
 		$expires = (int) $order->get_meta( '_mtal_booking_expires_at' );
