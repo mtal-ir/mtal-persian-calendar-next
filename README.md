@@ -68,3 +68,11 @@ No FarazSMS API credentials are copied into this plugin. SMS delivery remains co
 - Configure WooCommerce's store currency/price unit consistently with the calendar's configured prices (the calendar price fields are documented in toman).
 - The admin decision controls are available on the WooCommerce order detail screen. The workflow supports the classic order editor and the HPOS order details screen.
 - Test the complete process on a staging site with the actual Elementor form, WooCommerce payment gateway, and FarazSMS settings before using it for live reservations.
+
+
+### Booking management dashboard
+
+- Users with the WooCommerce `manage_woocommerce` capability can open **تقویم فارسی MTAL → مدیریت رزروها** in the WordPress dashboard.
+- The page lists MTAL booking orders and supports filtering by order status, pagination, and links to the full WooCommerce order details.
+- Pending requests can be approved or rejected directly from the list. These actions use the same nonce-protected WooCommerce booking decision handler as the order details screen; approval enables the normal payment URL and rejection releases the held dates.
+- An admin-only shortcut to this page is also available in the Elementor settings panels for both MTAL calendar widgets. It is an editor/admin shortcut, not a public-facing frontend control.
