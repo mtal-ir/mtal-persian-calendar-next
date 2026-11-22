@@ -119,6 +119,25 @@ class MTAL_Admin_Calendar_Widget extends Widget_Base {
 		);
 
 		$this->end_controls_section();
+
+		if ( current_user_can( 'manage_woocommerce' ) ) {
+			$this->start_controls_section(
+				'section_booking_management',
+				array(
+					'label' => esc_html__( 'مدیریت رزروها', 'mtal-persian-calendar' ),
+				)
+			);
+
+			$this->add_control(
+				'booking_management_link',
+				array(
+					'type' => Controls_Manager::RAW_HTML,
+					'raw'  => '<a class="elementor-button elementor-button-default" href="' . esc_url( admin_url( 'admin.php?page=mtal-booking-management' ) ) . '" target="_blank" rel="noopener noreferrer">رفتن به مدیریت رزروها</a><p class="description">فهرست درخواست‌ها و عملیات تأیید یا رد رزروها در پیشخوان وردپرس باز می‌شود.</p>',
+				)
+			);
+
+			$this->end_controls_section();
+		}
 	}
 
 	protected function render() {
