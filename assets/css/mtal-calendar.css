@@ -1146,3 +1146,19 @@ html.mtal-modal-open {
 	font-size: 12px;
 	line-height: 1.8;
 }
+
+
+/* وضعیت رد درخواست رزرو */
+.mtal-booking-countdown.is-rejected {
+	border-color: rgba(185, 28, 28, 0.3);
+	background: #fef2f2;
+	color: #b91c1c;
+}
+.mtal-booking-countdown.is-approved-payment {
+	border-color: rgba(37, 99, 235, 0.28);
+	background: #eff6ff;
+	color: #1d4ed8;
+}
+.mtal-booking-countdown.is-final-status {
+	font-weight: 700;
+}
