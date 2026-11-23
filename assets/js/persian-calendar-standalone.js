@@ -931,7 +931,7 @@
 				const blocked = !pastOrOut && this.isDateBlocked(dObj);
 				const currentJdn = jalaliToJdn(dObj.jy, dObj.jm, dObj.jd);
 				const previousDay = jdnToJalali(currentJdn - 1);
-				const previousDayBlocked = this.isDateBlocked({ jy: previousDay[0], jm: previousDay[1], jd: previousDay[2] });
+				const previousDayBlocked = this.isDateBlocked(previousDay);
 
 				const allowCheckoutOnBlocked =
 					blocked &&
