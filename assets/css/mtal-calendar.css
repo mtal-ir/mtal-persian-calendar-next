@@ -961,3 +961,9 @@ html.mtal-modal-open {
 .mtal-cal-day.is-blocked-checkout-edge.is-selected {
 	background-color: var(--mtal-primary, #556b2f) !important;
 }
+
+
+/* رنگ انتخاب‌شده برای روز شروع بازهٔ مسدود؛ لایهٔ هاشور مثلثی حفظ می‌شود. */
+.mtal-cal-day.is-blocked.is-blocked-range-start.is-selected {
+	background-color: var(--mtal-primary, #556b2f) !important;
+}
