@@ -967,3 +967,116 @@ html.mtal-modal-open {
 .mtal-cal-day.is-blocked.is-blocked-range-start.is-selected {
 	background-color: var(--mtal-primary, #556b2f) !important;
 }
+
+/* ارسال درخواست رزرو از داخل تقویم */
+.mtal-booking-action {
+	margin-top: 12px;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	align-items: center;
+	gap: 8px;
+}
+.mtal-booking-action .mtal-booking-submit {
+	grid-column: 1 / -1;
+	grid-row: 1;
+	transition: grid-column 260ms ease, width 260ms ease, transform 260ms ease;
+}
+.mtal-booking-action .mtal-booking-form-hint {
+	grid-column: 1 / -1;
+	grid-row: 2;
+}
+.mtal-booking-action .mtal-booking-countdown {
+	grid-column: 1 / -1;
+	grid-row: 3;
+	margin: 0;
+	min-width: 0;
+	opacity: 0;
+	transform: translateX(-12px);
+	animation: mtal-countdown-enter 420ms ease forwards;
+}
+.mtal-booking-action.has-countdown {
+	grid-template-columns: minmax(0, 1fr);
+}
+.mtal-booking-action.has-countdown .mtal-booking-submit {
+	grid-column: 1;
+	grid-row: 1;
+}
+.mtal-booking-action.has-countdown .mtal-booking-countdown {
+	grid-column: 1;
+	grid-row: 2;
+}
+.mtal-booking-action.has-countdown .mtal-booking-form-hint {
+	grid-column: 1;
+	grid-row: 3;
+}
+@keyframes mtal-countdown-enter {
+	from { opacity: 0; transform: translateX(-12px); }
+	to { opacity: 1; transform: translateX(0); }
+}
+@media (max-width: 480px) {
+	.mtal-booking-action,
+	.mtal-booking-action.has-countdown {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.mtal-booking-action .mtal-booking-submit,
+	.mtal-booking-action .mtal-booking-countdown,
+	.mtal-booking-action .mtal-booking-form-hint,
+	.mtal-booking-action.has-countdown .mtal-booking-submit,
+	.mtal-booking-action.has-countdown .mtal-booking-countdown {
+		grid-column: 1;
+		grid-row: auto;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.mtal-booking-action .mtal-booking-submit,
+	.mtal-booking-action .mtal-booking-countdown {
+		transition: none;
+		animation: none;
+		opacity: 1;
+		transform: none;
+	}
+}
+.mtal-booking-submit {
+	width: 100%;
+	min-height: 44px;
+}
+.mtal-booking-submit {
+	background: #556b2f !important;
+	border-color: #556b2f !important;
+	color: #fff !important;
+	transition: background-color 160ms ease, border-color 160ms ease, opacity 160ms ease;
+}
+.mtal-booking-submit:disabled {
+	background: #b7c99a !important;
+	border-color: #b7c99a !important;
+	color: #fff !important;
+	opacity: 1;
+	cursor: not-allowed;
+}
+.mtal-booking-form-hint {
+	padding: 9px 11px;
+	border: 1px solid #e5e7eb;
+	border-radius: 9px;
+	background: #f8fafc;
+	color: #475569;
+	font-size: 12px;
+	line-height: 1.8;
+}
+.mtal-booking-submit:not(:disabled) + .mtal-booking-form-hint {
+	border-color: rgba(99, 116, 38, 0.3);
+	background: rgba(99, 116, 38, 0.07);
+	color: #4f5d1e;
+}
+
+.mtal-booking-countdown {
+	margin: 12px 0;
+	padding: 12px 14px;
+	border: 1px solid rgba(85, 107, 47, 0.28);
+	border-radius: 9px;
+	background: #f3f7ec;
+	color: #405321;
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1.8;
+	text-align: center;
+}

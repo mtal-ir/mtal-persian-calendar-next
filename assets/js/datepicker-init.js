@@ -580,6 +580,144 @@
 		});
 	}
 
+	function findBookingForm(host) {
+		const directForm = host.closest('form');
+		if (directForm) return directForm;
+
+		const suiteId = host.getAttribute('data-mtal-post-id') || '';
+		const scope = host.closest('.e-con, .elementor-section, .elementor-column, .elementor-widget-wrap, .elementor') || document;
+		const forms = Array.from(scope.querySelectorAll('form.elementor-form, form'));
+		const candidates = forms.length ? forms : Array.from(document.querySelectorAll('form.elementor-form, form'));
+		if (!candidates.length) return null;
+
+		const scored = candidates.map((form) => {
+			let score = 0;
+			if (form.querySelector('#form-field-mtal_qty, input[name*="mtal_qty"]')) score += 4;
+			if (form.querySelector('#form-field-checkin_checkout, input[name*="checkin_checkout"], input[name*="date"]')) score += 2;
+			const idField = form.querySelector('#form-field-mtal_post_id, input[name="form_fields[mtal_post_id]"]');
+			if (suiteId && idField && String(idField.value) === String(suiteId)) score += 8;
+			return { form, score };
+		}).sort((a, b) => b.score - a.score);
+		return scored[0] && scored[0].score > 0 ? scored[0].form : null;
+	}
+
+	function getRequiredFieldLabel(field) {
+		const group = field.closest('.elementor-field-group');
+		const label = group && group.querySelector('label');
+		return label ? label.textContent.replace(/[*：:]/g, '').trim() : (field.getAttribute('placeholder') || field.name || 'یک فیلد ضروری');
+	}
+
+	function validateBookingForm(form, host, cal) {
+		const missing = [];
+		if (!cal.startDate || !cal.endDate || !cal.isRangeAllowed(cal.startDate, cal.endDate)) {
+			missing.push('تاریخ ورود و خروج');
+		}
+		if (!form) missing.push('فرم رزرو');
+		if (form) {
+			const fields = Array.from(form.querySelectorAll('input[required], select[required], textarea[required]'));
+			fields.forEach((field) => {
+				if (field.disabled || field.type === 'hidden' || field.type === 'submit' || field.type === 'button' || !field.getClientRects().length) return;
+				if (field.type === 'checkbox' || field.type === 'radio') {
+					const group = form.querySelectorAll('[name="' + CSS.escape(field.name) + '"]');
+					if (Array.from(group).some((item) => item.checked)) return;
+				} else if (String(field.value || '').trim() !== '' && field.checkValidity()) {
+					return;
+				}
+				const label = getRequiredFieldLabel(field);
+				if (!missing.includes(label)) missing.push(label);
+			});
+			if (!form.checkValidity() && !missing.length) missing.push('اطلاعات فرم را بررسی کنید');
+		}
+		return missing;
+	}
+
+	function buildCalendarBookingAction(host, cal) {
+		const wrap = document.createElement('div');
+		wrap.className = 'mtal-booking-action';
+		wrap.setAttribute('dir', 'rtl');
+
+		const message = document.createElement('div');
+		message.className = 'mtal-booking-form-hint';
+		message.setAttribute('role', 'status');
+		message.setAttribute('aria-live', 'polite');
+
+		const button = document.createElement('button');
+		button.type = 'button';
+		button.className = 'mtal-cal-confirm-btn mtal-booking-submit';
+		button.textContent = 'ارسال درخواست رزرو';
+		button.disabled = true;
+
+		const form = findBookingForm(host);
+		if (form) form._mtalCalendarHost = host;
+		let bookingSubmitted = false;
+		function refreshState() {
+			if (bookingSubmitted) {
+				button.disabled = true;
+				button.textContent = 'درخواست رزرو ارسال شد';
+				message.textContent = 'درخواست شما ثبت شد؛ مهلت بررسی و پرداخت در تایمر فرم نمایش داده می‌شود.';
+				return;
+			}
+			button.textContent = 'ارسال درخواست رزرو';
+			const missing = validateBookingForm(form, host, cal);
+			const payload = host._mtalLatestPayload || cal.buildPayload(cal.startDate, cal.endDate);
+			const priceReady = Boolean(payload && Number(payload.totalPrice) > 0);
+			const ready = Boolean(form && missing.length === 0 && priceReady);
+			button.disabled = !ready;
+			if (!form) {
+				message.textContent = 'فرم رزرو مرتبط پیدا نشد؛ فرم المنتور و فیلد تعداد نفرات را بررسی کنید.';
+			} else if (missing.length) {
+				message.textContent = 'برای فعال شدن ارسال، این موارد را تکمیل کنید: ' + missing.join('، ') + (priceReady ? '' : '، محاسبه مبلغ رزرو');
+			} else if (!priceReady) {
+				message.textContent = 'لطفاً منتظر بمانید تا مبلغ رزرو محاسبه شود.';
+			} else {
+				message.textContent = 'اطلاعات کامل است؛ می‌توانید درخواست رزرو را ارسال کنید.';
+			}
+		}
+		button.addEventListener('click', () => {
+			refreshState();
+			if (button.disabled || !form) return;
+			if (typeof form.requestSubmit === 'function') form.requestSubmit();
+			else form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+		});
+		if (form) {
+			['input', 'change', 'keyup'].forEach((eventName) => {
+				form.addEventListener(eventName, refreshState);
+			});
+			form.addEventListener('submit', (event) => {
+				if (bookingSubmitted) {
+					event.preventDefault();
+					event.stopImmediatePropagation();
+					return;
+				}
+				const missing = validateBookingForm(form, host, cal);
+				const payload = host._mtalLatestPayload || cal.buildPayload(cal.startDate, cal.endDate);
+				if (missing.length || !payload || !(Number(payload.totalPrice) > 0)) {
+					event.preventDefault();
+					event.stopImmediatePropagation();
+					refreshState();
+				}
+			}, true);
+			if (window.jQuery) {
+				window.jQuery(form).on('submit_success.mtalInlineBooking', () => {
+					bookingSubmitted = true;
+					button.disabled = true;
+					button.textContent = 'درخواست رزرو ارسال شد';
+					message.textContent = 'درخواست شما ثبت شد؛ مهلت بررسی و پرداخت در تایمر فرم نمایش داده می‌شود.';
+				});
+			}
+		}
+		host.addEventListener('mtal:calendarChange', refreshState);
+		host.addEventListener('mtal:serverPriceCalculated', (event) => {
+			if (host._mtalLatestPayload) host._mtalLatestPayload.totalPrice = Number(event.detail && event.detail.totalPrice) || 0;
+			refreshState();
+		});
+		host.addEventListener('mtal:serverPriceError', refreshState);
+		wrap.appendChild(button);
+		wrap.appendChild(message);
+		host.appendChild(wrap);
+		refreshState();
+	}
+
 	function initCalendarHosts(root = document) {
 		const hosts = root.querySelectorAll(
 			'.mtal-cal-inline-host:not([data-mtal-initialized="1"]), .mtal-cal-modal-host:not([data-mtal-initialized="1"])'
@@ -657,6 +795,7 @@
 				extraGuestPrice,
 				guestsCount: initialGuests,
 				onChange(payload) {
+					host._mtalLatestPayload = payload;
 					if (payload && payload.checkIn && payload.checkOut && cfg.ajaxUrl && postId) {
 						const requestId = (host._mtalPriceRequestId || 0) + 1;
 						host._mtalPriceRequestId = requestId;
@@ -716,6 +855,7 @@
 			});
 
 			buildGuestCounterBox(host, cal, maxGuests);
+			buildCalendarBookingAction(host, cal);
 
 			calendarEntries.push({ cal, postId, host });
 
@@ -1191,21 +1331,27 @@
 	 * The server remains authoritative; this is a visual countdown only.
 	 */
 	function startBookingCountdown(form, response) {
-		if (!form || !form.querySelector('#form-field-mtal_qty, input[name*="mtal_qty"]')) return;
+		if (!form) return;
 		const data = response && response.data ? response.data : {};
 		const orderId = data.mtal_booking_order_id || data.data && data.data.mtal_booking_order_id || '';
 		const key = 'mtal_booking_deadline_' + (orderId || form.id || 'latest');
 		const serverExpiry = parseInt(data.mtal_booking_expires_at || data.data && data.data.mtal_booking_expires_at || '0', 10);
 		const deadline = serverExpiry > 0 ? serverExpiry * 1000 : Date.now() + 30 * 60 * 1000;
 		try { window.localStorage.setItem(key, String(deadline)); } catch (e) {}
-		let timer = form.querySelector('.mtal-booking-countdown');
+		const calendarHost = form._mtalCalendarHost || null;
+		const timerContainer = calendarHost && calendarHost.querySelector('.mtal-booking-action');
+		let timer = timerContainer
+			? timerContainer.querySelector('.mtal-booking-countdown')
+			: form.querySelector('.mtal-booking-countdown');
 		if (!timer) {
 			timer = document.createElement('div');
 			timer.className = 'mtal-booking-countdown';
 			timer.setAttribute('role', 'status');
-			const success = form.querySelector('.elementor-message-success, .elementor-form-fields-wrapper') || form;
-			success.appendChild(timer);
+			timer.setAttribute('aria-live', 'polite');
 		}
+		// نمایش تایمر در نوار اقدام تقویم؛ در نبود تقویم، داخل فرم باقی می‌ماند.
+		(timerContainer || form).appendChild(timer);
+		if (timerContainer) timerContainer.classList.add('has-countdown');
 		if (timer._mtalInterval) window.clearInterval(timer._mtalInterval);
 		const render = () => {
 			const remaining = Math.max(0, deadline - Date.now());
@@ -1223,9 +1369,12 @@
 	}
 
 	if (window.jQuery) {
+		window.jQuery(document).on('submit_success', 'form.elementor-form', function (event, response) {
+			startBookingCountdown(this, response || {});
+		});
 		window.jQuery(document).on('submit_success', function (event, response) {
 			const form = event.target && event.target.closest ? event.target.closest('form') : null;
-			if (form) startBookingCountdown(form, response || {});
+			if (form && !form.matches('form.elementor-form')) startBookingCountdown(form, response || {});
 		});
 	}
 
