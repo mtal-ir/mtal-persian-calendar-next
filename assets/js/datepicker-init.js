@@ -648,6 +648,7 @@
 		button.disabled = true;
 
 		const form = findBookingForm(host);
+		if (form) form._mtalCalendarHost = host;
 		let bookingSubmitted = false;
 		function refreshState() {
 			if (bookingSubmitted) {
@@ -1337,15 +1338,19 @@
 		const serverExpiry = parseInt(data.mtal_booking_expires_at || data.data && data.data.mtal_booking_expires_at || '0', 10);
 		const deadline = serverExpiry > 0 ? serverExpiry * 1000 : Date.now() + 30 * 60 * 1000;
 		try { window.localStorage.setItem(key, String(deadline)); } catch (e) {}
-		let timer = form.querySelector('.mtal-booking-countdown');
+		const calendarHost = form._mtalCalendarHost || null;
+		const timerContainer = calendarHost && calendarHost.querySelector('.mtal-booking-action');
+		let timer = timerContainer
+			? timerContainer.querySelector('.mtal-booking-countdown')
+			: form.querySelector('.mtal-booking-countdown');
 		if (!timer) {
 			timer = document.createElement('div');
 			timer.className = 'mtal-booking-countdown';
 			timer.setAttribute('role', 'status');
 			timer.setAttribute('aria-live', 'polite');
-			// Keep the countdown inside the form itself so Elementor field refreshes do not remove it.
-			form.appendChild(timer);
 		}
+		// نمایش تایمر در نوار اقدام تقویم؛ در نبود تقویم، داخل فرم باقی می‌ماند.
+		(timerContainer || form).appendChild(timer);
 		if (timer._mtalInterval) window.clearInterval(timer._mtalInterval);
 		const render = () => {
 			const remaining = Math.max(0, deadline - Date.now());
