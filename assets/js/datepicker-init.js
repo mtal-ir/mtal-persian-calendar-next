@@ -784,7 +784,6 @@
 						countdown.classList.add('is-final-status', 'is-rejected');
 						countdown.textContent = result.data.message || 'درخواست شما لغو شد و تاریخ‌های انتخابی آزاد شدند.';
 					}
-					message.textContent = result.data.message || 'درخواست شما لغو شد.';
 					bookingSubmitted = false;
 					button.classList.remove('is-cancel-action');
 					try {
@@ -793,6 +792,7 @@
 					} catch (e) {}
 					button.textContent = 'ارسال درخواست رزرو';
 					refreshState();
+					message.textContent = result.data.message || 'درخواست شما لغو شد و تاریخ‌های انتخابی آزاد شدند.';
 				}).catch(() => {
 					button.classList.remove('is-cancelling'); button.removeAttribute('aria-busy');
 					button.disabled = false; button.textContent = 'لغو درخواست رزرو';
