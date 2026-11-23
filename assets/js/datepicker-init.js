@@ -717,13 +717,14 @@
 		button.disabled = true;
 
 		const form = findBookingForm(host);
-		if (form) form._mtalCalendarHost = host;
+		if (form) { form._mtalCalendarHost = host; form._mtalBookingActionButton = button; }
 		let bookingSubmitted = false;
 		function refreshState() {
 			if (bookingSubmitted) {
-				button.disabled = true;
-				button.textContent = 'درخواست رزرو ارسال شد';
-				message.textContent = 'درخواست شما ثبت شد؛ مهلت بررسی و پرداخت در تایمر فرم نمایش داده می‌شود.';
+				button.disabled = false;
+				button.textContent = 'لغو درخواست رزرو';
+				button.classList.add('is-cancel-action');
+				message.textContent = 'درخواست شما در حال بررسی است؛ در صورت تمایل می‌توانید آن را لغو کنید.';
 				return;
 			}
 			button.textContent = 'ارسال درخواست رزرو';
@@ -743,6 +744,17 @@
 			}
 		}
 		button.addEventListener('click', () => {
+			if (bookingSubmitted) {
+				const saved = (() => { try { return JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null'); } catch(e) { return null; } })();
+				if (!saved || !saved.orderId || !saved.token || !cfg.ajaxUrl) { message.textContent = 'اطلاعات امن درخواست برای لغو پیدا نشد؛ صفحه را تازه‌سازی کنید.'; return; }
+				button.disabled = true;
+				const fd = new FormData(); fd.append('action', 'mtal_booking_cancel'); fd.append('order_id', saved.orderId); fd.append('token', saved.token);
+				fetch(cfg.ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' }).then(r => r.json()).then(result => {
+					if (!result || !result.success) { button.disabled = false; message.textContent = result && result.data && result.data.message ? result.data.message : 'لغو درخواست انجام نشد؛ دوباره تلاش کنید.'; return; }
+					message.textContent = result.data.message || 'درخواست شما لغو شد.';
+				}).catch(() => { button.disabled = false; message.textContent = 'ارتباط با سرور برقرار نشد؛ دوباره تلاش کنید.'; });
+				return;
+			}
 			refreshState();
 			if (button.disabled || !form) return;
 			if (typeof form.requestSubmit === 'function') form.requestSubmit();
@@ -1466,6 +1478,7 @@
 		// نمایش تایمر در نوار اقدام تقویم؛ در نبود تقویم، داخل فرم باقی می‌ماند.
 		(timerContainer || form).appendChild(timer);
 		if (timerContainer) timerContainer.classList.add('has-countdown');
+		if (form && form._mtalBookingActionButton) { form._mtalBookingActionButton.classList.add('is-cancel-action'); form._mtalBookingActionButton.disabled = false; form._mtalBookingActionButton.textContent = 'لغو درخواست رزرو'; }
 		if (timer._mtalInterval) window.clearInterval(timer._mtalInterval);
  if (timer._mtalStatusInterval) window.clearInterval(timer._mtalStatusInterval);
  let finalStatus = false;
@@ -1501,6 +1514,7 @@
     timer.textContent=result.data.message;
     timer.classList.add('is-final-status');
     timer.classList.toggle('is-rejected', result.data.status === 'cancelled');
+    if (form && form._mtalBookingActionButton) { form._mtalBookingActionButton.classList.remove('is-cancel-action'); form._mtalBookingActionButton.disabled = result.data.status !== 'cancelled'; form._mtalBookingActionButton.textContent = result.data.status === 'cancelled' ? 'ارسال درخواست رزرو جدید' : 'درخواست رزرو نهایی شد'; }
     try { window.localStorage.removeItem('mtal_booking_active_request'); window.localStorage.removeItem(key); } catch(e) {}
    }).catch(()=>{});
   };
