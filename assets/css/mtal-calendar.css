@@ -971,9 +971,31 @@ html.mtal-modal-open {
 /* ارسال درخواست رزرو از داخل تقویم */
 .mtal-booking-action {
 	margin-top: 12px;
-	display: flex;
-	flex-direction: column;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	align-items: center;
 	gap: 8px;
+}
+.mtal-booking-action .mtal-booking-form-hint {
+	grid-column: 1 / -1;
+	grid-row: 2;
+}
+.mtal-booking-action .mtal-booking-countdown {
+	grid-column: 2;
+	grid-row: 1;
+	margin: 0;
+	min-width: 0;
+}
+@media (max-width: 480px) {
+	.mtal-booking-action {
+		grid-template-columns: 1fr;
+	}
+	.mtal-booking-action .mtal-booking-submit,
+	.mtal-booking-action .mtal-booking-countdown,
+	.mtal-booking-action .mtal-booking-form-hint {
+		grid-column: 1;
+		grid-row: auto;
+	}
 }
 .mtal-booking-submit {
 	width: 100%;
