@@ -508,8 +508,8 @@
 		const update = (payload) => {
 			const inValue = checkInField.querySelector('.mtal-date-field-value');
 			const outValue = checkOutField.querySelector('.mtal-date-field-value');
-			const checkIn = payload && payload.checkIn ? payload.checkIn : cal.startDate;
-			const checkOut = payload && payload.checkOut ? payload.checkOut : cal.endDate;
+			const checkIn = payload ? payload.checkIn : cal.startDate;
+			const checkOut = payload ? payload.checkOut : cal.endDate;
 			inValue.textContent = checkIn ? formatDateForDisplay(checkIn) : 'انتخاب تاریخ ورود';
 			outValue.textContent = checkOut ? formatDateForDisplay(checkOut) : 'انتخاب تاریخ خروج';
 			checkInField.classList.toggle('has-value', Boolean(checkIn));
@@ -526,8 +526,8 @@
 		summary.setAttribute('aria-live', 'polite');
 		host.appendChild(summary);
 		const update = (payload) => {
-			const checkIn = payload && payload.checkIn ? payload.checkIn : cal.startDate;
-			const checkOut = payload && payload.checkOut ? payload.checkOut : cal.endDate;
+			const checkIn = payload ? payload.checkIn : cal.startDate;
+			const checkOut = payload ? payload.checkOut : cal.endDate;
 			summary.innerHTML = '';
 			if (!checkIn || !checkOut || !cal.isRangeAllowed(checkIn, checkOut)) {
 				const hint = document.createElement('div');
