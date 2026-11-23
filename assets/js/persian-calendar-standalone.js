@@ -682,10 +682,11 @@
 					return;
 				}
 				this.enforceValidState();
+				// Commit the partial check-in selection so closing and reopening the modal keeps it.
+				this.startDate = this.draftStart ? { ...this.draftStart } : null;
+				this.endDate = null;
 				this.render();
-				if (this.draftStart && this.onChange) {
-					this.onChange(this.buildPayload(this.draftStart, null));
-				}
+				this.emitChange(true);
 				return;
 			}
 
