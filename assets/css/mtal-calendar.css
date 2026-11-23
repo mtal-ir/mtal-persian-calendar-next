@@ -1162,3 +1162,13 @@ html.mtal-modal-open {
 .mtal-booking-countdown.is-final-status {
 	font-weight: 700;
 }
+
+
+/* دکمه لغو درخواست در زمان انتظار */
+.mtal-booking-submit.is-cancel-action,
+.mtal-booking-submit.is-cancel-action:hover:not(:disabled) {
+	background: #fce8e8 !important;
+	border-color: #f3b4b4 !important;
+	color: #a83232 !important;
+}
+.mtal-booking-submit.is-cancel-action:disabled { opacity: .65; cursor: wait; }
