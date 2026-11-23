@@ -541,7 +541,7 @@
 				const total = payload && Number(payload.totalPrice) > 0 ? Number(payload.totalPrice) : 0;
 				const totalValue = breakdown.querySelector('.mtal-breakdown-row.is-total strong');
 				if (total && totalValue) {
-					totalValue.textContent = formatNumberPersian(total) + ' تومان';
+					totalValue.textContent = toPersianDigits(total.toLocaleString('en-US')) + ' تومان';
 				}
 				summary.appendChild(breakdown);
 			}
@@ -778,6 +778,7 @@
 		host.addEventListener('mtal:calendarChange', refreshState);
 		host.addEventListener('mtal:serverPriceCalculated', (event) => {
 			if (host._mtalLatestPayload) host._mtalLatestPayload.totalPrice = Number(event.detail && event.detail.totalPrice) || 0;
+			if (host._mtalLatestPayload && typeof host._mtalUpdateStaySummary === 'function') host._mtalUpdateStaySummary(host._mtalLatestPayload);
 			refreshState();
 		});
 		host.addEventListener('mtal:serverPriceError', refreshState);
@@ -928,11 +929,9 @@
 
 			updateExternalDateFields = buildExternalDateFields(host, cal);
 			buildGuestCounterBox(host, cal, maxGuests);
-			if (cal.triggerBtnEl) {
-				cal.triggerBtnEl.textContent = triggerLabel;
-				cal.triggerBtnEl.classList.add('mtal-date-modal-trigger');
-				host.appendChild(cal.triggerBtnEl);
-			}
+			updateExternalStaySummary = buildExternalStaySummary(host, cal);
+			host._mtalUpdateStaySummary = updateExternalStaySummary;
+			if (cal.triggerBtnEl) cal.triggerBtnEl.remove();
 			buildCalendarBookingAction(host, cal);
 
 			calendarEntries.push({ cal, postId, host });
