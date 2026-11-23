@@ -757,11 +757,33 @@
 				button.setAttribute('aria-busy', 'true');
 				button.textContent = 'در حال لغو...';
 				message.textContent = 'درخواست لغو شما در حال ارسال به سرور است؛ لطفاً کمی صبر کنید.';
+				// به محض کلیک، شمارش سبز متوقف و همان محل به لودر تبدیل می‌شود.
+				const countdown = form && form._mtalBookingCountdown;
+				if (countdown) {
+					if (countdown._mtalInterval) window.clearInterval(countdown._mtalInterval);
+					if (countdown._mtalStatusInterval) window.clearInterval(countdown._mtalStatusInterval);
+					countdown.classList.remove('is-final-status', 'is-rejected');
+					countdown.classList.add('is-cancelling');
+					countdown.textContent = 'در حال لغو درخواست...';
+				}
 				const fd = new FormData(); fd.append('action', 'mtal_booking_cancel'); fd.append('order_id', saved.orderId); fd.append('token', saved.token);
 				fetch(cfg.ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' }).then(r => r.json()).then(result => {
 					button.classList.remove('is-cancelling');
 					button.removeAttribute('aria-busy');
-					if (!result || !result.success) { button.disabled = false; button.textContent = 'لغو درخواست رزرو'; message.textContent = result && result.data && result.data.message ? result.data.message : 'لغو درخواست انجام نشد؛ دوباره تلاش کنید.'; return; }
+					if (!result || !result.success) {
+						button.disabled = false; button.textContent = 'لغو درخواست رزرو';
+						if (countdown) {
+							countdown.classList.remove('is-cancelling');
+							startBookingCountdown(form, { data: { mtal_booking_order_id: saved.orderId, mtal_booking_access_token: saved.token, mtal_booking_expires_at: Math.floor(Number(saved.deadline) / 1000) } });
+						}
+						message.textContent = result && result.data && result.data.message ? result.data.message : 'لغو درخواست انجام نشد؛ دوباره تلاش کنید.';
+						return;
+					}
+					if (countdown) {
+						countdown.classList.remove('is-cancelling');
+						countdown.classList.add('is-final-status', 'is-rejected');
+						countdown.textContent = result.data.message || 'درخواست شما لغو شد و تاریخ‌های انتخابی آزاد شدند.';
+					}
 					message.textContent = result.data.message || 'درخواست شما لغو شد.';
 					bookingSubmitted = false;
 					button.classList.remove('is-cancel-action');
@@ -771,7 +793,15 @@
 					} catch (e) {}
 					button.textContent = 'ارسال درخواست رزرو';
 					refreshState();
-				}).catch(() => { button.classList.remove('is-cancelling'); button.removeAttribute('aria-busy'); button.disabled = false; button.textContent = 'لغو درخواست رزرو'; message.textContent = 'ارتباط با سرور برقرار نشد؛ دوباره تلاش کنید.'; });
+				}).catch(() => {
+					button.classList.remove('is-cancelling'); button.removeAttribute('aria-busy');
+					button.disabled = false; button.textContent = 'لغو درخواست رزرو';
+					if (countdown) {
+						countdown.classList.remove('is-cancelling');
+						startBookingCountdown(form, { data: { mtal_booking_order_id: saved.orderId, mtal_booking_access_token: saved.token, mtal_booking_expires_at: Math.floor(Number(saved.deadline) / 1000) } });
+					}
+					message.textContent = 'ارتباط با سرور برقرار نشد؛ دوباره تلاش کنید.';
+				});
 				return;
 			}
 			refreshState();
@@ -1496,6 +1526,7 @@
 		}
 		// نمایش تایمر در نوار اقدام تقویم؛ در نبود تقویم، داخل فرم باقی می‌ماند.
 		(timerContainer || form).appendChild(timer);
+		form._mtalBookingCountdown = timer;
 		if (timerContainer) timerContainer.classList.add('has-countdown');
 		if (form && form._mtalBookingActionButton) { form._mtalBookingActionButton.classList.add('is-cancel-action'); form._mtalBookingActionButton.disabled = false; form._mtalBookingActionButton.textContent = 'لغو درخواست رزرو'; }
 		if (timer._mtalInterval) window.clearInterval(timer._mtalInterval);
