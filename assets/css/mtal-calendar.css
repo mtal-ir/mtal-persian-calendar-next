@@ -649,6 +649,19 @@ html.mtal-modal-open {
 .mtal-date-field-label { font-size: 12px; color: #64748b; }
 .mtal-date-field-value { font-size: 14px; font-weight: 700; }
 .mtal-date-field.has-value { border-color: #637426; }
+.mtal-date-field:hover,
+.mtal-date-field:focus,
+.mtal-date-field:focus-visible {
+	background: #eef4e5 !important;
+	border-color: #9caf78 !important;
+	color: #4f5d1e !important;
+	outline: none;
+	box-shadow: 0 0 0 2px rgba(156, 175, 120, 0.16) !important;
+}
+.mtal-date-field:active {
+	background: #e5eed8 !important;
+	border-color: #8fa36b !important;
+}
 .mtal-cal-modal-trigger.mtal-date-modal-trigger { margin-top: 12px; }
 @media (max-width: 480px) {
 	.mtal-date-fields { gap: 8px; }
