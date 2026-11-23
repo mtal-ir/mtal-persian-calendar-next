@@ -505,13 +505,46 @@
 		wrap.appendChild(checkInField);
 		wrap.appendChild(checkOutField);
 		host.appendChild(wrap);
-		const update = () => {
+		const update = (payload) => {
 			const inValue = checkInField.querySelector('.mtal-date-field-value');
 			const outValue = checkOutField.querySelector('.mtal-date-field-value');
-			inValue.textContent = cal.startDate ? formatDateForDisplay(cal.startDate) : 'انتخاب تاریخ ورود';
-			outValue.textContent = cal.endDate ? formatDateForDisplay(cal.endDate) : 'انتخاب تاریخ خروج';
-			checkInField.classList.toggle('has-value', Boolean(cal.startDate));
-			checkOutField.classList.toggle('has-value', Boolean(cal.endDate));
+			const checkIn = payload && payload.checkIn ? payload.checkIn : cal.startDate;
+			const checkOut = payload && payload.checkOut ? payload.checkOut : cal.endDate;
+			inValue.textContent = checkIn ? formatDateForDisplay(checkIn) : 'انتخاب تاریخ ورود';
+			outValue.textContent = checkOut ? formatDateForDisplay(checkOut) : 'انتخاب تاریخ خروج';
+			checkInField.classList.toggle('has-value', Boolean(checkIn));
+			checkOutField.classList.toggle('has-value', Boolean(checkOut));
+		};
+		update();
+		return update;
+	}
+
+	function buildExternalStaySummary(host, cal) {
+		const summary = document.createElement('div');
+		summary.className = 'mtal-external-stay-summary';
+		summary.setAttribute('dir', 'rtl');
+		summary.setAttribute('aria-live', 'polite');
+		host.appendChild(summary);
+		const update = (payload) => {
+			const checkIn = payload && payload.checkIn ? payload.checkIn : cal.startDate;
+			const checkOut = payload && payload.checkOut ? payload.checkOut : cal.endDate;
+			summary.innerHTML = '';
+			if (!checkIn || !checkOut || !cal.isRangeAllowed(checkIn, checkOut)) {
+				const hint = document.createElement('div');
+				hint.className = 'mtal-external-stay-hint';
+				hint.textContent = checkIn ? 'تاریخ ورود ثبت شد؛ تاریخ خروج را انتخاب کنید.' : 'پس از انتخاب تاریخ ورود و خروج، جزئیات اقامت و قیمت نمایش داده می‌شود.';
+				summary.appendChild(hint);
+				return;
+			}
+			const breakdown = cal.createPricingBreakdownBox(checkIn, checkOut);
+			if (breakdown) {
+				const total = payload && Number(payload.totalPrice) > 0 ? Number(payload.totalPrice) : 0;
+				const totalValue = breakdown.querySelector('.mtal-breakdown-row.is-total strong');
+				if (total && totalValue) {
+					totalValue.textContent = formatNumberPersian(total) + ' تومان';
+				}
+				summary.appendChild(breakdown);
+			}
 		};
 		update();
 		return update;
@@ -817,7 +850,7 @@
 			const openGuestModalAfterCheckout =
 				host.getAttribute('data-mtal-guest-modal-on-checkout') !== '0';
 
-			let updateExternalDateFields = null;
+			let updateExternalDateFields = null;\n\t\t\tlet updateExternalStaySummary = null;
 
 			const cal = new window.MTALPersianCalendar({
 				mode,
@@ -834,7 +867,7 @@
 				guestsCount: initialGuests,
 				onChange(payload) {
 					host._mtalLatestPayload = payload;
-					if (updateExternalDateFields) updateExternalDateFields();
+					if (updateExternalDateFields) updateExternalDateFields(payload);\n\t\t\t\tif (updateExternalStaySummary) updateExternalStaySummary(payload);
 					if (payload && payload.checkIn && payload.checkOut && cfg.ajaxUrl && postId) {
 						const requestId = (host._mtalPriceRequestId || 0) + 1;
 						host._mtalPriceRequestId = requestId;
