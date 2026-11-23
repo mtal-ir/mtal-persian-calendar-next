@@ -648,7 +648,15 @@
 		button.disabled = true;
 
 		const form = findBookingForm(host);
+		let bookingSubmitted = false;
 		function refreshState() {
+			if (bookingSubmitted) {
+				button.disabled = true;
+				button.textContent = 'درخواست رزرو ارسال شد';
+				message.textContent = 'درخواست شما ثبت شد؛ مهلت بررسی و پرداخت در تایمر فرم نمایش داده می‌شود.';
+				return;
+			}
+			button.textContent = 'ارسال درخواست رزرو';
 			const missing = validateBookingForm(form, host, cal);
 			const payload = host._mtalLatestPayload || cal.buildPayload(cal.startDate, cal.endDate);
 			const priceReady = Boolean(payload && Number(payload.totalPrice) > 0);
@@ -675,6 +683,11 @@
 				form.addEventListener(eventName, refreshState);
 			});
 			form.addEventListener('submit', (event) => {
+				if (bookingSubmitted) {
+					event.preventDefault();
+					event.stopImmediatePropagation();
+					return;
+				}
 				const missing = validateBookingForm(form, host, cal);
 				const payload = host._mtalLatestPayload || cal.buildPayload(cal.startDate, cal.endDate);
 				if (missing.length || !payload || !(Number(payload.totalPrice) > 0)) {
@@ -683,6 +696,14 @@
 					refreshState();
 				}
 			}, true);
+			if (window.jQuery) {
+				window.jQuery(form).on('submit_success.mtalInlineBooking', () => {
+					bookingSubmitted = true;
+					button.disabled = true;
+					button.textContent = 'درخواست رزرو ارسال شد';
+					message.textContent = 'درخواست شما ثبت شد؛ مهلت بررسی و پرداخت در تایمر فرم نمایش داده می‌شود.';
+				});
+			}
 		}
 		host.addEventListener('mtal:calendarChange', refreshState);
 		host.addEventListener('mtal:serverPriceCalculated', (event) => {
