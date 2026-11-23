@@ -487,6 +487,75 @@
 		}
 	}
 
+	function buildExternalDateFields(host, cal) {
+		const wrap = document.createElement('div');
+		wrap.className = 'mtal-date-fields';
+		wrap.setAttribute('dir', 'rtl');
+		const makeField = (label, className) => {
+			const field = document.createElement('button');
+			field.type = 'button';
+			field.className = 'mtal-date-field ' + className;
+			field.setAttribute('aria-label', label + '؛ باز کردن تقویم');
+			field.innerHTML = '<span class="mtal-date-field-label">' + label + '</span><span class="mtal-date-field-value">انتخاب تاریخ</span>';
+			field.addEventListener('click', () => cal.openModal());
+			return field;
+		};
+		const checkInField = makeField('تاریخ ورود', 'mtal-checkin-field');
+		const checkOutField = makeField('تاریخ خروج', 'mtal-checkout-field');
+		wrap.appendChild(checkInField);
+		wrap.appendChild(checkOutField);
+		host.appendChild(wrap);
+		const update = (payload) => {
+			const inValue = checkInField.querySelector('.mtal-date-field-value');
+			const outValue = checkOutField.querySelector('.mtal-date-field-value');
+			const checkIn = payload ? payload.checkIn : cal.startDate;
+			const checkOut = payload ? payload.checkOut : cal.endDate;
+			inValue.textContent = checkIn ? formatDateForDisplay(checkIn) : 'انتخاب تاریخ ورود';
+			outValue.textContent = checkOut ? formatDateForDisplay(checkOut) : 'انتخاب تاریخ خروج';
+			checkInField.classList.toggle('has-value', Boolean(checkIn));
+			checkOutField.classList.toggle('has-value', Boolean(checkOut));
+		};
+		update();
+		return update;
+	}
+
+	function buildExternalStaySummary(host, cal) {
+		const summary = document.createElement('div');
+		summary.className = 'mtal-external-stay-summary';
+		summary.setAttribute('dir', 'rtl');
+		summary.setAttribute('aria-live', 'polite');
+		host.appendChild(summary);
+		const update = (payload) => {
+			const checkIn = payload ? payload.checkIn : cal.startDate;
+			const checkOut = payload ? payload.checkOut : cal.endDate;
+			summary.innerHTML = '';
+			if (!checkIn || !checkOut || !cal.isRangeAllowed(checkIn, checkOut)) {
+				const hint = document.createElement('div');
+				hint.className = 'mtal-external-stay-hint';
+				hint.textContent = checkIn ? 'تاریخ ورود ثبت شد؛ تاریخ خروج را انتخاب کنید.' : 'پس از انتخاب تاریخ ورود و خروج، جزئیات اقامت و قیمت نمایش داده می‌شود.';
+				summary.appendChild(hint);
+				return;
+			}
+			const breakdown = cal.createPricingBreakdownBox(checkIn, checkOut);
+			if (breakdown) {
+				const total = payload && Number(payload.totalPrice) > 0 ? Number(payload.totalPrice) : 0;
+				const totalValue = breakdown.querySelector('.mtal-breakdown-row.is-total strong');
+				if (total && totalValue) {
+					totalValue.textContent = toPersianDigits(total.toLocaleString('en-US')) + ' تومان';
+				}
+				summary.appendChild(breakdown);
+			}
+		};
+		update();
+		return update;
+	}
+
+	function formatDateForDisplay(date) {
+		if (!date) return '';
+		const value = date.jy + '/' + String(date.jm).padStart(2, '0') + '/' + String(date.jd).padStart(2, '0');
+		return value.replace(/[0-9]/g, digit => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
+	}
+
 	function buildGuestCounterBox(host, cal, maxGuests) {
 		const showCounter = host.getAttribute('data-mtal-show-guests') !== '0';
 		if (!showCounter) return;
@@ -709,6 +778,7 @@
 		host.addEventListener('mtal:calendarChange', refreshState);
 		host.addEventListener('mtal:serverPriceCalculated', (event) => {
 			if (host._mtalLatestPayload) host._mtalLatestPayload.totalPrice = Number(event.detail && event.detail.totalPrice) || 0;
+			if (host._mtalLatestPayload && typeof host._mtalUpdateStaySummary === 'function') host._mtalUpdateStaySummary(host._mtalLatestPayload);
 			refreshState();
 		});
 		host.addEventListener('mtal:serverPriceError', refreshState);
@@ -781,6 +851,9 @@
 			const openGuestModalAfterCheckout =
 				host.getAttribute('data-mtal-guest-modal-on-checkout') !== '0';
 
+			let updateExternalDateFields = null;
+			let updateExternalStaySummary = null;
+
 			const cal = new window.MTALPersianCalendar({
 				mode,
 				mountEl,
@@ -796,6 +869,8 @@
 				guestsCount: initialGuests,
 				onChange(payload) {
 					host._mtalLatestPayload = payload;
+					if (updateExternalDateFields) updateExternalDateFields(payload);
+				if (updateExternalStaySummary) updateExternalStaySummary(payload);
 					if (payload && payload.checkIn && payload.checkOut && cfg.ajaxUrl && postId) {
 						const requestId = (host._mtalPriceRequestId || 0) + 1;
 						host._mtalPriceRequestId = requestId;
@@ -854,7 +929,11 @@
 				},
 			});
 
+			updateExternalDateFields = buildExternalDateFields(host, cal);
 			buildGuestCounterBox(host, cal, maxGuests);
+			updateExternalStaySummary = buildExternalStaySummary(host, cal);
+			host._mtalUpdateStaySummary = updateExternalStaySummary;
+			if (cal.triggerBtnEl) cal.triggerBtnEl.remove();
 			buildCalendarBookingAction(host, cal);
 
 			calendarEntries.push({ cal, postId, host });

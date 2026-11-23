@@ -677,9 +677,16 @@
 				} else {
 					this.draftEnd = { ...dayObj };
 					this.warningMessage = '';
+					this.enforceValidState();
+					this.confirmModalRange();
+					return;
 				}
 				this.enforceValidState();
+				// Commit the partial check-in selection so closing and reopening the modal keeps it.
+				this.startDate = this.draftStart ? { ...this.draftStart } : null;
+				this.endDate = null;
 				this.render();
+				this.emitChange(true);
 				return;
 			}
 
@@ -1176,17 +1183,8 @@
 
 		renderModalMode() {
 			if (this.triggerBtnEl) {
-				if (this.isRangeAllowed(this.startDate, this.endDate)) {
-					const pricing = this.calculateRangePricing(this.startDate, this.endDate);
-					this.triggerBtnEl.textContent = `${formatShortPersian(this.startDate)} ← ${formatShortPersian(this.endDate)} (${toPersianDigits(pricing.nights)} شب · ${formatFullTomanPersian(pricing.totalPrice)})`;
-					this.triggerBtnEl.classList.add('has-selection');
-				} else if (this.startDate) {
-					this.triggerBtnEl.textContent = `ورود: ${formatShortPersian(this.startDate)} (انتخاب خروج)`;
-					this.triggerBtnEl.classList.add('has-selection');
-				} else {
-					this.triggerBtnEl.textContent = this.triggerLabel;
-					this.triggerBtnEl.classList.remove('has-selection');
-				}
+				this.triggerBtnEl.textContent = this.triggerLabel;
+				this.triggerBtnEl.classList.toggle('has-selection', Boolean(this.startDate && this.endDate));
 			}
 
 			this.panelEl.innerHTML = '';
@@ -1235,26 +1233,7 @@
 					this.clear({ notify: true });
 				});
 
-				const confirmBtn = document.createElement('button');
-				confirmBtn.type = 'button';
-				confirmBtn.className = 'mtal-cal-confirm-btn';
-
-				if (this.isRangeAllowed(this.draftStart, this.draftEnd)) {
-					const pricing = this.calculateRangePricing(this.draftStart, this.draftEnd);
-					confirmBtn.textContent = `انتخاب تاریخ (${toPersianDigits(pricing.nights)} شب · ${formatFullTomanPersian(pricing.totalPrice)})`;
-					confirmBtn.disabled = false;
-				} else if (this.draftStart) {
-					confirmBtn.textContent = 'تاریخ خروج را انتخاب کنید';
-					confirmBtn.disabled = true;
-				} else {
-					confirmBtn.textContent = 'انتخاب تاریخ';
-					confirmBtn.disabled = true;
-				}
-
-				confirmBtn.addEventListener('click', () => this.confirmModalRange());
-
 				actionsRow.appendChild(clearBtn);
-				actionsRow.appendChild(confirmBtn);
 
 				this.modalFooterEl.appendChild(actionsRow);
 			}
