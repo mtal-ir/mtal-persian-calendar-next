@@ -624,6 +624,38 @@ html.mtal-modal-open {
 	color: var(--mtal-primary-dark);
 }
 
+.mtal-date-fields {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 10px;
+	width: 100%;
+	margin: 0 0 12px;
+}
+.mtal-date-field {
+	min-width: 0;
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+	padding: 12px 14px;
+	border: 1px solid #d1d5db;
+	border-radius: 10px;
+	background: #fff;
+	color: #111827;
+	text-align: right;
+	cursor: pointer;
+}
+.mtal-date-field-label { font-size: 12px; color: #64748b; }
+.mtal-date-field-value { font-size: 14px; font-weight: 700; }
+.mtal-date-field.has-value { border-color: #637426; }
+.mtal-cal-modal-trigger.mtal-date-modal-trigger { margin-top: 12px; }
+@media (max-width: 480px) {
+	.mtal-date-fields { gap: 8px; }
+	.mtal-date-field { padding: 10px; }
+	.mtal-date-field-value { font-size: 12px; }
+}
+
 .mtal-cal-modal-backdrop {
 	--mtal-primary: #637426;
 	--mtal-primary-dark: #4f5d1e;
