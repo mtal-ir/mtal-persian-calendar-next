@@ -1441,6 +1441,7 @@
 		if (timer._mtalInterval) window.clearInterval(timer._mtalInterval);
  if (timer._mtalStatusInterval) window.clearInterval(timer._mtalStatusInterval);
  let finalStatus = false;
+ let approvedForPayment = false;
  const activeRequest = (() => { try { return JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null'); } catch (e) { return null; } })();
  const requestToken = data.mtal_booking_access_token || (data.data && data.data.mtal_booking_access_token) || (activeRequest && activeRequest.orderId === String(orderId) ? activeRequest.token : '');
 		const render = () => { if (finalStatus) return;
@@ -1448,11 +1449,11 @@
 			const minutes = Math.floor(remaining / 60000);
 			const seconds = Math.floor((remaining % 60000) / 1000);
 			if (remaining <= 0) {
-				timer.textContent = 'مهلت درخواست به پایان رسید؛ لطفاً درخواست رزرو جدید ثبت کنید.';
+				timer.textContent = approvedForPayment ? 'مهلت پرداخت رزرو تأییدشده به پایان رسید.' : 'مهلت درخواست به پایان رسید؛ لطفاً درخواست رزرو جدید ثبت کنید.';
 				window.clearInterval(timer._mtalInterval);
 				return;
 			}
-			timer.textContent = 'مهلت بررسی و پرداخت درخواست: ' + toPersianDigits(String(minutes).padStart(2, '0')) + ':' + toPersianDigits(String(seconds).padStart(2, '0'));
+			timer.textContent = (approvedForPayment ? 'درخواست تأیید شد؛ مهلت پرداخت: ' : 'مهلت بررسی درخواست: ') + toPersianDigits(String(minutes).padStart(2, '0')) + ':' + toPersianDigits(String(seconds).padStart(2, '0'));
 		};
 		render();
  timer._mtalInterval = window.setInterval(render, 1000);
@@ -1460,9 +1461,18 @@
   const checkStatus = () => {
    const fd = new FormData(); fd.append('action','mtal_booking_status'); fd.append('order_id',String(orderId)); fd.append('token',requestToken);
    fetch(cfg.ajaxUrl,{method:'POST',body:fd,credentials:'same-origin'}).then(r=>r.json()).then(result=>{
-    if (!result || !result.success || !result.data || result.data.status === 'mtal-pending') return;
+    if (!result || !result.success || !result.data) return;
+    if (result.data.status === 'mtal-pending') return;
+    if (result.data.status === 'pending') {
+     approvedForPayment = true;
+     timer.classList.add('is-approved-payment');
+     render();
+     return;
+    }
     finalStatus=true; window.clearInterval(timer._mtalInterval); window.clearInterval(timer._mtalStatusInterval);
-    timer.textContent=result.data.message; timer.classList.add('is-final-status');
+    timer.textContent=result.data.message;
+    timer.classList.add('is-final-status');
+    timer.classList.toggle('is-rejected', result.data.status === 'cancelled');
     try { window.localStorage.removeItem('mtal_booking_active_request'); window.localStorage.removeItem(key); } catch(e) {}
    }).catch(()=>{});
   };
