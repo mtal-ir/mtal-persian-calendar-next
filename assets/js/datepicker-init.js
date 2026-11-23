@@ -1488,54 +1488,66 @@
 	 */
 	function startBookingCountdown(form, response) {
 		if (!form) return;
-		const data = response && response.data ? response.data : {};
-		const orderId = data.mtal_booking_order_id || data.data && data.data.mtal_booking_order_id || '';
+		const responseData = response && response.data ? response.data : {};
+		const nestedData = responseData.data && typeof responseData.data === 'object' ? responseData.data : {};
+		const pick = (key) => responseData[key] !== undefined && responseData[key] !== '' ? responseData[key] : nestedData[key];
+		let previous = null;
+		try { previous = JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null'); } catch (e) {}
+		const receivedOrderId = pick('mtal_booking_order_id');
+		const orderId = String(receivedOrderId || (previous && previous.orderId) || '');
+		const sameRequest = Boolean(previous && String(previous.orderId) === orderId);
+		const serverExpiry = parseInt(pick('mtal_booking_expires_at') || '0', 10);
+		const deadline = serverExpiry > 0 ? serverExpiry * 1000 : (sameRequest && Number(previous.deadline) > 0 ? Number(previous.deadline) : Date.now() + 30 * 60 * 1000);
 		const key = 'mtal_booking_deadline_' + (orderId || form.id || 'latest');
-		const serverExpiry = parseInt(data.mtal_booking_expires_at || data.data && data.data.mtal_booking_expires_at || '0', 10);
-		const deadline = serverExpiry > 0 ? serverExpiry * 1000 : Date.now() + 30 * 60 * 1000;
 		try {
- window.localStorage.setItem(key, String(deadline));
- const calendarHost = form._mtalCalendarHost || form.closest('.mtal-calendar-host, [data-mtal-post-id]') || null;
- const getFieldValue = (selectors) => {
-  for (const selector of selectors) { const field = form.querySelector(selector); if (field && field.value) return field.value; }
-  return '';
- };
- const checkIn = data.mtal_booking_check_in || (data.data && data.data.mtal_booking_check_in) || getFieldValue(['[name*="check_in"]','[name*="checkin"]']);
- const checkOut = data.mtal_booking_check_out || (data.data && data.data.mtal_booking_check_out) || getFieldValue(['[name*="check_out"]','[name*="checkout"]']);
- const guests = data.mtal_booking_guests || (data.data && data.data.mtal_booking_guests) || getFieldValue(['#form-field-mtal_qty','input[name*="mtal_qty"]']);
- window.localStorage.setItem('mtal_booking_active_request', JSON.stringify({
-  orderId: String(orderId || ''),
-  token: String(data.mtal_booking_access_token || (data.data && data.data.mtal_booking_access_token) || ''),
-  deadline: deadline,
-  checkIn: String(checkIn || ''),
-  checkOut: String(checkOut || ''),
-  guests: String(guests || ''),
-  postId: String((calendarHost && calendarHost.getAttribute('data-mtal-post-id')) || '')
- }));
-} catch (e) {}
+			window.localStorage.setItem(key, String(deadline));
+			const calendarHost = form._mtalCalendarHost || form.closest('.mtal-calendar-host, [data-mtal-post-id]') || null;
+			const getFieldValue = (selectors) => {
+				for (const selector of selectors) {
+					const field = form.querySelector(selector);
+					if (field && field.value) return field.value;
+				}
+				return '';
+			};
+			const token = pick('mtal_booking_access_token') || (sameRequest ? previous.token : '');
+			const checkIn = pick('mtal_booking_check_in') || getFieldValue(['[name*="check_in"]','[name*="checkin"]']) || (sameRequest ? previous.checkIn : '');
+			const checkOut = pick('mtal_booking_check_out') || getFieldValue(['[name*="check_out"]','[name*="checkout"]']) || (sameRequest ? previous.checkOut : '');
+			const guests = pick('mtal_booking_guests') || getFieldValue(['#form-field-mtal_qty','input[name*="mtal_qty"]']) || (sameRequest ? previous.guests : '');
+			const postId = (calendarHost && calendarHost.getAttribute('data-mtal-post-id')) || (sameRequest ? previous.postId : '') || '';
+			// پاسخ‌های تکراری یا ناقص نباید توکن/تاریخ‌های معتبر درخواست قبلی را پاک کنند.
+			if (orderId && token) {
+				window.localStorage.setItem('mtal_booking_active_request', JSON.stringify({
+					orderId: orderId, token: String(token), deadline: deadline,
+					checkIn: String(checkIn || ''), checkOut: String(checkOut || ''),
+					guests: String(guests || ''), postId: String(postId)
+				}));
+			}
+		} catch (e) {}
 		const calendarHost = form._mtalCalendarHost || null;
 		const timerContainer = calendarHost && calendarHost.querySelector('.mtal-booking-action');
-		let timer = timerContainer
-			? timerContainer.querySelector('.mtal-booking-countdown')
-			: form.querySelector('.mtal-booking-countdown');
+		let timer = timerContainer ? timerContainer.querySelector('.mtal-booking-countdown') : form.querySelector('.mtal-booking-countdown');
 		if (!timer) {
 			timer = document.createElement('div');
 			timer.className = 'mtal-booking-countdown';
 			timer.setAttribute('role', 'status');
 			timer.setAttribute('aria-live', 'polite');
 		}
-		// نمایش تایمر در نوار اقدام تقویم؛ در نبود تقویم، داخل فرم باقی می‌ماند.
 		(timerContainer || form).appendChild(timer);
 		form._mtalBookingCountdown = timer;
 		if (timerContainer) timerContainer.classList.add('has-countdown');
-		if (form && form._mtalBookingActionButton) { form._mtalBookingActionButton.classList.add('is-cancel-action'); form._mtalBookingActionButton.disabled = false; form._mtalBookingActionButton.textContent = 'لغو درخواست رزرو'; }
+		if (form._mtalBookingActionButton) {
+			form._mtalBookingActionButton.classList.add('is-cancel-action');
+			form._mtalBookingActionButton.disabled = false;
+			form._mtalBookingActionButton.textContent = 'لغو درخواست رزرو';
+		}
 		if (timer._mtalInterval) window.clearInterval(timer._mtalInterval);
- if (timer._mtalStatusInterval) window.clearInterval(timer._mtalStatusInterval);
- let finalStatus = false;
- let approvedForPayment = false;
- const activeRequest = (() => { try { return JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null'); } catch (e) { return null; } })();
- const requestToken = data.mtal_booking_access_token || (data.data && data.data.mtal_booking_access_token) || (activeRequest && activeRequest.orderId === String(orderId) ? activeRequest.token : '');
-		const render = () => { if (finalStatus) return;
+		if (timer._mtalStatusInterval) window.clearInterval(timer._mtalStatusInterval);
+		let finalStatus = false;
+		let approvedForPayment = false;
+		const activeRequest = (() => { try { return JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null'); } catch (e) { return null; } })();
+		const requestToken = pick('mtal_booking_access_token') || (activeRequest && activeRequest.orderId === orderId ? activeRequest.token : '');
+		const render = () => {
+			if (finalStatus) return;
 			const remaining = Math.max(0, deadline - Date.now());
 			const minutes = Math.floor(remaining / 60000);
 			const seconds = Math.floor((remaining % 60000) / 1000);
@@ -1547,31 +1559,44 @@
 			timer.textContent = (approvedForPayment ? 'درخواست تأیید شد؛ مهلت پرداخت: ' : 'مهلت بررسی درخواست: ') + toPersianDigits(String(minutes).padStart(2, '0')) + ':' + toPersianDigits(String(seconds).padStart(2, '0'));
 		};
 		render();
- timer._mtalInterval = window.setInterval(render, 1000);
- if (orderId && requestToken && cfg.ajaxUrl) {
-  const checkStatus = () => {
-   const fd = new FormData(); fd.append('action','mtal_booking_status'); fd.append('order_id',String(orderId)); fd.append('token',requestToken);
-   fetch(cfg.ajaxUrl,{method:'POST',body:fd,credentials:'same-origin'}).then(r=>r.json()).then(result=>{
-    if (!result || !result.success || !result.data) return;
-    if (result.data.status === 'mtal-pending') return;
-    if (result.data.status === 'pending') {
-     approvedForPayment = true;
-     timer.classList.add('is-approved-payment');
-     render();
-     return;
-    }
-    finalStatus=true; window.clearInterval(timer._mtalInterval); window.clearInterval(timer._mtalStatusInterval);
-    timer.textContent=result.data.message;
-    timer.classList.add('is-final-status');
-    timer.classList.toggle('is-rejected', result.data.status === 'cancelled');
-    if (form && form._mtalBookingActionButton) { form._mtalBookingActionButton.classList.remove('is-cancel-action'); form._mtalBookingActionButton.disabled = result.data.status !== 'cancelled'; form._mtalBookingActionButton.textContent = result.data.status === 'cancelled' ? 'ارسال درخواست رزرو جدید' : 'درخواست رزرو نهایی شد'; }
-    try { window.localStorage.removeItem('mtal_booking_active_request'); window.localStorage.removeItem(key); } catch(e) {}
-   }).catch(()=>{});
-  };
-  checkStatus(); timer._mtalStatusInterval=window.setInterval(checkStatus,15000);
- }
+		timer._mtalInterval = window.setInterval(render, 1000);
+		if (orderId && requestToken && cfg.ajaxUrl) {
+			const checkStatus = () => {
+				const fd = new FormData();
+				fd.append('action', 'mtal_booking_status');
+				fd.append('order_id', orderId);
+				fd.append('token', requestToken);
+				fetch(cfg.ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' }).then(r => r.json()).then(result => {
+					if (!result || !result.success || !result.data) return;
+					if (result.data.status === 'mtal-pending') return;
+					if (result.data.status === 'pending') {
+						approvedForPayment = true;
+						timer.classList.add('is-approved-payment');
+						render();
+						return;
+					}
+					finalStatus = true;
+					window.clearInterval(timer._mtalInterval);
+					window.clearInterval(timer._mtalStatusInterval);
+					timer.textContent = result.data.message;
+					timer.classList.add('is-final-status');
+					timer.classList.toggle('is-rejected', result.data.status === 'cancelled');
+					if (form._mtalBookingActionButton) {
+						form._mtalBookingActionButton.classList.remove('is-cancel-action');
+						form._mtalBookingActionButton.disabled = result.data.status !== 'cancelled';
+						form._mtalBookingActionButton.textContent = result.data.status === 'cancelled' ? 'ارسال درخواست رزرو جدید' : 'درخواست رزرو نهایی شد';
+					}
+					try {
+						const current = JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null');
+						if (current && current.orderId === orderId) window.localStorage.removeItem('mtal_booking_active_request');
+						window.localStorage.removeItem(key);
+					} catch (e) {}
+				}).catch(() => {});
+			};
+			checkStatus();
+			timer._mtalStatusInterval = window.setInterval(checkStatus, 15000);
+		}
 	}
-
 	if (window.jQuery) {
 		window.jQuery(document).on('submit_success', 'form.elementor-form', function (event, response) {
 			startBookingCountdown(this, response || {});
