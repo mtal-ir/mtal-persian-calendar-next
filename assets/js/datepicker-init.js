@@ -757,6 +757,14 @@
 				fetch(cfg.ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' }).then(r => r.json()).then(result => {
 					if (!result || !result.success) { button.disabled = false; message.textContent = result && result.data && result.data.message ? result.data.message : 'لغو درخواست انجام نشد؛ دوباره تلاش کنید.'; return; }
 					message.textContent = result.data.message || 'درخواست شما لغو شد.';
+					bookingSubmitted = false;
+					button.classList.remove('is-cancel-action');
+					try {
+						window.localStorage.removeItem('mtal_booking_active_request');
+						if (saved.orderId) window.localStorage.removeItem('mtal_booking_deadline_' + saved.orderId);
+					} catch (e) {}
+					button.textContent = 'ارسال درخواست رزرو';
+					refreshState();
 				}).catch(() => { button.disabled = false; message.textContent = 'ارتباط با سرور برقرار نشد؛ دوباره تلاش کنید.'; });
 				return;
 			}
