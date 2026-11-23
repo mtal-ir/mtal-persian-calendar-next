@@ -1416,7 +1416,14 @@
 		const key = 'mtal_booking_deadline_' + (orderId || form.id || 'latest');
 		const serverExpiry = parseInt(data.mtal_booking_expires_at || data.data && data.data.mtal_booking_expires_at || '0', 10);
 		const deadline = serverExpiry > 0 ? serverExpiry * 1000 : Date.now() + 30 * 60 * 1000;
-		try { window.localStorage.setItem(key, String(deadline)); } catch (e) {}
+		try {
+ window.localStorage.setItem(key, String(deadline));
+ window.localStorage.setItem('mtal_booking_active_request', JSON.stringify({
+  orderId: String(orderId || ''),
+  token: String(data.mtal_booking_access_token || (data.data && data.data.mtal_booking_access_token) || ''),
+  deadline: deadline
+ }));
+} catch (e) {}
 		const calendarHost = form._mtalCalendarHost || null;
 		const timerContainer = calendarHost && calendarHost.querySelector('.mtal-booking-action');
 		let timer = timerContainer
@@ -1432,7 +1439,11 @@
 		(timerContainer || form).appendChild(timer);
 		if (timerContainer) timerContainer.classList.add('has-countdown');
 		if (timer._mtalInterval) window.clearInterval(timer._mtalInterval);
-		const render = () => {
+ if (timer._mtalStatusInterval) window.clearInterval(timer._mtalStatusInterval);
+ let finalStatus = false;
+ const activeRequest = (() => { try { return JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null'); } catch (e) { return null; } })();
+ const requestToken = data.mtal_booking_access_token || (data.data && data.data.mtal_booking_access_token) || (activeRequest && activeRequest.orderId === String(orderId) ? activeRequest.token : '');
+		const render = () => { if (finalStatus) return;
 			const remaining = Math.max(0, deadline - Date.now());
 			const minutes = Math.floor(remaining / 60000);
 			const seconds = Math.floor((remaining % 60000) / 1000);
@@ -1444,7 +1455,19 @@
 			timer.textContent = 'مهلت بررسی و پرداخت درخواست: ' + toPersianDigits(String(minutes).padStart(2, '0')) + ':' + toPersianDigits(String(seconds).padStart(2, '0'));
 		};
 		render();
-		timer._mtalInterval = window.setInterval(render, 1000);
+ timer._mtalInterval = window.setInterval(render, 1000);
+ if (orderId && requestToken && cfg.ajaxUrl) {
+  const checkStatus = () => {
+   const fd = new FormData(); fd.append('action','mtal_booking_status'); fd.append('order_id',String(orderId)); fd.append('token',requestToken);
+   fetch(cfg.ajaxUrl,{method:'POST',body:fd,credentials:'same-origin'}).then(r=>r.json()).then(result=>{
+    if (!result || !result.success || !result.data || result.data.status === 'mtal-pending') return;
+    finalStatus=true; window.clearInterval(timer._mtalInterval); window.clearInterval(timer._mtalStatusInterval);
+    timer.textContent=result.data.message; timer.classList.add('is-final-status');
+    try { window.localStorage.removeItem('mtal_booking_active_request'); window.localStorage.removeItem(key); } catch(e) {}
+   }).catch(()=>{});
+  };
+  checkStatus(); timer._mtalStatusInterval=window.setInterval(checkStatus,15000);
+ }
 	}
 
 	if (window.jQuery) {
@@ -1457,4 +1480,14 @@
 		});
 	}
 
+ // Restore the active request countdown after page refresh.
+ function restoreActiveBookingCountdown() {
+  let saved; try { saved=JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null'); } catch(e) { saved=null; }
+  if (!saved || !saved.orderId || !saved.token) return;
+  const form=Array.from(document.querySelectorAll('form')).find(item=>item._mtalCalendarHost || item.matches('form.elementor-form'));
+  if (!form) return;
+  startBookingCountdown(form,{data:{mtal_booking_order_id:saved.orderId,mtal_booking_access_token:saved.token,mtal_booking_expires_at:Math.floor((Number(saved.deadline)||Date.now())/1000)}});
+ }
+ if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',restoreActiveBookingCountdown,{once:true});
+ else window.setTimeout(restoreActiveBookingCountdown,0);
 })();
