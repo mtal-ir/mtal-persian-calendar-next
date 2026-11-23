@@ -1179,6 +1179,13 @@
 	});
 	window.addEventListener('online', refreshServerAvailability);
 
+	// Fetch the latest reservation availability as soon as the calendar is ready.
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', refreshServerAvailability, { once: true });
+	} else {
+		refreshServerAvailability();
+	}
+
 	/**
 	 * Show the server workflow's 30-minute request window after Elementor succeeds.
 	 * The server remains authoritative; this is a visual countdown only.
