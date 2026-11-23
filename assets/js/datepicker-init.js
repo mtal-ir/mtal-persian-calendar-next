@@ -753,9 +753,15 @@
 				const saved = (() => { try { return JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null'); } catch(e) { return null; } })();
 				if (!saved || !saved.orderId || !saved.token || !cfg.ajaxUrl) { message.textContent = 'اطلاعات امن درخواست برای لغو پیدا نشد؛ صفحه را تازه‌سازی کنید.'; return; }
 				button.disabled = true;
+				button.classList.add('is-cancelling');
+				button.setAttribute('aria-busy', 'true');
+				button.textContent = 'در حال لغو...';
+				message.textContent = 'درخواست لغو شما در حال ارسال به سرور است؛ لطفاً کمی صبر کنید.';
 				const fd = new FormData(); fd.append('action', 'mtal_booking_cancel'); fd.append('order_id', saved.orderId); fd.append('token', saved.token);
 				fetch(cfg.ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' }).then(r => r.json()).then(result => {
-					if (!result || !result.success) { button.disabled = false; message.textContent = result && result.data && result.data.message ? result.data.message : 'لغو درخواست انجام نشد؛ دوباره تلاش کنید.'; return; }
+					button.classList.remove('is-cancelling');
+					button.removeAttribute('aria-busy');
+					if (!result || !result.success) { button.disabled = false; button.textContent = 'لغو درخواست رزرو'; message.textContent = result && result.data && result.data.message ? result.data.message : 'لغو درخواست انجام نشد؛ دوباره تلاش کنید.'; return; }
 					message.textContent = result.data.message || 'درخواست شما لغو شد.';
 					bookingSubmitted = false;
 					button.classList.remove('is-cancel-action');
@@ -765,7 +771,7 @@
 					} catch (e) {}
 					button.textContent = 'ارسال درخواست رزرو';
 					refreshState();
-				}).catch(() => { button.disabled = false; message.textContent = 'ارتباط با سرور برقرار نشد؛ دوباره تلاش کنید.'; });
+				}).catch(() => { button.classList.remove('is-cancelling'); button.removeAttribute('aria-busy'); button.disabled = false; button.textContent = 'لغو درخواست رزرو'; message.textContent = 'ارتباط با سرور برقرار نشد؛ دوباره تلاش کنید.'; });
 				return;
 			}
 			refreshState();
