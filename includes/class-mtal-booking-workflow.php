@@ -260,7 +260,6 @@ final class MTAL_Booking_Workflow {
 		}
 		$order->update_status( 'cancelled', 'درخواست توسط کاربر از طریق صفحه رزرو لغو شد؛ تاریخ‌ها آزاد شدند.' );
 		self::release_order_holds( $order->get_id() );
-		self::email_booking_decision( $order, false );
 		wp_send_json_success( array( 'message' => 'درخواست شما لغو شد و تاریخ‌های انتخابی آزاد شدند.' ) );
 	}
 
