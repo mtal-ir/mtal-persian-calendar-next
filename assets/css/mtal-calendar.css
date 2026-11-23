@@ -911,17 +911,13 @@ html.mtal-modal-open {
 	direction: rtl;
 }
 
-
-/* الگوی مورب مثلثی مرزهای بازه: شروع پایین-راست، تخلیه بالا-چپ */
+/* مرزهای بازه: هاشور مثلثی بدون باقی‌ماندن پس‌زمینه‌های نیمه‌ای قبلی */
 .mtal-cal-day.is-blocked.is-blocked-range-start,
 .mtal-cal-day.is-blocked-checkout-edge:not(.is-blocked),
 .mtal-cal-day.is-blocked-edge-checkout.is-selected {
 	position: relative;
 	isolation: isolate;
 	overflow: hidden;
-}
-
-.mtal-cal-day.is-blocked.is-blocked-range-start {
 	background-image: none !important;
 	background-color: #f1f5f9 !important;
 }
@@ -941,15 +937,15 @@ html.mtal-modal-open {
 	);
 }
 
+/* شروع بازه: مثلث بالا-چپ؛ قطر از بالا-چپ به پایین-راست */
 .mtal-cal-day.is-blocked.is-blocked-range-start::before {
-	/* شروع بازه: مثلث پایین-راست؛ قطر از بالا-چپ به پایین-راست */
-	clip-path: polygon(100% 0, 100% 100%, 0 100%);
+	clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 
+/* روز تخلیه: مثلث پایین-راست؛ جهت مخالف روز شروع */
 .mtal-cal-day.is-blocked-checkout-edge:not(.is-blocked)::before,
 .mtal-cal-day.is-blocked-edge-checkout.is-selected::before {
-	/* تخلیه: مثلث بالا-چپ؛ جهت معکوس روز شروع */
-	clip-path: polygon(0 0, 100% 0, 0 100%);
+	clip-path: polygon(100% 0, 100% 100%, 0 100%);
 }
 
 .mtal-cal-day.is-blocked.is-blocked-range-start > *,
