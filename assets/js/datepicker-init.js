@@ -718,7 +718,12 @@
 
 		const form = findBookingForm(host);
 		if (form) { form._mtalCalendarHost = host; form._mtalBookingActionButton = button; }
-		let bookingSubmitted = false;
+		let bookingSubmitted = (() => {
+			try {
+				const active = JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null');
+				return Boolean(active && active.orderId && active.token && Number(active.deadline) > Date.now() && (!active.postId || String(active.postId) === String(host.getAttribute('data-mtal-post-id') || '')));
+			} catch (e) { return false; }
+		})();
 		function refreshState() {
 			if (bookingSubmitted) {
 				button.disabled = false;
