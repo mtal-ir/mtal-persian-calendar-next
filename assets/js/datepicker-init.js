@@ -851,7 +851,8 @@
 			const openGuestModalAfterCheckout =
 				host.getAttribute('data-mtal-guest-modal-on-checkout') !== '0';
 
-			let updateExternalDateFields = null;\n\t\t\tlet updateExternalStaySummary = null;
+			let updateExternalDateFields = null;
+			let updateExternalStaySummary = null;
 
 			const cal = new window.MTALPersianCalendar({
 				mode,
@@ -868,7 +869,8 @@
 				guestsCount: initialGuests,
 				onChange(payload) {
 					host._mtalLatestPayload = payload;
-					if (updateExternalDateFields) updateExternalDateFields(payload);\n\t\t\t\tif (updateExternalStaySummary) updateExternalStaySummary(payload);
+					if (updateExternalDateFields) updateExternalDateFields(payload);
+				if (updateExternalStaySummary) updateExternalStaySummary(payload);
 					if (payload && payload.checkIn && payload.checkOut && cfg.ajaxUrl && postId) {
 						const requestId = (host._mtalPriceRequestId || 0) + 1;
 						host._mtalPriceRequestId = requestId;
