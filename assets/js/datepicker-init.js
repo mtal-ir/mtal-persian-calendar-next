@@ -1351,6 +1351,7 @@
 		}
 		// نمایش تایمر در نوار اقدام تقویم؛ در نبود تقویم، داخل فرم باقی می‌ماند.
 		(timerContainer || form).appendChild(timer);
+		if (timerContainer) timerContainer.classList.add('has-countdown');
 		if (timer._mtalInterval) window.clearInterval(timer._mtalInterval);
 		const render = () => {
 			const remaining = Math.max(0, deadline - Date.now());
