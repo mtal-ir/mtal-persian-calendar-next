@@ -910,3 +910,51 @@ html.mtal-modal-open {
 	text-align: center;
 	direction: rtl;
 }
+
+
+/* الگوی مورب مثلثی مرزهای بازه: شروع پایین-راست، تخلیه بالا-چپ */
+.mtal-cal-day.is-blocked.is-blocked-range-start,
+.mtal-cal-day.is-blocked-checkout-edge:not(.is-blocked),
+.mtal-cal-day.is-blocked-edge-checkout.is-selected {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+}
+
+.mtal-cal-day.is-blocked.is-blocked-range-start {
+	background-image: none !important;
+	background-color: #f1f5f9 !important;
+}
+
+.mtal-cal-day.is-blocked.is-blocked-range-start::before,
+.mtal-cal-day.is-blocked-checkout-edge:not(.is-blocked)::before,
+.mtal-cal-day.is-blocked-edge-checkout.is-selected::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	pointer-events: none;
+	background-image: repeating-linear-gradient(
+		-45deg,
+		rgba(148, 163, 184, 0.34) 0 3px,
+		transparent 3px 9px
+	);
+}
+
+.mtal-cal-day.is-blocked.is-blocked-range-start::before {
+	/* شروع بازه: مثلث پایین-راست؛ قطر از بالا-چپ به پایین-راست */
+	clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+.mtal-cal-day.is-blocked-checkout-edge:not(.is-blocked)::before,
+.mtal-cal-day.is-blocked-edge-checkout.is-selected::before {
+	/* تخلیه: مثلث بالا-چپ؛ جهت معکوس روز شروع */
+	clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.mtal-cal-day.is-blocked.is-blocked-range-start > *,
+.mtal-cal-day.is-blocked-checkout-edge:not(.is-blocked) > *,
+.mtal-cal-day.is-blocked-edge-checkout.is-selected > * {
+	position: relative;
+	z-index: 1;
+}
