@@ -677,6 +677,9 @@
 				} else {
 					this.draftEnd = { ...dayObj };
 					this.warningMessage = '';
+					this.enforceValidState();
+					this.confirmModalRange();
+					return;
 				}
 				this.enforceValidState();
 				this.render();
@@ -1235,26 +1238,7 @@
 					this.clear({ notify: true });
 				});
 
-				const confirmBtn = document.createElement('button');
-				confirmBtn.type = 'button';
-				confirmBtn.className = 'mtal-cal-confirm-btn';
-
-				if (this.isRangeAllowed(this.draftStart, this.draftEnd)) {
-					const pricing = this.calculateRangePricing(this.draftStart, this.draftEnd);
-					confirmBtn.textContent = `انتخاب تاریخ (${toPersianDigits(pricing.nights)} شب · ${formatFullTomanPersian(pricing.totalPrice)})`;
-					confirmBtn.disabled = false;
-				} else if (this.draftStart) {
-					confirmBtn.textContent = 'تاریخ خروج را انتخاب کنید';
-					confirmBtn.disabled = true;
-				} else {
-					confirmBtn.textContent = 'انتخاب تاریخ';
-					confirmBtn.disabled = true;
-				}
-
-				confirmBtn.addEventListener('click', () => this.confirmModalRange());
-
 				actionsRow.appendChild(clearBtn);
-				actionsRow.appendChild(confirmBtn);
 
 				this.modalFooterEl.appendChild(actionsRow);
 			}
