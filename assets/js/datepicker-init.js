@@ -487,6 +487,42 @@
 		}
 	}
 
+	function buildExternalDateFields(host, cal) {
+		const wrap = document.createElement('div');
+		wrap.className = 'mtal-date-fields';
+		wrap.setAttribute('dir', 'rtl');
+		const makeField = (label, className) => {
+			const field = document.createElement('button');
+			field.type = 'button';
+			field.className = 'mtal-date-field ' + className;
+			field.setAttribute('aria-label', label + '؛ باز کردن تقویم');
+			field.innerHTML = '<span class="mtal-date-field-label">' + label + '</span><span class="mtal-date-field-value">انتخاب تاریخ</span>';
+			field.addEventListener('click', () => cal.openModal());
+			return field;
+		};
+		const checkInField = makeField('تاریخ ورود', 'mtal-checkin-field');
+		const checkOutField = makeField('تاریخ خروج', 'mtal-checkout-field');
+		wrap.appendChild(checkInField);
+		wrap.appendChild(checkOutField);
+		host.appendChild(wrap);
+		const update = () => {
+			const inValue = checkInField.querySelector('.mtal-date-field-value');
+			const outValue = checkOutField.querySelector('.mtal-date-field-value');
+			inValue.textContent = cal.startDate ? formatDateForDisplay(cal.startDate) : 'انتخاب تاریخ ورود';
+			outValue.textContent = cal.endDate ? formatDateForDisplay(cal.endDate) : 'انتخاب تاریخ خروج';
+			checkInField.classList.toggle('has-value', Boolean(cal.startDate));
+			checkOutField.classList.toggle('has-value', Boolean(cal.endDate));
+		};
+		update();
+		return update;
+	}
+
+	function formatDateForDisplay(date) {
+		if (!date) return '';
+		const value = date.jy + '/' + String(date.jm).padStart(2, '0') + '/' + String(date.jd).padStart(2, '0');
+		return value.replace(/[0-9]/g, digit => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
+	}
+
 	function buildGuestCounterBox(host, cal, maxGuests) {
 		const showCounter = host.getAttribute('data-mtal-show-guests') !== '0';
 		if (!showCounter) return;
@@ -781,6 +817,8 @@
 			const openGuestModalAfterCheckout =
 				host.getAttribute('data-mtal-guest-modal-on-checkout') !== '0';
 
+			let updateExternalDateFields = null;
+
 			const cal = new window.MTALPersianCalendar({
 				mode,
 				mountEl,
@@ -796,6 +834,7 @@
 				guestsCount: initialGuests,
 				onChange(payload) {
 					host._mtalLatestPayload = payload;
+					if (updateExternalDateFields) updateExternalDateFields();
 					if (payload && payload.checkIn && payload.checkOut && cfg.ajaxUrl && postId) {
 						const requestId = (host._mtalPriceRequestId || 0) + 1;
 						host._mtalPriceRequestId = requestId;
@@ -854,7 +893,13 @@
 				},
 			});
 
+			updateExternalDateFields = buildExternalDateFields(host, cal);
 			buildGuestCounterBox(host, cal, maxGuests);
+			if (cal.triggerBtnEl) {
+				cal.triggerBtnEl.textContent = triggerLabel;
+				cal.triggerBtnEl.classList.add('mtal-date-modal-trigger');
+				host.appendChild(cal.triggerBtnEl);
+			}
 			buildCalendarBookingAction(host, cal);
 
 			calendarEntries.push({ cal, postId, host });
