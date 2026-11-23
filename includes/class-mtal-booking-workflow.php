@@ -255,6 +255,14 @@ final class MTAL_Booking_Workflow {
 		if ( ! $order || ! $stored || ! $token || ! hash_equals( $stored, wp_hash( $token ) ) ) {
 			wp_send_json_error( array( 'message' => 'درخواست رزرو پیدا نشد یا دسترسی معتبر نیست.' ), 403 );
 		}
+		// حداکثر سه تلاش لغو برای هر درخواست؛ شمارنده سمت سرور قابل دور زدن با رفرش صفحه نیست.
+		$attempt_key = 'mtal_cancel_attempts_' . $order_id . '_' . substr( $stored, 0, 12 );
+		$attempts = (int) get_transient( $attempt_key );
+		if ( $attempts >= 3 ) {
+			wp_send_json_error( array( 'message' => 'حداکثر ۳ بار تلاش برای لغو این درخواست مجاز است.' ), 429 );
+		}
+		set_transient( $attempt_key, $attempts + 1, DAY_IN_SECONDS );
+
 		if ( 'mtal-pending' !== $order->get_status() ) {
 			wp_send_json_error( array( 'message' => 'این درخواست دیگر در وضعیت قابل لغو توسط کاربر نیست.' ), 409 );
 		}
