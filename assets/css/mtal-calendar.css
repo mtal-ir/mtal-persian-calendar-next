@@ -955,3 +955,9 @@ html.mtal-modal-open {
 	position: relative;
 	z-index: 1;
 }
+
+
+/* هنگام انتخاب روز تخلیه، رنگ انتخاب بر پس‌زمینهٔ پایه اولویت دارد؛ هاشور مثلثی حفظ می‌شود. */
+.mtal-cal-day.is-blocked-edge-checkout.is-selected {
+	background-color: var(--mtal-primary, #556b2f) !important;
+}
