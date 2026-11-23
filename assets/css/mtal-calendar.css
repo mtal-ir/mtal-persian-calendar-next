@@ -957,7 +957,7 @@ html.mtal-modal-open {
 }
 
 
-/* هنگام انتخاب روز تخلیه، رنگ انتخاب بر پس‌زمینهٔ پایه اولویت دارد؛ هاشور مثلثی حفظ می‌شود. */
-.mtal-cal-day.is-blocked-edge-checkout.is-selected {
+/* هنگام انتخاب روز تخلیه، رنگ انتخاب سبز می‌شود و هاشور مثلثی حفظ می‌شود. */
+.mtal-cal-day.is-blocked-checkout-edge.is-selected {
 	background-color: var(--mtal-primary, #556b2f) !important;
 }
