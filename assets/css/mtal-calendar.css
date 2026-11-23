@@ -1112,3 +1112,24 @@ html.mtal-modal-open {
 	line-height: 1.8;
 	text-align: center;
 }
+
+
+/* خلاصه اقامت در فرم، جایگزین دکمه انتخاب تاریخ سفر */
+.mtal-external-stay-summary {
+	width: 100%;
+	margin-top: 12px;
+	direction: rtl;
+}
+.mtal-external-stay-summary .mtal-pricing-breakdown {
+	width: 100%;
+	box-sizing: border-box;
+}
+.mtal-external-stay-hint {
+	padding: 10px 12px;
+	border: 1px dashed #cbd5e1;
+	border-radius: 10px;
+	background: #f8fafc;
+	color: #64748b;
+	font-size: 12px;
+	line-height: 1.8;
+}
