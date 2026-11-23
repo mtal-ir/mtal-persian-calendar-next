@@ -1172,3 +1172,28 @@ html.mtal-modal-open {
 	color: #a83232 !important;
 }
 .mtal-booking-submit.is-cancel-action:disabled { opacity: .65; cursor: wait; }
+
+
+/* نمایش وضعیت پردازش هنگام لغو درخواست */
+.mtal-booking-submit.is-cancelling {
+	cursor: wait !important;
+	opacity: .85;
+}
+.mtal-booking-submit.is-cancelling::before {
+	content: '';
+	display: inline-block;
+	width: 13px;
+	height: 13px;
+	margin-left: 8px;
+	vertical-align: -2px;
+	border: 2px solid rgba(168, 50, 50, .25);
+	border-top-color: #a83232;
+	border-radius: 50%;
+	animation: mtal-cancel-spin .7s linear infinite;
+}
+@keyframes mtal-cancel-spin {
+	to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+	.mtal-booking-submit.is-cancelling::before { animation: none; }
+}
