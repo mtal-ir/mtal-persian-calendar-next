@@ -19,6 +19,8 @@ final class MTAL_Booking_Workflow {
 		add_action( 'elementor_pro/forms/new_record', array( __CLASS__, 'handle_elementor_submission' ), 20, 2 );
 		add_action( 'add_meta_boxes', array( __CLASS__, 'add_order_metabox' ) );
 		add_action( 'admin_post_mtal_booking_decision', array( __CLASS__, 'handle_admin_decision' ) );
+		add_action( 'wp_ajax_mtal_booking_status', array( __CLASS__, 'ajax_booking_status' ) );
+		add_action( 'wp_ajax_nopriv_mtal_booking_status', array( __CLASS__, 'ajax_booking_status' ) );
 		add_action( self::CRON_HOOK, array( __CLASS__, 'expire_order' ), 10, 1 );
 		add_action( 'woocommerce_payment_complete', array( __CLASS__, 'confirm_paid_booking' ) );
 		add_action( 'woocommerce_order_status_processing', array( __CLASS__, 'confirm_paid_booking' ) );
@@ -206,6 +208,8 @@ final class MTAL_Booking_Workflow {
 		$order->update_meta_data( '_mtal_booking_guests', $guests );
 		$order->update_meta_data( '_mtal_booking_expires_at', $expires );
 		$order->update_meta_data( '_mtal_booking_total', (int) $price['totalPrice'] );
+		$access_token = wp_generate_password( 48, false, false );
+		$order->update_meta_data( '_mtal_booking_access_token', wp_hash( $access_token ) );
 		$order->save();
 
 		$dates = array();
@@ -234,7 +238,47 @@ final class MTAL_Booking_Workflow {
 		if ( is_object( $handler ) && method_exists( $handler, 'add_response_data' ) ) {
 			$handler->add_response_data( 'mtal_booking_order_id', $order->get_id() );
 			$handler->add_response_data( 'mtal_booking_expires_at', $expires );
+			$handler->add_response_data( 'mtal_booking_access_token', $access_token );
+			$handler->add_response_data( 'mtal_booking_check_in', $range[0] );
+			$handler->add_response_data( 'mtal_booking_check_out', $range[1] );
+			$handler->add_response_data( 'mtal_booking_guests', $guests );
 		}
+	}
+
+	public static function ajax_booking_status() {
+		$order_id = isset( $_POST['order_id'] ) ? absint( $_POST['order_id'] ) : 0;
+		$token = isset( $_POST['token'] ) ? sanitize_text_field( wp_unslash( $_POST['token'] ) ) : '';
+		$order = $order_id ? wc_get_order( $order_id ) : false;
+		$stored = $order ? (string) $order->get_meta( '_mtal_booking_access_token' ) : '';
+		if ( ! $order || ! $stored || ! $token || ! hash_equals( $stored, wp_hash( $token ) ) ) {
+			wp_send_json_error( array( 'message' => 'درخواست رزرو پیدا نشد یا دسترسی معتبر نیست.' ), 403 );
+		}
+		$status = $order->get_status();
+		$messages = array(
+			'mtal-pending' => 'درخواست شما ثبت شده و در انتظار بررسی مدیر است.',
+			'pending' => 'درخواست شما تأیید شد؛ برای تکمیل رزرو، پرداخت را انجام دهید.',
+			'cancelled' => 'درخواست رزرو شما رد یا منقضی شد و تاریخ‌ها آزاد شدند.',
+			'processing' => 'پرداخت شما دریافت شد و رزرو تأیید شده است.',
+			'completed' => 'رزرو شما با موفقیت تأیید شد.',
+			'on-hold' => 'پرداخت/رزرو شما نیازمند بررسی مدیر است.',
+		);
+		wp_send_json_success( array(
+			'status' => $status,
+			'statusLabel' => wc_get_order_status_name( $status ),
+			'message' => isset( $messages[ $status ] ) ? $messages[ $status ] : 'وضعیت درخواست شما: ' . wc_get_order_status_name( $status ),
+			'expiresAt' => (int) $order->get_meta( '_mtal_booking_expires_at' ),
+			'isFinal' => ! in_array( $status, array( 'mtal-pending', 'pending' ), true ),
+		) );
+	}
+
+	private static function email_booking_decision( $order, $approved ) {
+		$email = $order->get_billing_email();
+		if ( ! $email || ! is_email( $email ) || ! function_exists( 'WC' ) || ! WC()->mailer() ) return;
+		$subject = $approved ? 'درخواست رزرو شما تأیید شد' : 'وضعیت درخواست رزرو شما';
+		$message = $approved
+			? 'درخواست رزرو شما تأیید شد. برای تکمیل رزرو، از طریق لینک زیر پرداخت را انجام دهید: ' . $order->get_checkout_payment_url()
+			: 'متأسفانه درخواست رزرو شما تأیید نشد و تاریخ‌های انتخابی آزاد شدند. برای اطلاعات بیشتر با پشتیبانی تماس بگیرید.';
+		wp_mail( $email, $subject, $message, array( 'Content-Type: text/plain; charset=UTF-8' ) );
 	}
 
 	public static function add_order_metabox() {
@@ -316,9 +360,11 @@ final class MTAL_Booking_Workflow {
 		if ( 'reject' === $decision ) {
 			$order->update_status( 'cancelled', 'درخواست رزرو توسط مدیر رد شد؛ تاریخ‌ها آزاد شدند.' );
 			self::release_order_holds( $order_id );
+			self::email_booking_decision( $order, false );
 		} else {
 			$order->update_status( 'pending', 'درخواست توسط مدیر تأیید شد؛ لینک پرداخت برای مشتری فعال است.' );
 			$order->add_order_note( 'لینک پرداخت: ' . $order->get_checkout_payment_url() );
+			self::email_booking_decision( $order, true );
 		}
 		$redirect = wp_get_referer();
 		if ( ! $redirect ) {
