@@ -929,6 +929,9 @@
 
 				const pastOrOut = this.isPastOrOutOfHorizon(dObj);
 				const blocked = !pastOrOut && this.isDateBlocked(dObj);
+				const currentJdn = jalaliToJdn(dObj.jy, dObj.jm, dObj.jd);
+				const previousDay = jdnToJalali(currentJdn - 1);
+				const previousDayBlocked = this.isDateBlocked(previousDay);
 
 				const allowCheckoutOnBlocked =
 					blocked &&
@@ -954,12 +957,20 @@
 				}
 				if (blocked) {
 					btn.classList.add('is-blocked');
+					if (!previousDayBlocked) {
+						btn.classList.add('is-blocked-range-start');
+					}
 					btn.setAttribute(
 						'title',
 						allowCheckoutOnBlocked
 							? 'امکان انتخاب به عنوان تاریخ خروج (تحویل تا ۱۲ ظهر)'
 							: 'مسدود / رزرو شده'
 					);
+				}
+
+				if (!blocked && !pastOrOut && previousDayBlocked) {
+					btn.classList.add('is-blocked-checkout-edge');
+					btn.setAttribute('title', 'روز تخلیه؛ تحویل تا ساعت ۱۲ و آماده تحویل از ساعت ۱۴');
 				}
 
 				if (!pastOrOut && this.isFriday(dObj)) {
