@@ -21,6 +21,8 @@ final class MTAL_Booking_Workflow {
 		add_action( 'admin_post_mtal_booking_decision', array( __CLASS__, 'handle_admin_decision' ) );
 		add_action( 'wp_ajax_mtal_booking_status', array( __CLASS__, 'ajax_booking_status' ) );
 		add_action( 'wp_ajax_nopriv_mtal_booking_status', array( __CLASS__, 'ajax_booking_status' ) );
+		add_action( 'wp_ajax_mtal_booking_cancel', array( __CLASS__, 'ajax_cancel_booking' ) );
+		add_action( 'wp_ajax_nopriv_mtal_booking_cancel', array( __CLASS__, 'ajax_cancel_booking' ) );
 		add_action( self::CRON_HOOK, array( __CLASS__, 'expire_order' ), 10, 1 );
 		add_action( 'woocommerce_payment_complete', array( __CLASS__, 'confirm_paid_booking' ) );
 		add_action( 'woocommerce_order_status_processing', array( __CLASS__, 'confirm_paid_booking' ) );
@@ -243,6 +245,23 @@ final class MTAL_Booking_Workflow {
 			$handler->add_response_data( 'mtal_booking_check_out', $range[1] );
 			$handler->add_response_data( 'mtal_booking_guests', $guests );
 		}
+	}
+
+	public static function ajax_cancel_booking() {
+		$order_id = isset( $_POST['order_id'] ) ? absint( $_POST['order_id'] ) : 0;
+		$token = isset( $_POST['token'] ) ? sanitize_text_field( wp_unslash( $_POST['token'] ) ) : '';
+		$order = $order_id ? wc_get_order( $order_id ) : false;
+		$stored = $order ? (string) $order->get_meta( '_mtal_booking_access_token' ) : '';
+		if ( ! $order || ! $stored || ! $token || ! hash_equals( $stored, wp_hash( $token ) ) ) {
+			wp_send_json_error( array( 'message' => 'درخواست رزرو پیدا نشد یا دسترسی معتبر نیست.' ), 403 );
+		}
+		if ( 'mtal-pending' !== $order->get_status() ) {
+			wp_send_json_error( array( 'message' => 'این درخواست دیگر در وضعیت قابل لغو توسط کاربر نیست.' ), 409 );
+		}
+		$order->update_status( 'cancelled', 'درخواست توسط کاربر از طریق صفحه رزرو لغو شد؛ تاریخ‌ها آزاد شدند.' );
+		self::release_order_holds( $order->get_id() );
+		self::email_booking_decision( $order, false );
+		wp_send_json_success( array( 'message' => 'درخواست شما لغو شد و تاریخ‌های انتخابی آزاد شدند.' ) );
 	}
 
 	public static function ajax_booking_status() {
