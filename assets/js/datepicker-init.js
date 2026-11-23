@@ -1330,7 +1330,7 @@
 	 * The server remains authoritative; this is a visual countdown only.
 	 */
 	function startBookingCountdown(form, response) {
-		if (!form || !form.querySelector('#form-field-mtal_qty, input[name*="mtal_qty"]')) return;
+		if (!form) return;
 		const data = response && response.data ? response.data : {};
 		const orderId = data.mtal_booking_order_id || data.data && data.data.mtal_booking_order_id || '';
 		const key = 'mtal_booking_deadline_' + (orderId || form.id || 'latest');
@@ -1342,8 +1342,9 @@
 			timer = document.createElement('div');
 			timer.className = 'mtal-booking-countdown';
 			timer.setAttribute('role', 'status');
-			const success = form.querySelector('.elementor-message-success, .elementor-form-fields-wrapper') || form;
-			success.appendChild(timer);
+			timer.setAttribute('aria-live', 'polite');
+			// Keep the countdown inside the form itself so Elementor field refreshes do not remove it.
+			form.appendChild(timer);
 		}
 		if (timer._mtalInterval) window.clearInterval(timer._mtalInterval);
 		const render = () => {
@@ -1362,9 +1363,12 @@
 	}
 
 	if (window.jQuery) {
+		window.jQuery(document).on('submit_success', 'form.elementor-form', function (event, response) {
+			startBookingCountdown(this, response || {});
+		});
 		window.jQuery(document).on('submit_success', function (event, response) {
 			const form = event.target && event.target.closest ? event.target.closest('form') : null;
-			if (form) startBookingCountdown(form, response || {});
+			if (form && !form.matches('form.elementor-form')) startBookingCountdown(form, response || {});
 		});
 	}
 
