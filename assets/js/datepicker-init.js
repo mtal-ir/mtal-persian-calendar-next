@@ -717,7 +717,7 @@
 		button.disabled = true;
 
 		const form = findBookingForm(host);
-		if (form) { form._mtalCalendarHost = host; form._mtalBookingActionButton = button; form._mtalBookingMessage = message; }
+		if (form) { form._mtalCalendarHost = host; form._mtalBookingActionButton = button; }
 		let bookingSubmitted = (() => {
 			try {
 				const active = JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null');
@@ -784,6 +784,7 @@
 						countdown.classList.add('is-final-status', 'is-rejected');
 						countdown.textContent = result.data.message || 'درخواست شما لغو شد و تاریخ‌های انتخابی آزاد شدند.';
 					}
+					message.textContent = result.data.message || 'درخواست شما لغو شد.';
 					bookingSubmitted = false;
 					button.classList.remove('is-cancel-action');
 					try {
@@ -792,7 +793,6 @@
 					} catch (e) {}
 					button.textContent = 'ارسال درخواست رزرو';
 					refreshState();
-					message.textContent = result.data.message || 'درخواست شما لغو شد و تاریخ‌های انتخابی آزاد شدند.';
 				}).catch(() => {
 					button.classList.remove('is-cancelling'); button.removeAttribute('aria-busy');
 					button.disabled = false; button.textContent = 'لغو درخواست رزرو';
@@ -843,9 +843,8 @@
 			refreshState();
 		});
 		host.addEventListener('mtal:serverPriceError', refreshState);
-		// پیام راهنما/وضعیت همیشه بالای دکمه و تایمر قرار می‌گیرد.
-		wrap.appendChild(message);
 		wrap.appendChild(button);
+		wrap.appendChild(message);
 		host.appendChild(wrap);
 		refreshState();
 	}
@@ -1557,14 +1556,12 @@
     if (result.data.status === 'mtal-pending') return;
     if (result.data.status === 'pending') {
      approvedForPayment = true;
-     if (form && form._mtalBookingMessage) form._mtalBookingMessage.textContent = result.data.message || 'درخواست تأیید شد؛ برای تکمیل رزرو تا پایان مهلت نمایش‌داده‌شده پرداخت کنید.';
      timer.classList.add('is-approved-payment');
      render();
      return;
     }
     finalStatus=true; window.clearInterval(timer._mtalInterval); window.clearInterval(timer._mtalStatusInterval);
     timer.textContent=result.data.message;
-    if (form && form._mtalBookingMessage) form._mtalBookingMessage.textContent = result.data.message;
     timer.classList.add('is-final-status');
     timer.classList.toggle('is-rejected', result.data.status === 'cancelled');
     if (form && form._mtalBookingActionButton) { form._mtalBookingActionButton.classList.remove('is-cancel-action'); form._mtalBookingActionButton.disabled = result.data.status !== 'cancelled'; form._mtalBookingActionButton.textContent = result.data.status === 'cancelled' ? 'ارسال درخواست رزرو جدید' : 'درخواست رزرو نهایی شد'; }
