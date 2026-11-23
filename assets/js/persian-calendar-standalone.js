@@ -683,6 +683,9 @@
 				}
 				this.enforceValidState();
 				this.render();
+				if (this.draftStart && this.onChange) {
+					this.onChange(this.buildPayload(this.draftStart, null));
+				}
 				return;
 			}
 
