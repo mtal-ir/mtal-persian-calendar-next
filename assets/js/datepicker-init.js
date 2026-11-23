@@ -943,6 +943,18 @@
 			}
 			instancesByKey.get(groupKey).push({ cal, targetSelector, storageKey, guestsStorageKey, host });
 
+			// Keep the active booking's dates and guest count visible until its deadline/status ends.
+			try {
+				const activeBooking = JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null');
+				if (activeBooking && Number(activeBooking.deadline) > Date.now() &&
+					(!activeBooking.postId || String(activeBooking.postId) === String(postId))) {
+					if (activeBooking.checkIn && activeBooking.checkOut) {
+						const persistedRange = activeBooking.checkIn + ' - ' + activeBooking.checkOut;
+						savePersistedValue(storageKey, persistedRange);
+					}
+					if (activeBooking.guests) savePersistedValue(guestsStorageKey, activeBooking.guests);
+				}
+			} catch (e) {}
 			let savedRaw = readPersistedValue(storageKey);
 			if (!savedRaw && targetSelector) {
 				const targetEl = document.querySelector(targetSelector);
@@ -1418,10 +1430,22 @@
 		const deadline = serverExpiry > 0 ? serverExpiry * 1000 : Date.now() + 30 * 60 * 1000;
 		try {
  window.localStorage.setItem(key, String(deadline));
+ const calendarHost = form._mtalCalendarHost || form.closest('.mtal-calendar-host, [data-mtal-post-id]') || null;
+ const getFieldValue = (selectors) => {
+  for (const selector of selectors) { const field = form.querySelector(selector); if (field && field.value) return field.value; }
+  return '';
+ };
+ const checkIn = data.mtal_booking_check_in || (data.data && data.data.mtal_booking_check_in) || getFieldValue(['[name*="check_in"]','[name*="checkin"]']);
+ const checkOut = data.mtal_booking_check_out || (data.data && data.data.mtal_booking_check_out) || getFieldValue(['[name*="check_out"]','[name*="checkout"]']);
+ const guests = data.mtal_booking_guests || (data.data && data.data.mtal_booking_guests) || getFieldValue(['#form-field-mtal_qty','input[name*="mtal_qty"]']);
  window.localStorage.setItem('mtal_booking_active_request', JSON.stringify({
   orderId: String(orderId || ''),
   token: String(data.mtal_booking_access_token || (data.data && data.data.mtal_booking_access_token) || ''),
-  deadline: deadline
+  deadline: deadline,
+  checkIn: String(checkIn || ''),
+  checkOut: String(checkOut || ''),
+  guests: String(guests || ''),
+  postId: String((calendarHost && calendarHost.getAttribute('data-mtal-post-id')) || '')
  }));
 } catch (e) {}
 		const calendarHost = form._mtalCalendarHost || null;
