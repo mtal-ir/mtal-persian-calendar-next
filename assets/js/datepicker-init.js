@@ -952,7 +952,11 @@
 						const persistedRange = activeBooking.checkIn + ' - ' + activeBooking.checkOut;
 						savePersistedValue(storageKey, persistedRange);
 					}
-					if (activeBooking.guests) savePersistedValue(guestsStorageKey, activeBooking.guests);
+					if (activeBooking.guests) {
+						savePersistedValue(guestsStorageKey, activeBooking.guests);
+						const restoredGuests = Math.min(maxGuests, Math.max(1, parsePositiveInt(activeBooking.guests, initialGuests)));
+						if (restoredGuests !== cal.guestsCount) cal.setGuestsCount(restoredGuests, { notify: true });
+					}
 				}
 			} catch (e) {}
 			let savedRaw = readPersistedValue(storageKey);
