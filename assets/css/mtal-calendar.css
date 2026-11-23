@@ -853,29 +853,27 @@ html.mtal-modal-open {
 
 /* شروع بازه اشغال: فقط نیمه چپ خانه هاشور می‌خورد (جهت فیزیکی، مستقل از RTL). */
 .mtal-cal-day.is-blocked.is-blocked-range-start {
-	background-image: linear-gradient(
-		to right,
-		repeating-linear-gradient(-45deg, rgba(148, 163, 184, 0.30) 0 6px, rgba(241, 245, 249, 0.96) 6px 12px) 0 0 / 50% 100% no-repeat,
-		linear-gradient(#f1f5f9, #f1f5f9)
-	) !important;
+	background-image: repeating-linear-gradient(-45deg, rgba(148, 163, 184, 0.30) 0 6px, rgba(241, 245, 249, 0.96) 6px 12px) !important;
+	background-size: 50% 100% !important;
+	background-position: left center !important;
+	background-repeat: no-repeat !important;
 }
 
 /* روز تخلیه: نیمه راست هاشور می‌خورد و برای ورود بعدی قابل انتخاب می‌ماند. */
 .mtal-cal-day.is-blocked-checkout-edge:not(.is-blocked) {
-	background-image: linear-gradient(
-		to left,
-		repeating-linear-gradient(-45deg, rgba(148, 163, 184, 0.30) 0 6px, rgba(241, 245, 249, 0.96) 6px 12px) 0 0 / 50% 100% no-repeat,
-		linear-gradient(#ffffff, #ffffff)
-	) !important;
+	background-image: repeating-linear-gradient(-45deg, rgba(148, 163, 184, 0.30) 0 6px, rgba(241, 245, 249, 0.96) 6px 12px) !important;
+	background-size: 50% 100% !important;
+	background-position: right center !important;
+	background-repeat: no-repeat !important;
 	color: #64748b;
 }
 
 .mtal-cal-day.is-blocked-edge-checkout.is-selected {
-	background-image: linear-gradient(
-		to left,
-		repeating-linear-gradient(-45deg, rgba(148, 163, 184, 0.30) 0 6px, rgba(241, 245, 249, 0.96) 6px 12px) 0 0 / 50% 100% no-repeat,
-		linear-gradient(#556b2f, #556b2f)
-	) !important;
+	background-image: repeating-linear-gradient(-45deg, rgba(148, 163, 184, 0.30) 0 6px, rgba(241, 245, 249, 0.96) 6px 12px) !important;
+	background-size: 50% 100% !important;
+	background-position: right center !important;
+	background-repeat: no-repeat !important;
+	background-color: #556b2f !important;
 }
 
 .mtal-cal-handover-note {
