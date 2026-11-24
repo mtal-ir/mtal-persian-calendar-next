@@ -728,7 +728,7 @@
 		return missing;
 	}
 
-	function buildCalendarBookingAction(host, cal) {
+	function buildCalendarBookingAction(host, cal, groupKey) {
 		const wrap = document.createElement('div');
 		wrap.className = 'mtal-booking-action';
 		wrap.setAttribute('dir', 'rtl');
@@ -1061,7 +1061,7 @@
 			updateExternalStaySummary = buildExternalStaySummary(host, cal);
 			host._mtalUpdateStaySummary = updateExternalStaySummary;
 			if (cal.triggerBtnEl) cal.triggerBtnEl.remove();
-			buildCalendarBookingAction(host, cal);
+			buildCalendarBookingAction(host, cal, groupKey);
 
 			calendarEntries.push({ cal, postId, host });
 
@@ -1678,21 +1678,34 @@
 					try {
 						const current = JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null');
 						if (current && current.orderId === orderId) {
-							// Keep the selected stay and guest count after the workflow reaches a final state.
-						const checkIn = result.data.checkIn || current.checkIn || '';
-						const checkOut = result.data.checkOut || current.checkOut || '';
-						const guests = result.data.guests || current.guests || '';
-						const suiteId = String(result.data.suiteId || current.postId || '');
-						if (suiteId) {
-							const range = checkIn && checkOut ? String(checkIn).replace(/-/g, '/') + ' - ' + String(checkOut).replace(/-/g, '/') : '';
-						for (let index = 0; index < window.localStorage.length; index++) {
-							const storageKey = window.localStorage.key(index);
-							if (!storageKey || !storageKey.includes('suite-' + suiteId + '__')) continue;
-							if (range && storageKey.startsWith('mtal_cal_range__')) window.localStorage.setItem(storageKey, range);
-							if (guests && storageKey.startsWith('mtal_cal_guests__')) window.localStorage.setItem(storageKey, String(guests));
-						}
-						}
-						window.localStorage.removeItem('mtal_booking_active_request');
+							const suiteId = String(result.data.suiteId || current.postId || '');
+							if (result.data.status !== 'cancelled') {
+								// Keep the selected stay and guest count after non-cancellation final states.
+								const checkIn = result.data.checkIn || current.checkIn || '';
+								const checkOut = result.data.checkOut || current.checkOut || '';
+								const guests = result.data.guests || current.guests || '';
+								if (suiteId) {
+									const range = checkIn && checkOut ? String(checkIn).replace(/-/g, '/') + ' - ' + String(checkOut).replace(/-/g, '/') : '';
+									for (let index = 0; index < window.localStorage.length; index++) {
+										const storageKey = window.localStorage.key(index);
+										if (!storageKey || !storageKey.includes('suite-' + suiteId + '__')) continue;
+										if (range && storageKey.startsWith('mtal_cal_range__')) window.localStorage.setItem(storageKey, range);
+										if (guests && storageKey.startsWith('mtal_cal_guests__')) window.localStorage.setItem(storageKey, String(guests));
+									}
+								}
+							} else if (suiteId) {
+								// A cancelled request must not restore its previous dates or guest count.
+								const keysToRemove = [];
+								for (let index = 0; index < window.localStorage.length; index++) {
+									const storageKey = window.localStorage.key(index);
+									if (storageKey && storageKey.includes('suite-' + suiteId + '__') &&
+										(storageKey.startsWith('mtal_cal_range__') || storageKey.startsWith('mtal_cal_guests__'))) {
+										keysToRemove.push(storageKey);
+										}
+								}
+								keysToRemove.forEach((storageKey) => window.localStorage.removeItem(storageKey));
+							}
+							window.localStorage.removeItem('mtal_booking_active_request');
 						}
 						window.localStorage.removeItem(key);
 					} catch (e) {}
