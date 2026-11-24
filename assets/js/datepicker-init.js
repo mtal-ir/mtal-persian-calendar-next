@@ -805,6 +805,18 @@
 			}
 		}
 		button.addEventListener('click', () => {
+			// Guests may browse the calendar, but must sign in before submitting a booking.
+			if (cfg.isUserLoggedIn === false && !(form && form._mtalBookingSubmitted)) {
+				const loginUrl = cfg.loginUrl || '';
+				if (loginUrl) {
+					const target = new URL(loginUrl, window.location.origin);
+					target.searchParams.set('redirect', window.location.href);
+					window.location.assign(target.toString());
+				} else {
+					message.textContent = 'برای ثبت رزرو ابتدا وارد حساب کاربری خود شوید.';
+				}
+				return;
+			}
 			// Keep the click handler in sync with the form state set by startBookingCountdown.
 			// This ensures the very first click after a successful booking enters the cancel flow.
 			if (bookingSubmitted || (form && form._mtalBookingSubmitted)) {
