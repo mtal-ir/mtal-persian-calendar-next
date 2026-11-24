@@ -171,7 +171,20 @@
 
 	// پر کردن تمام فیلدهای مخفی فرم المنتور (تاریخ، مبلغ کل، نفر اضافه و تعداد نفرات)
 	function syncAllHiddenFormFields(host, cal, payload) {
-		const container = host.closest('form, .elementor-widget, .jet-listing-grid__item') || document;
+		const bookingForm = host._mtalBookingForm || findBookingForm(host);
+		const container = bookingForm || host.closest('.elementor-widget, .jet-listing-grid__item') || document;
+		const ensureHiddenField = (id, name) => {
+			if (!bookingForm) return null;
+			let field = bookingForm.querySelector('#' + CSS.escape(id) + ', input[name="' + name + '"]');
+			if (!field) {
+				field = document.createElement('input');
+				field.type = 'hidden';
+				field.id = id;
+				field.name = name;
+				bookingForm.appendChild(field);
+			}
+			return field;
+		};
 
 		// ۱. فیلد تاریخ ورود و خروج
 		const targetSelector = host.getAttribute('data-mtal-target') || '';
@@ -213,14 +226,18 @@
 		// شناسه سوئیت برای اتصال امن درخواست Elementor به قیمت‌گذاری سمت سرور.
 		const suiteId = host.getAttribute('data-mtal-post-id') || '';
 		if (suiteId) {
-			writeValueToSelector('#form-field-mtal_post_id, input[name="form_fields[mtal_post_id]"]', suiteId, container);
+			const suiteField = ensureHiddenField('form-field-mtal_post_id', 'form_fields[mtal_post_id]');
+			if (suiteField) setElementValue(suiteField, suiteId);
+			else writeValueToSelector('#form-field-mtal_post_id, input[name="form_fields[mtal_post_id]"]', suiteId, container);
 		}
 
 		// ۴. فیلد تعداد نفرات کل
-		const qtyInputs = container.querySelectorAll('#form-field-mtal_qty, input[name*="mtal_qty"]');
-		qtyInputs.forEach((input) => {
-			setElementValue(input, String(cal.guestsCount));
-		});
+		let qtyInputs = container.querySelectorAll('#form-field-mtal_qty, input[name="form_fields[mtal_qty]"], input[name*="mtal_qty"]');
+		if (!qtyInputs.length) {
+			const qtyField = ensureHiddenField('form-field-mtal_qty', 'form_fields[mtal_qty]');
+			if (qtyField) qtyInputs = [qtyField];
+		}
+		qtyInputs.forEach((input) => setElementValue(input, String(cal.guestsCount)));
 	}
 
 	function syncHostCounterDisplay(host, count) {
@@ -717,7 +734,7 @@
 		button.disabled = true;
 
 		const form = findBookingForm(host);
-		if (form) { form._mtalCalendarHost = host; form._mtalBookingActionButton = button; }
+		if (form) { form._mtalCalendarHost = host; form._mtalBookingForm = form; host._mtalBookingForm = form; form._mtalBookingActionButton = button; }
 		let bookingSubmitted = (() => {
 			try {
 				const active = JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null');
