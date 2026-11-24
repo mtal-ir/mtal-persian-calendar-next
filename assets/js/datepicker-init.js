@@ -750,6 +750,17 @@
 		button.textContent = 'ارسال درخواست رزرو';
 		button.disabled = true;
 
+		const paymentButton = document.createElement('button');
+		paymentButton.type = 'button';
+		paymentButton.className = 'mtal-booking-payment-button';
+		paymentButton.textContent = 'پرداخت و نهایی‌سازی رزرو';
+		paymentButton.hidden = true;
+		paymentButton.style.cssText = 'display:none;width:100%;margin-top:10px;padding:12px 18px;border:0;border-radius:10px;background:#198754;color:#fff;font-weight:700;cursor:pointer;';
+		let paymentUrl = '';
+		paymentButton.addEventListener('click', () => {
+			if (paymentUrl) window.location.assign(paymentUrl);
+		});
+
 		const form = findBookingForm(host);
 		if (form) { form._mtalCalendarHost = host; form._mtalBookingForm = form; host._mtalBookingForm = form; form._mtalBookingActionButton = button; }
 		let bookingSubmitted = (() => {
@@ -923,6 +934,7 @@
 		});
 		host.addEventListener('mtal:serverPriceError', refreshState);
 		wrap.appendChild(button);
+		wrap.appendChild(paymentButton);
 		wrap.appendChild(message);
 		host.appendChild(wrap);
 		refreshState();
@@ -1672,10 +1684,16 @@
 					if (result.data.status === 'pending') {
 						approvedForPayment = true;
 						timer.classList.add('is-approved-payment');
+						paymentUrl = result.data.paymentUrl || '';
+						paymentButton.hidden = !paymentUrl;
+						paymentButton.style.display = paymentUrl ? 'block' : 'none';
 						render();
 						return;
 					}
 					finalStatus = true;
+					paymentUrl = '';
+					paymentButton.hidden = true;
+					paymentButton.style.display = 'none';
 					window.clearInterval(timer._mtalInterval);
 					window.clearInterval(timer._mtalStatusInterval);
 					timer.textContent = result.data.message;
