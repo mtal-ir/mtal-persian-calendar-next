@@ -756,13 +756,19 @@
 		paymentButton.textContent = 'پرداخت و نهایی‌سازی رزرو';
 		paymentButton.hidden = true;
 		paymentButton.style.cssText = 'display:none;width:100%;margin-top:10px;padding:12px 18px;border:0;border-radius:10px;background:#198754;color:#fff;font-weight:700;cursor:pointer;';
-		let paymentUrl = '';
+		paymentButton._mtalPaymentUrl = '';
 		paymentButton.addEventListener('click', () => {
-			if (paymentUrl) window.location.assign(paymentUrl);
+			if (paymentButton._mtalPaymentUrl) window.location.assign(paymentButton._mtalPaymentUrl);
 		});
 
 		const form = findBookingForm(host);
-		if (form) { form._mtalCalendarHost = host; form._mtalBookingForm = form; host._mtalBookingForm = form; form._mtalBookingActionButton = button; }
+		if (form) {
+			form._mtalCalendarHost = host;
+			form._mtalBookingForm = form;
+			host._mtalBookingForm = form;
+			form._mtalBookingActionButton = button;
+			form._mtalBookingPaymentButton = paymentButton;
+		}
 		let bookingSubmitted = (() => {
 			try {
 				const active = JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null');
@@ -1681,19 +1687,24 @@
 				fetch(cfg.ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' }).then(r => r.json()).then(result => {
 					if (!result || !result.success || !result.data) return;
 					if (result.data.status === 'mtal-pending') return;
+					const paymentButton = form._mtalBookingPaymentButton;
 					if (result.data.status === 'pending') {
 						approvedForPayment = true;
 						timer.classList.add('is-approved-payment');
-						paymentUrl = result.data.paymentUrl || '';
-						paymentButton.hidden = !paymentUrl;
-						paymentButton.style.display = paymentUrl ? 'block' : 'none';
+						if (paymentButton) {
+							paymentButton._mtalPaymentUrl = result.data.paymentUrl || '';
+							paymentButton.hidden = !paymentButton._mtalPaymentUrl;
+							paymentButton.style.display = paymentButton._mtalPaymentUrl ? 'block' : 'none';
+						}
 						render();
 						return;
 					}
 					finalStatus = true;
-					paymentUrl = '';
-					paymentButton.hidden = true;
-					paymentButton.style.display = 'none';
+					if (paymentButton) {
+						paymentButton._mtalPaymentUrl = '';
+						paymentButton.hidden = true;
+						paymentButton.style.display = 'none';
+					}
 					window.clearInterval(timer._mtalInterval);
 					window.clearInterval(timer._mtalStatusInterval);
 					timer.textContent = result.data.message;
