@@ -293,6 +293,10 @@ final class MTAL_Booking_Workflow {
 			'statusLabel' => wc_get_order_status_name( $status ),
 			'message' => isset( $messages[ $status ] ) ? $messages[ $status ] : 'وضعیت درخواست شما: ' . wc_get_order_status_name( $status ),
 			'expiresAt' => (int) $order->get_meta( '_mtal_booking_expires_at' ),
+			'checkIn' => (string) $order->get_meta( '_mtal_booking_check_in' ),
+			'checkOut' => (string) $order->get_meta( '_mtal_booking_check_out' ),
+			'guests' => (int) $order->get_meta( '_mtal_booking_guests' ),
+			'suiteId' => (int) $order->get_meta( '_mtal_booking_suite_id' ),
 			'isFinal' => ! in_array( $status, array( 'mtal-pending', 'pending' ), true ),
 		) );
 	}
