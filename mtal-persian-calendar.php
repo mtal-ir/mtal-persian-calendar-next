@@ -2,7 +2,7 @@
 /**
  * Plugin Name: MTAL Persian Calendar
  * Description: افزونه مستقل تقویم جلالی برای انتخاب بازه دو تاریخی، مدیریت روزهای بسته/تعطیلات و قیمت‌گذاری در المنتور.
- * Version: 0.6.0
+ * Version: 0.6.1
  * Author: MTAL
  * Text Domain: mtal-persian-calendar
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MTAL_PC_VERSION', '0.6.0' );
+define( 'MTAL_PC_VERSION', '0.6.1' );
 define( 'MTAL_PC_PATH', plugin_dir_path( __FILE__ ) );
 define( 'MTAL_PC_URL', plugin_dir_url( __FILE__ ) );
 
