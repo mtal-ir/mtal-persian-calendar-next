@@ -159,6 +159,8 @@ final class MTAL_Persian_Calendar {
 			'mtalCalendarConfig',
 			array(
 				'ajaxUrl'         => admin_url( 'admin-ajax.php' ),
+				'isUserLoggedIn'  => is_user_logged_in(),
+				'loginUrl'        => function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : wp_login_url(),
 				'nonce'           => wp_create_nonce( 'mtal_calendar_rules_nonce' ),
 				'maxMonths'       => 3,
 				'postId'          => $current_post_id,
