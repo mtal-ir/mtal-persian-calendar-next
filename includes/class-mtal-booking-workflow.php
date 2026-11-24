@@ -76,25 +76,60 @@ final class MTAL_Booking_Workflow {
 		return $statuses;
 	}
 
-	public static function is_date_held( $suite_id, $jalali_date ) {
+	/**
+	 * Validate access to an active booking before excluding its own date holds.
+	 *
+	 * @return int Valid active order ID, or 0.
+	 */
+	public static function get_valid_active_booking_order_id( $order_id, $token, $suite_id ) {
+		$order_id = absint( $order_id );
+		$suite_id = absint( $suite_id );
+		$token = is_string( $token ) ? trim( $token ) : '';
+		if ( ! $order_id || ! $suite_id || '' === $token || ! function_exists( 'wc_get_order' ) ) {
+			return 0;
+		}
+		$order = wc_get_order( $order_id );
+		if ( ! $order || absint( $order->get_meta( '_mtal_booking_suite_id' ) ) !== $suite_id ) {
+			return 0;
+		}
+		$stored = (string) $order->get_meta( '_mtal_booking_access_token' );
+		$expires = (int) $order->get_meta( '_mtal_booking_expires_at' );
+		if ( ! $stored || ! hash_equals( $stored, wp_hash( $token ) ) || $expires <= time() || $order->is_paid() ) {
+			return 0;
+		}
+		if ( ! in_array( $order->get_status(), array( 'mtal-pending', 'pending' ), true ) ) {
+			return 0;
+		}
+		return $order_id;
+	}
+
+	public static function is_date_held( $suite_id, $jalali_date, $exclude_order_id = 0 ) {
 		global $wpdb;
 		$table = self::table_name();
 		$now = time();
-		$held = $wpdb->get_var( $wpdb->prepare(
-			"SELECT order_id FROM {$table} WHERE suite_id = %d AND stay_date = %s AND (expires_at = 0 OR expires_at > %d) LIMIT 1",
-			absint( $suite_id ), $jalali_date, $now
-		) );
+		$exclude_order_id = absint( $exclude_order_id );
+		$sql = "SELECT order_id FROM {$table} WHERE suite_id = %d AND stay_date = %s AND (expires_at = 0 OR expires_at > %d)";
+		$args = array( absint( $suite_id ), $jalali_date, $now );
+		if ( $exclude_order_id ) {
+			$sql .= " AND order_id != %d";
+			$args[] = $exclude_order_id;
+		}
+		$held = $wpdb->get_var( $wpdb->prepare( $sql . ' LIMIT 1', $args ) );
 		return ! empty( $held );
 	}
 
-	public static function active_held_dates( $suite_id ) {
+	public static function active_held_dates( $suite_id, $exclude_order_id = 0 ) {
 		global $wpdb;
 		$table = self::table_name();
 		$now = time();
-		$dates = $wpdb->get_col( $wpdb->prepare(
-			"SELECT stay_date FROM {$table} WHERE suite_id = %d AND (expires_at = 0 OR expires_at > %d)",
-			absint( $suite_id ), $now
-		) );
+		$exclude_order_id = absint( $exclude_order_id );
+		$sql = "SELECT stay_date FROM {$table} WHERE suite_id = %d AND (expires_at = 0 OR expires_at > %d)";
+		$args = array( absint( $suite_id ), $now );
+		if ( $exclude_order_id ) {
+			$sql .= " AND order_id != %d";
+			$args[] = $exclude_order_id;
+		}
+		$dates = $wpdb->get_col( $wpdb->prepare( $sql, $args ) );
 		return is_array( $dates ) ? $dates : array();
 	}
 

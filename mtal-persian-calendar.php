@@ -258,7 +258,7 @@ final class MTAL_Persian_Calendar {
 	 *
 	 * @return array|WP_Error
 	 */
-	public static function calculate_stay_price( $post_id, $check_in, $check_out, $guests ) {
+	public static function calculate_stay_price( $post_id, $check_in, $check_out, $guests, $booking_order_id = 0 ) {
 		$post_id = absint( $post_id );
 		$post = $post_id ? get_post( $post_id ) : null;
 		if ( ! $post || 'publish' !== $post->post_status || absint( $guests ) < 1 ) {
@@ -288,7 +288,7 @@ final class MTAL_Persian_Calendar {
 		for ( $jdn = $start['jdn']; $jdn < $end['jdn']; $jdn++ ) {
 			$day = self::jdn_to_jalali( $jdn );
 			$key = sprintf( '%04d/%02d/%02d', $day[0], $day[1], $day[2] );
-			if ( isset( $blocked[ $key ] ) || ( class_exists( 'MTAL_Booking_Workflow' ) && MTAL_Booking_Workflow::is_date_held( $post_id, $key ) ) ) {
+			if ( isset( $blocked[ $key ] ) || ( class_exists( 'MTAL_Booking_Workflow' ) && MTAL_Booking_Workflow::is_date_held( $post_id, $key, $booking_order_id ) ) ) {
 				return new WP_Error( 'mtal_date_unavailable', 'یکی از تاریخ‌های انتخابی در حال حاضر مسدود یا در انتظار درخواست دیگری است: ' . $key );
 			}
 			$weekday = ( ( $jdn + 2 ) % 7 + 7 ) % 7;
@@ -334,6 +334,14 @@ final class MTAL_Persian_Calendar {
 		$start = self::normalize_jalali_input( isset( $_POST['check_in'] ) ? wp_unslash( $_POST['check_in'] ) : '' );
 		$end   = self::normalize_jalali_input( isset( $_POST['check_out'] ) ? wp_unslash( $_POST['check_out'] ) : '' );
 		$guests = isset( $_POST['guests'] ) ? absint( $_POST['guests'] ) : 0;
+		$booking_order_id = 0;
+		if ( class_exists( 'MTAL_Booking_Workflow' ) ) {
+			$booking_order_id = MTAL_Booking_Workflow::get_valid_active_booking_order_id(
+				isset( $_POST['order_id'] ) ? absint( $_POST['order_id'] ) : 0,
+				isset( $_POST['token'] ) ? sanitize_text_field( wp_unslash( $_POST['token'] ) ) : '',
+				$post_id
+			);
+		}
 		if ( ! $start || ! $end || $guests < 1 || $end['jdn'] <= $start['jdn'] ) {
 			wp_send_json_error( array( 'message' => 'تاریخ ورود، خروج یا تعداد مهمان معتبر نیست.' ), 400 );
 		}
@@ -367,7 +375,7 @@ final class MTAL_Persian_Calendar {
 		for ( $jdn = $start['jdn']; $jdn < $end['jdn']; $jdn++ ) {
 			$day = self::jdn_to_jalali( $jdn );
 			$key = sprintf( '%04d/%02d/%02d', $day[0], $day[1], $day[2] );
-			if ( isset( $blocked[ $key ] ) || ( class_exists( 'MTAL_Booking_Workflow' ) && MTAL_Booking_Workflow::is_date_held( $post_id, $key ) ) ) {
+			if ( isset( $blocked[ $key ] ) || ( class_exists( 'MTAL_Booking_Workflow' ) && MTAL_Booking_Workflow::is_date_held( $post_id, $key, $booking_order_id ) ) ) {
 				wp_send_json_error( array( 'message' => 'در بازه انتخابی روز مسدود وجود دارد: ' . $key ), 400 );
 			}
 			$weekday = ( ( $jdn + 2 ) % 7 + 7 ) % 7;
@@ -398,7 +406,12 @@ final class MTAL_Persian_Calendar {
 		$post_id = isset( $_REQUEST['post_id'] ) ? absint( $_REQUEST['post_id'] ) : 0;
 		$data = self::get_suite_calendar_data( $post_id );
 		if ( class_exists( 'MTAL_Booking_Workflow' ) ) {
-			$data['blockedDates'] = array_values( array_unique( array_merge( $data['blockedDates'], MTAL_Booking_Workflow::active_held_dates( $post_id ) ) ) );
+			$booking_order_id = MTAL_Booking_Workflow::get_valid_active_booking_order_id(
+				isset( $_REQUEST['order_id'] ) ? absint( $_REQUEST['order_id'] ) : 0,
+				isset( $_REQUEST['token'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['token'] ) ) : '',
+				$post_id
+			);
+			$data['blockedDates'] = array_values( array_unique( array_merge( $data['blockedDates'], MTAL_Booking_Workflow::active_held_dates( $post_id, $booking_order_id ) ) ) );
 		}
 		wp_send_json_success( $data );
 	}

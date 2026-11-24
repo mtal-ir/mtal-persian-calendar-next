@@ -98,6 +98,17 @@
 		}
 	}
 
+	function getActiveBookingForSuite(postId) {
+		try {
+			const active = JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null');
+			if (!active || !active.orderId || !active.token || Number(active.deadline) <= Date.now()) return null;
+			if (active.postId && String(active.postId) !== String(postId)) return null;
+			return active;
+		} catch (e) {
+			return null;
+		}
+	}
+
 	function resolveSuiteMaxCapacity(host, fallbackMax) {
 		const attrMax = parsePositiveInt(host.getAttribute('data-mtal-max-guests') || cfg.maxGuests, 0);
 		if (attrMax > 0) return attrMax;
@@ -982,6 +993,11 @@
 						fd.append('check_out', payload.checkOutSlash || '');
 						fd.append('guests', String(cal.guestsCount || 1));
 						fd.append('max_months', String(maxMonths));
+						const activeBooking = getActiveBookingForSuite(postId);
+						if (activeBooking) {
+							fd.append('order_id', String(activeBooking.orderId));
+							fd.append('token', String(activeBooking.token));
+						}
 						fetch(cfg.ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
 							.then((response) => response.json())
 							.then((result) => {
@@ -1483,6 +1499,11 @@
 			const fd = new FormData();
 			fd.append('action', 'mtal_get_suite_calendar_rules');
 			fd.append('post_id', String(postId));
+			const activeBooking = getActiveBookingForSuite(postId);
+			if (activeBooking) {
+				fd.append('order_id', String(activeBooking.orderId));
+				fd.append('token', String(activeBooking.token));
+			}
 			return fetch(cfg.ajaxUrl, {
 				method: 'POST',
 				body: fd,
