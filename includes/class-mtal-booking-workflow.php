@@ -15,6 +15,7 @@ final class MTAL_Booking_Workflow {
 		add_action( 'plugins_loaded', array( __CLASS__, 'maybe_upgrade' ), 5 );
 		add_filter( 'woocommerce_order_needs_payment', array( __CLASS__, 'prevent_expired_payment' ), 10, 3 );
 		add_action( 'woocommerce_admin_order_data_after_order_details', array( __CLASS__, 'render_hpos_order_actions' ) );
+		add_action( 'woocommerce_admin_order_data_after_order_details', array( __CLASS__, 'render_booking_details_panel' ), 5 );
 		add_filter( 'wc_order_statuses', array( __CLASS__, 'add_order_statuses' ) );
 		add_action( 'elementor_pro/forms/new_record', array( __CLASS__, 'handle_elementor_submission' ), 20, 2 );
 		add_action( 'add_meta_boxes', array( __CLASS__, 'add_order_metabox' ) );
@@ -434,10 +435,8 @@ final class MTAL_Booking_Workflow {
 			echo '<p>این سفارش مربوط به رزرو تقویم MTAL نیست.</p>';
 			return;
 		}
+		self::render_booking_details_panel( $order );
 		$status = $order->get_status();
-		$expires = (int) $order->get_meta( '_mtal_booking_expires_at' );
-		echo '<p>تاریخ: ' . esc_html( $order->get_meta( '_mtal_booking_check_in' ) . ' تا ' . $order->get_meta( '_mtal_booking_check_out' ) ) . '</p>';
-		echo '<p>مهلت: ' . esc_html( $expires ? wp_date( 'Y-m-d H:i:s', $expires ) : 'پایان یافته' ) . '</p>';
 		if ( 'mtal-pending' !== $status ) {
 			echo '<p>وضعیت فعلی: ' . esc_html( wc_get_order_status_name( $status ) ) . '</p>';
 			return;
@@ -448,6 +447,38 @@ final class MTAL_Booking_Workflow {
 		echo '<p><a class="button" href="' . esc_url( add_query_arg( array( 'decision' => 'reject', '_wpnonce' => $nonce ), $url ) ) . '" onclick="return confirm(\'درخواست رد و تاریخ‌ها آزاد شوند؟\')">رد درخواست و آزادسازی تاریخ‌ها</a></p>';
 	}
 
+
+	/**
+	 * Display the booking metadata stored on the WooCommerce order.
+	 * Shared by the HPOS order screen and the legacy order metabox.
+	 */
+	public static function render_booking_details_panel( $order ) {
+		if ( ! $order || ! is_a( $order, 'WC_Order' ) || ! $order->get_meta( '_mtal_booking_suite_id' ) ) {
+			return;
+		}
+		$suite_id = absint( $order->get_meta( '_mtal_booking_suite_id' ) );
+		$suite_name = get_the_title( $suite_id );
+		$suite_name = $suite_name ? $suite_name : 'سوئیت #' . $suite_id;
+		$check_in = (string) $order->get_meta( '_mtal_booking_check_in' );
+		$check_out = (string) $order->get_meta( '_mtal_booking_check_out' );
+		$guests = absint( $order->get_meta( '_mtal_booking_guests' ) );
+		$total = $order->get_meta( '_mtal_booking_total' );
+		$expires = absint( $order->get_meta( '_mtal_booking_expires_at' ) );
+		echo '<div class="mtal-booking-order-details"><h3>جزئیات رزرو تقویم MTAL</h3><table class="widefat striped"><tbody>';
+		$rows = array(
+			'سوئیت' => $suite_name,
+			'تاریخ ورود' => $check_in ? $check_in : '—',
+			'تاریخ خروج' => $check_out ? $check_out : '—',
+			'تعداد نفرات' => $guests ? $guests . ' نفر' : '—',
+			'مبلغ رزرو' => null !== $total && '' !== $total ? wp_strip_all_tags( wc_price( (float) $total, array( 'currency' => $order->get_currency() ) ) ) : wp_strip_all_tags( wc_price( (float) $order->get_total(), array( 'currency' => $order->get_currency() ) ) ),
+			'وضعیت سفارش' => wc_get_order_status_name( $order->get_status() ),
+			'مهلت درخواست/پرداخت' => $expires ? wp_date( 'Y-m-d H:i:s', $expires ) : '—',
+		);
+		foreach ( $rows as $label => $value ) {
+			echo '<tr><th style="width:35%">' . esc_html( $label ) . '</th><td>' . esc_html( $value ) . '</td></tr>';
+		}
+		echo '</tbody></table></div>';
+	}
 
 	public static function render_hpos_order_actions( $order ) {
 		if ( ! $order || ! is_a( $order, 'WC_Order' ) || ! $order->get_meta( '_mtal_booking_suite_id' ) || 'mtal-pending' !== $order->get_status() ) {
