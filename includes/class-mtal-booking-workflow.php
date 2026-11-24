@@ -211,6 +211,12 @@ final class MTAL_Booking_Workflow {
 	}
 
 	public static function handle_elementor_submission( $record, $handler ) {
+		if ( ! is_user_logged_in() ) {
+			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+				$handler->add_error_message( 'برای ثبت درخواست رزرو، ابتدا وارد حساب کاربری خود شوید.' );
+			}
+			return;
+		}
 		if ( ! function_exists( 'wc_create_order' ) || ! class_exists( 'MTAL_Persian_Calendar' ) ) {
 			return;
 		}
