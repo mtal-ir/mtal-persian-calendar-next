@@ -157,12 +157,16 @@ final class MTAL_Booking_Workflow {
 		}
 		$fields = self::extract_fields( $record );
 		$suite_id = isset( $fields['mtal_post_id'] ) ? absint( $fields['mtal_post_id'] ) : 0;
-		if ( ! $suite_id && isset( $_POST['post_id'] ) ) {
-			$suite_id = absint( wp_unslash( $_POST['post_id'] ) );
-		}
 		$range = self::find_date_range( $fields );
 		$guests = isset( $fields['mtal_qty'] ) ? absint( $fields['mtal_qty'] ) : 0;
 		if ( ! $suite_id || ! $range || $guests < 1 ) {
+			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+				$missing = array();
+				if ( ! $suite_id ) $missing[] = 'شناسه سوئیت';
+				if ( ! $range ) $missing[] = 'بازه تاریخ ورود و خروج';
+				if ( $guests < 1 ) $missing[] = 'تعداد مسافران';
+				$handler->add_error_message( 'اطلاعات رزرو به سرور نرسید یا ناقص است: ' . implode( '، ', $missing ) . '. فرم را بررسی کنید و دوباره ارسال نکنید؛ با پشتیبانی تماس بگیرید.' );
+			}
 			return;
 		}
 		$price = MTAL_Persian_Calendar::calculate_stay_price( $suite_id, $range[0], $range[1], $guests );
@@ -177,9 +181,15 @@ final class MTAL_Booking_Workflow {
 		try {
 			$order = wc_create_order( array( 'customer_id' => get_current_user_id() ) );
 		} catch ( Exception $e ) {
+			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+				$handler->add_error_message( 'ساخت سفارش در ووکامرس انجام نشد. لطفاً با پشتیبانی تماس بگیرید.' );
+			}
 			return;
 		}
 		if ( is_wp_error( $order ) || ! $order ) {
+			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+				$handler->add_error_message( 'ووکامرس نتوانست سفارش رزرو را ایجاد کند. لطفاً با پشتیبانی تماس بگیرید.' );
+			}
 			return;
 		}
 
