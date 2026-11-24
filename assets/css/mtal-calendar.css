@@ -1225,3 +1225,32 @@ html.mtal-modal-open {
 @media (prefers-reduced-motion: reduce) {
 	.mtal-booking-countdown.is-cancelling::before { animation: none; }
 }
+
+/* دکمه پرداخت رزرو: هماهنگ با رنگ دکمه ارسال */
+.mtal-booking-payment-button {
+	background: #637426 !important;
+	border: 1px solid #637426 !important;
+	color: #fff !important;
+	font-weight: 700;
+	box-shadow: 0 3px 10px rgba(99, 116, 38, 0.22);
+	transition: background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+	animation: mtal-payment-button-pulse 2.8s ease-in-out infinite;
+}
+.mtal-booking-payment-button:hover,
+.mtal-booking-payment-button:focus-visible {
+	background: #56651f !important;
+	border-color: #56651f !important;
+	box-shadow: 0 5px 15px rgba(99, 116, 38, 0.3);
+	transform: translateY(-1px);
+}
+@keyframes mtal-payment-button-pulse {
+	0%, 100% { box-shadow: 0 3px 10px rgba(99, 116, 38, 0.18); }
+	50% { box-shadow: 0 4px 16px rgba(99, 116, 38, 0.34); }
+}
+@media (prefers-reduced-motion: reduce) {
+	.mtal-booking-payment-button {
+		animation: none;
+		transition: none;
+	}
+}
+
