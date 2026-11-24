@@ -1652,13 +1652,30 @@
 		}
 		return true;
 	}
+	function handleElementorBookingSuccess(form, response) {
+		if (!form || !form._mtalBookingActionButton) return;
+		const started = startBookingCountdown(form, response || {});
+		if (started) return;
+		// Elementor may report a successful form submission even when the booking
+		// workflow did not create an order (for example, missing booking fields).
+		// Keep the action in submit mode and tell the visitor no booking was confirmed.
+		form._mtalBookingSubmitted = false;
+		form._mtalBookingFinalized = false;
+		const button = form._mtalBookingActionButton;
+		button.classList.remove('is-cancel-action', 'is-cancelling');
+		button.removeAttribute('aria-busy');
+		button.textContent = 'ارسال درخواست رزرو';
+		const host = form._mtalCalendarHost || null;
+		const hint = host && host.querySelector('.mtal-booking-form-hint');
+		if (hint) hint.textContent = 'فرم ارسال شد، اما سرور شناسه سفارش و تأیید ثبت رزرو را برنگرداند؛ درخواست رزرو ثبت‌شده محسوب نمی‌شود. اطلاعات فرم را بررسی کنید و در صورت تکرار، با پشتیبانی تماس بگیرید.';
+	}
 	if (window.jQuery) {
 		window.jQuery(document).on('submit_success', 'form.elementor-form', function (event, response) {
-			startBookingCountdown(this, response || {});
+			handleElementorBookingSuccess(this, response || {});
 		});
 		window.jQuery(document).on('submit_success', function (event, response) {
 			const form = event.target && event.target.closest ? event.target.closest('form') : null;
-			if (form && !form.matches('form.elementor-form')) startBookingCountdown(form, response || {});
+			if (form && !form.matches('form.elementor-form')) handleElementorBookingSuccess(form, response || {});
 		});
 	}
 
