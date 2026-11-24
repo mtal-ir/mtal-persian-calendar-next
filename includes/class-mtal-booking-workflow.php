@@ -263,8 +263,8 @@ final class MTAL_Booking_Workflow {
 		}
 		set_transient( $attempt_key, $attempts + 1, DAY_IN_SECONDS );
 
-		if ( 'mtal-pending' !== $order->get_status() ) {
-			wp_send_json_error( array( 'message' => 'این درخواست دیگر در وضعیت قابل لغو توسط کاربر نیست.' ), 409 );
+		if ( ! in_array( $order->get_status(), array( 'mtal-pending', 'pending' ), true ) || $order->is_paid() ) {
+			wp_send_json_error( array( 'message' => 'این درخواست دیگر قابل لغو نیست؛ ممکن است پرداخت آن انجام شده یا رزرو نهایی شده باشد.' ), 409 );
 		}
 		$order->update_status( 'cancelled', 'درخواست توسط کاربر از طریق صفحه رزرو لغو شد؛ تاریخ‌ها آزاد شدند.' );
 		self::release_order_holds( $order->get_id() );
