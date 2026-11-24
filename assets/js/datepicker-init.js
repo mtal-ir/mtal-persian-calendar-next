@@ -861,11 +861,13 @@
 			const mode = VALID_MODES.includes(modeAttr) ? modeAttr : 'inline';
 			const mountEl = host.querySelector('.mtal-cal-inline-mount') || host;
 			const targetSelector = host.getAttribute('data-mtal-target') || '';
-			const scope = host.getAttribute('data-mtal-storage-scope') || 'global';
+			const baseScope = host.getAttribute('data-mtal-storage-scope') || 'global';
 			const triggerLabel = host.getAttribute('data-mtal-trigger-label') || 'انتخاب تاریخ سفر';
 			const attrMax = parsePositiveInt(host.getAttribute('data-mtal-max-months'), NaN);
 			const maxMonths = !Number.isNaN(attrMax) ? Math.max(1, Math.min(3, attrMax)) : globalMaxMonths;
 			const postId = parsePositiveInt(host.getAttribute('data-mtal-post-id') || cfg.postId, 0);
+			// Each suite needs isolated date/guest persistence and sibling synchronization.
+			const scope = `${baseScope}::suite-${postId || 'unknown'}`;
 
 			const blockedDates = parseJsonAttr(host.getAttribute('data-mtal-blocked-dates'), cfg.blockedDates || []);
 			const holidayDates = parseJsonAttr(host.getAttribute('data-mtal-holiday-dates'), cfg.holidayDates || []);
@@ -1611,9 +1613,16 @@
  function restoreActiveBookingCountdown() {
   let saved; try { saved=JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null'); } catch(e) { saved=null; }
   if (!saved || !saved.orderId || !saved.token) return;
-  const form=Array.from(document.querySelectorAll('form')).find(item=>item._mtalCalendarHost || item.matches('form.elementor-form'));
+  const forms=Array.from(document.querySelectorAll('form'));
+  const form=forms.find(item=>{
+   const host=item._mtalCalendarHost || item.closest('.mtal-calendar-host, [data-mtal-post-id]');
+   const hostId=host && host.getAttribute('data-mtal-post-id');
+   const idField=item.querySelector('#form-field-mtal_post_id, input[name="form_fields[mtal_post_id]"]');
+   const formId=idField && idField.value;
+   return (saved.postId && String(hostId || formId || '')===String(saved.postId)) || (!saved.postId && (item._mtalCalendarHost || item.matches('form.elementor-form')));
+  });
   if (!form) return;
-  startBookingCountdown(form,{data:{mtal_booking_order_id:saved.orderId,mtal_booking_access_token:saved.token,mtal_booking_expires_at:Math.floor((Number(saved.deadline)||Date.now())/1000)}});
+  startBookingCountdown(form,{data:{mtal_booking_order_id:saved.orderId,mtal_booking_access_token:saved.token,mtal_booking_expires_at:Math.floor((Number(saved.deadline)||Date.now())/1000),mtal_booking_check_in:saved.checkIn||'',mtal_booking_check_out:saved.checkOut||'',mtal_booking_guests:saved.guests||''}});
  }
  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',restoreActiveBookingCountdown,{once:true});
  else window.setTimeout(restoreActiveBookingCountdown,0);
