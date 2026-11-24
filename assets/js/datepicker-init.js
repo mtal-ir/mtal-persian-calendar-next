@@ -1695,6 +1695,23 @@
 					}
 					const stateHost = form._mtalCalendarHost || form.closest('.mtal-calendar-host, [data-mtal-post-id]');
 					if (stateHost) stateHost.dispatchEvent(new CustomEvent('mtal:bookingFinalized', { detail: { status: result.data.status, message: result.data.message || '' } }));
+					// Make rejected/expired requests clear the live calendar state directly as
+					// well as notifying the form listener; this avoids stale selections when
+					// the status poll runs after an administrator decision.
+					if (result.data.status === 'cancelled') {
+						const finalSuiteId = Number(result.data.suiteId || (activeRequest && activeRequest.postId) || 0);
+						calendarEntries.filter((entry) => !finalSuiteId || Number(entry.postId) === finalSuiteId).forEach((entry) => {
+							entry.cal.clear({ notify: true });
+							entry.cal.setGuestsCount(entry.cal.baseCapacity, { notify: true });
+							const group = instancesByKey.get(entry.host && entry.host.getAttribute('data-mtal-sync-key')) || [];
+							group.forEach((item) => {
+								try {
+									window.localStorage.removeItem(item.storageKey);
+									window.localStorage.removeItem(item.guestsStorageKey);
+								} catch (e) {}
+							});
+						});
+					}
 					try {
 						const current = JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null');
 						if (current && current.orderId === orderId) {
