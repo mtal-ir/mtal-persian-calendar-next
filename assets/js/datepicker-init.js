@@ -789,6 +789,12 @@
 				return;
 			}
 			button.textContent = 'ارسال درخواست رزرو';
+			// Guests must be able to click through to login without completing the form.
+			if (cfg.isUserLoggedIn === false) {
+				button.disabled = false;
+				message.textContent = 'برای ثبت درخواست رزرو، ابتدا وارد حساب کاربری شوید یا ثبت‌نام کنید.';
+				return;
+			}
 			const missing = validateBookingForm(form, host, cal);
 			const payload = host._mtalLatestPayload || cal.buildPayload(cal.startDate, cal.endDate);
 			const priceReady = Boolean(payload && Number(payload.totalPrice) > 0);
