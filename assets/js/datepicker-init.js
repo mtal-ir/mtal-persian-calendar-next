@@ -1512,8 +1512,11 @@
 				return '';
 			};
 			const token = pick('mtal_booking_access_token') || (sameRequest ? previous.token : '');
-			const checkIn = pick('mtal_booking_check_in') || getFieldValue(['[name*="check_in"]','[name*="checkin"]']) || (sameRequest ? previous.checkIn : '');
-			const checkOut = pick('mtal_booking_check_out') || getFieldValue(['[name*="check_out"]','[name*="checkout"]']) || (sameRequest ? previous.checkOut : '');
+			const dateRangeSelector = calendarHost && calendarHost.getAttribute('data-mtal-target') ? calendarHost.getAttribute('data-mtal-target') : '';
+			const combinedDateRange = getFieldValue([dateRangeSelector, '#form-field-checkin_checkout', 'input[name*="checkin_checkout"]', 'input[name*="date_range"]'].filter(Boolean));
+			const dateParts = String(combinedDateRange || '').match(/\d{4}\/\d{1,2}\/\d{1,2}/g) || [];
+			const checkIn = pick('mtal_booking_check_in') || getFieldValue(['[name*="check_in"]','[name*="checkin"]']) || dateParts[0] || (sameRequest ? previous.checkIn : '');
+			const checkOut = pick('mtal_booking_check_out') || getFieldValue(['[name*="check_out"]','[name*="checkout"]']) || dateParts[1] || (sameRequest ? previous.checkOut : '');
 			const guests = pick('mtal_booking_guests') || getFieldValue(['#form-field-mtal_qty','input[name*="mtal_qty"]']) || (sameRequest ? previous.guests : '');
 			const postId = (calendarHost && calendarHost.getAttribute('data-mtal-post-id')) || (sameRequest ? previous.postId : '') || '';
 			// پاسخ‌های تکراری یا ناقص نباید توکن/تاریخ‌های معتبر درخواست قبلی را پاک کنند.
