@@ -785,6 +785,8 @@
 						countdown.textContent = result.data.message || 'درخواست شما لغو شد و تاریخ‌های انتخابی آزاد شدند.';
 					}
 					message.textContent = result.data.message || 'درخواست شما لغو شد.';
+					// Refresh the calendar immediately; do not wait for the periodic availability poll.
+					if (typeof refreshServerAvailability === 'function') refreshServerAvailability();
 					bookingSubmitted = false;
 					button.classList.remove('is-cancel-action');
 					try {
@@ -1471,7 +1473,7 @@
 	}
 
 	// Poll less often, avoid duplicate requests, and do no background work while offline/hidden.
-	window.setInterval(refreshServerAvailability, 120000);
+	window.setInterval(refreshServerAvailability, 15000);
 	document.addEventListener('visibilitychange', () => {
 		if (document.visibilityState === 'visible') refreshServerAvailability();
 	});
@@ -1593,7 +1595,23 @@
 					}
 					try {
 						const current = JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null');
-						if (current && current.orderId === orderId) window.localStorage.removeItem('mtal_booking_active_request');
+						if (current && current.orderId === orderId) {
+							// Keep the selected stay and guest count after the workflow reaches a final state.
+						const checkIn = result.data.checkIn || current.checkIn || '';
+						const checkOut = result.data.checkOut || current.checkOut || '';
+						const guests = result.data.guests || current.guests || '';
+						const suiteId = String(result.data.suiteId || current.postId || '');
+						if (suiteId) {
+							const range = checkIn && checkOut ? String(checkIn).replace(/-/g, '/') + ' - ' + String(checkOut).replace(/-/g, '/') : '';
+						for (let index = 0; index < window.localStorage.length; index++) {
+							const storageKey = window.localStorage.key(index);
+							if (!storageKey || !storageKey.includes('suite-' + suiteId + '__')) continue;
+							if (range && storageKey.startsWith('mtal_cal_range__')) window.localStorage.setItem(storageKey, range);
+							if (guests && storageKey.startsWith('mtal_cal_guests__')) window.localStorage.setItem(storageKey, String(guests));
+						}
+						}
+						window.localStorage.removeItem('mtal_booking_active_request');
+						}
 						window.localStorage.removeItem(key);
 					} catch (e) {}
 				}).catch(() => {});
