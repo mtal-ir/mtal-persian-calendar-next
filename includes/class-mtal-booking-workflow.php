@@ -133,6 +133,29 @@ final class MTAL_Booking_Workflow {
 		return is_array( $dates ) ? $dates : array();
 	}
 
+	/**
+	 * Acquire a short-lived atomic submission lock for a suite.
+	 *
+	 * @return string|false Option name when acquired.
+	 */
+	private static function acquire_submission_lock( $suite_id ) {
+		$key = 'mtal_booking_submit_lock_' . absint( $suite_id );
+		$created_at = (int) get_option( $key, 0 );
+		if ( $created_at && ( time() - $created_at ) > 120 ) {
+			delete_option( $key );
+		}
+		if ( ! add_option( $key, time(), '', false ) ) {
+			return false;
+		}
+		return $key;
+	}
+
+	private static function release_submission_lock( $key ) {
+		if ( is_string( $key ) && 0 === strpos( $key, 'mtal_booking_submit_lock_' ) ) {
+			delete_option( $key );
+		}
+	}
+
 	private static function claim_dates( $suite_id, $dates, $order_id, $expires_at ) {
 		global $wpdb;
 		$table = self::table_name();
@@ -212,16 +235,63 @@ final class MTAL_Booking_Workflow {
 			return;
 		}
 
+		// Normalize and validate the stay before creating any WooCommerce order.
+		$start = MTAL_Persian_Calendar::normalize_booking_date( $range[0] );
+		$end = MTAL_Persian_Calendar::normalize_booking_date( $range[1] );
+		if ( ! $start || ! $end || $end['jdn'] <= $start['jdn'] ) {
+			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+				$handler->add_error_message( 'بازه تاریخ انتخابی معتبر نیست؛ لطفاً تاریخ‌ها را دوباره انتخاب کنید.' );
+			}
+			return;
+		}
+		$dates = array();
+		for ( $jdn = $start['jdn']; $jdn < $end['jdn']; $jdn++ ) {
+			$day = MTAL_Persian_Calendar::booking_jdn_to_jalali( $jdn );
+			$dates[] = sprintf( '%04d/%02d/%02d', $day[0], $day[1], $day[2] );
+		}
+		foreach ( $dates as $date ) {
+			if ( self::is_date_held( $suite_id, $date ) ) {
+				if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+					$handler->add_error_message( 'بخشی از تاریخ‌های انتخابی هم‌اکنون در درخواست رزرو دیگری نگه داشته شده است. سفارش جدیدی ساخته نشد؛ لطفاً تاریخ دیگری انتخاب کنید.' );
+				}
+				return;
+			}
+		}
+
+		// Serialize submissions for the same suite to prevent rapid duplicate requests
+		// from creating multiple orders before the date-hold transaction is committed.
+		$submission_lock = self::acquire_submission_lock( $suite_id );
+		if ( ! $submission_lock ) {
+			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+				$handler->add_error_message( 'درخواست رزرو دیگری برای این سوئیت هم‌زمان در حال ثبت است؛ چند لحظه صبر کنید و وضعیت را بررسی کنید.' );
+			}
+			return;
+		}
+
+		// Recheck availability after acquiring the lock; another request may have
+		// completed between the first check and lock acquisition.
+		foreach ( $dates as $date ) {
+			if ( self::is_date_held( $suite_id, $date ) ) {
+				self::release_submission_lock( $submission_lock );
+				if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+					$handler->add_error_message( 'بخشی از تاریخ‌های انتخابی هم‌اکنون رزرو موقت شده است. سفارش جدیدی ساخته نشد؛ لطفاً تاریخ دیگری انتخاب کنید.' );
+				}
+				return;
+			}
+		}
+
 		$expires = time() + ( self::HOLD_MINUTES * MINUTE_IN_SECONDS );
 		try {
 			$order = wc_create_order( array( 'customer_id' => get_current_user_id() ) );
 		} catch ( Exception $e ) {
+			self::release_submission_lock( $submission_lock );
 			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
 				$handler->add_error_message( 'ساخت سفارش در ووکامرس انجام نشد. لطفاً با پشتیبانی تماس بگیرید.' );
 			}
 			return;
 		}
 		if ( is_wp_error( $order ) || ! $order ) {
+			self::release_submission_lock( $submission_lock );
 			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
 				$handler->add_error_message( 'ووکامرس نتوانست سفارش رزرو را ایجاد کند. لطفاً با پشتیبانی تماس بگیرید.' );
 			}
@@ -259,25 +329,16 @@ final class MTAL_Booking_Workflow {
 		$order->update_meta_data( '_mtal_booking_access_token', wp_hash( $access_token ) );
 		$order->save();
 
-		$dates = array();
-		$start = MTAL_Persian_Calendar::normalize_booking_date( $range[0] );
-		$end = MTAL_Persian_Calendar::normalize_booking_date( $range[1] );
-		if ( ! $start || ! $end ) {
-			$order->update_status( 'cancelled', 'تاریخ‌های درخواست رزرو معتبر نبودند.' );
-			return;
-		}
-		for ( $jdn = $start['jdn']; $jdn < $end['jdn']; $jdn++ ) {
-			$day = MTAL_Persian_Calendar::booking_jdn_to_jalali( $jdn );
-			$dates[] = sprintf( '%04d/%02d/%02d', $day[0], $day[1], $day[2] );
-		}
 		$claimed = self::claim_dates( $suite_id, $dates, $order->get_id(), $expires );
 		if ( is_wp_error( $claimed ) ) {
 			$order->update_status( 'cancelled', $claimed->get_error_message() );
+			self::release_submission_lock( $submission_lock );
 			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
 				$handler->add_error_message( $claimed->get_error_message() );
 			}
 			return;
 		}
+		self::release_submission_lock( $submission_lock );
 		$order->update_status( 'mtal-pending', 'درخواست رزرو ثبت شد؛ مهلت تصمیم‌گیری و پرداخت ۳۰ دقیقه است.' );
 		if ( function_exists( 'wp_schedule_single_event' ) ) {
 			wp_schedule_single_event( $expires, self::CRON_HOOK, array( $order->get_id() ) );

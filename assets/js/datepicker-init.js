@@ -826,9 +826,19 @@
 					bookingSubmitted = false;
 					if (form) { form._mtalBookingSubmitted = false; form._mtalBookingFinalized = false; }
 					button.classList.remove('is-cancel-action');
+					// Clear the cancelled stay from every synchronized calendar and its persisted state.
+					const synchronizedCalendars = instancesByKey.get(groupKey) || [];
+					synchronizedCalendars.forEach((item) => {
+						item.cal.clear({ notify: true });
+						item.cal.setGuestsCount(item.cal.baseCapacity, { notify: true });
+					});
 					try {
 						window.localStorage.removeItem('mtal_booking_active_request');
 						if (saved.orderId) window.localStorage.removeItem('mtal_booking_deadline_' + saved.orderId);
+						synchronizedCalendars.forEach((item) => {
+							window.localStorage.removeItem(item.storageKey);
+							window.localStorage.removeItem(item.guestsStorageKey);
+						});
 					} catch (e) {}
 					button.textContent = 'ارسال درخواست رزرو';
 					refreshState();
