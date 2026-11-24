@@ -538,8 +538,8 @@
 			const outValue = checkOutField.querySelector('.mtal-date-field-value');
 			const checkIn = payload ? payload.checkIn : cal.startDate;
 			const checkOut = payload ? payload.checkOut : cal.endDate;
-			inValue.textContent = checkIn ? formatDateForDisplay(checkIn) : 'انتخاب تاریخ ورود';
-			outValue.textContent = checkOut ? formatDateForDisplay(checkOut) : 'انتخاب تاریخ خروج';
+			inValue.textContent = checkIn ? formatDateForDisplay(checkIn, cal) : 'انتخاب تاریخ ورود';
+			outValue.textContent = checkOut ? formatDateForDisplay(checkOut, cal) : 'انتخاب تاریخ خروج';
 			checkInField.classList.toggle('has-value', Boolean(checkIn));
 			checkOutField.classList.toggle('has-value', Boolean(checkOut));
 		};
@@ -578,10 +578,16 @@
 		return update;
 	}
 
-	function formatDateForDisplay(date) {
+	function formatDateForDisplay(date, cal) {
 		if (!date) return '';
 		const value = date.jy + '/' + String(date.jm).padStart(2, '0') + '/' + String(date.jd).padStart(2, '0');
-		return value.replace(/[0-9]/g, digit => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
+		const formattedDate = value.replace(/[0-9]/g, digit => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
+		// Reuse the calendar's own Jalali weekday formatter without changing stored dates.
+		const rangeText = cal && typeof cal.buildPayload === 'function'
+			? cal.buildPayload(date, null).rangeText
+			: '';
+		const weekdayMatch = rangeText.match(/تاریخ ورود:\s*(\S+)/);
+		return (weekdayMatch ? weekdayMatch[1] + ' ' : '') + formattedDate;
 	}
 
 	function buildGuestCounterBox(host, cal, maxGuests) {
@@ -883,6 +889,20 @@
 					form._mtalBookingSubmitted = false;
 					form._mtalBookingFinalized = false;
 					button.classList.remove('is-cancel-action');
+					// Reset every calendar linked to this suite as soon as cancellation is final.
+					const synchronizedCalendars = instancesByKey.get(groupKey) || [];
+					synchronizedCalendars.forEach((item) => {
+						item.cal.clear({ notify: true });
+						item.cal.setGuestsCount(item.cal.baseCapacity, { notify: true });
+					});
+					try {
+						window.localStorage.removeItem('mtal_booking_active_request');
+						synchronizedCalendars.forEach((item) => {
+							window.localStorage.removeItem(item.storageKey);
+							window.localStorage.removeItem(item.guestsStorageKey);
+						});
+					} catch (e) {}
+					button.textContent = 'ارسال درخواست رزرو';
 					refreshState();
 				} else {
 					bookingSubmitted = true;
