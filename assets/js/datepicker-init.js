@@ -782,7 +782,10 @@
 			}
 		}
 		button.addEventListener('click', () => {
-			if (bookingSubmitted) {
+			// Keep the click handler in sync with the form state set by startBookingCountdown.
+			// This ensures the very first click after a successful booking enters the cancel flow.
+			if (bookingSubmitted || (form && form._mtalBookingSubmitted)) {
+				bookingSubmitted = true;
 				const saved = (() => { try { return JSON.parse(window.localStorage.getItem('mtal_booking_active_request') || 'null'); } catch(e) { return null; } })();
 				if (!saved || !saved.orderId || !saved.token || !cfg.ajaxUrl) { message.textContent = 'اطلاعات امن درخواست برای لغو پیدا نشد؛ صفحه را تازه‌سازی کنید.'; return; }
 				button.disabled = true;
