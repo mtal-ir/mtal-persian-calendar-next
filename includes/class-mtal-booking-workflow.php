@@ -400,6 +400,7 @@ final class MTAL_Booking_Workflow {
 			'statusLabel' => wc_get_order_status_name( $status ),
 			'message' => isset( $messages[ $status ] ) ? $messages[ $status ] : 'وضعیت درخواست شما: ' . wc_get_order_status_name( $status ),
 			'expiresAt' => (int) $order->get_meta( '_mtal_booking_expires_at' ),
+				'paymentUrl' => ( 'pending' === $status && ! $order->is_paid() && ( ! (int) $order->get_meta( '_mtal_booking_expires_at' ) || (int) $order->get_meta( '_mtal_booking_expires_at' ) > time() ) ) ? $order->get_checkout_payment_url() : '',
 			'checkIn' => (string) $order->get_meta( '_mtal_booking_check_in' ),
 			'checkOut' => (string) $order->get_meta( '_mtal_booking_check_out' ),
 			'guests' => (int) $order->get_meta( '_mtal_booking_guests' ),
