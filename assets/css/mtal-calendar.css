@@ -1054,6 +1054,10 @@ html.mtal-modal-open {
 	grid-column: 1;
 	grid-row: 3;
 }
+/* Hide the helper box once the countdown is visible; status is shown in the timer itself. */
+.mtal-booking-action.has-countdown .mtal-booking-form-hint {
+	display: none !important;
+}
 @keyframes mtal-countdown-enter {
 	from { opacity: 0; transform: translateX(-12px); }
 	to { opacity: 1; transform: translateX(0); }
