@@ -15,10 +15,15 @@ final class MTAL_Booking_Workflow {
 		add_action( 'plugins_loaded', array( __CLASS__, 'maybe_upgrade' ), 5 );
 		add_filter( 'woocommerce_order_needs_payment', array( __CLASS__, 'prevent_expired_payment' ), 10, 3 );
 		add_action( 'woocommerce_admin_order_data_after_order_details', array( __CLASS__, 'render_hpos_order_actions' ) );
+		add_action( 'woocommerce_admin_order_data_after_order_details', array( __CLASS__, 'render_booking_details_panel' ), 5 );
 		add_filter( 'wc_order_statuses', array( __CLASS__, 'add_order_statuses' ) );
 		add_action( 'elementor_pro/forms/new_record', array( __CLASS__, 'handle_elementor_submission' ), 20, 2 );
 		add_action( 'add_meta_boxes', array( __CLASS__, 'add_order_metabox' ) );
 		add_action( 'admin_post_mtal_booking_decision', array( __CLASS__, 'handle_admin_decision' ) );
+		add_action( 'wp_ajax_mtal_booking_status', array( __CLASS__, 'ajax_booking_status' ) );
+		add_action( 'wp_ajax_nopriv_mtal_booking_status', array( __CLASS__, 'ajax_booking_status' ) );
+		add_action( 'wp_ajax_mtal_booking_cancel', array( __CLASS__, 'ajax_cancel_booking' ) );
+		add_action( 'wp_ajax_nopriv_mtal_booking_cancel', array( __CLASS__, 'ajax_cancel_booking' ) );
 		add_action( self::CRON_HOOK, array( __CLASS__, 'expire_order' ), 10, 1 );
 		add_action( 'woocommerce_payment_complete', array( __CLASS__, 'confirm_paid_booking' ) );
 		add_action( 'woocommerce_order_status_processing', array( __CLASS__, 'confirm_paid_booking' ) );
@@ -72,26 +77,84 @@ final class MTAL_Booking_Workflow {
 		return $statuses;
 	}
 
-	public static function is_date_held( $suite_id, $jalali_date ) {
+	/**
+	 * Validate access to an active booking before excluding its own date holds.
+	 *
+	 * @return int Valid active order ID, or 0.
+	 */
+	public static function get_valid_active_booking_order_id( $order_id, $token, $suite_id ) {
+		$order_id = absint( $order_id );
+		$suite_id = absint( $suite_id );
+		$token = is_string( $token ) ? trim( $token ) : '';
+		if ( ! $order_id || ! $suite_id || '' === $token || ! function_exists( 'wc_get_order' ) ) {
+			return 0;
+		}
+		$order = wc_get_order( $order_id );
+		if ( ! $order || absint( $order->get_meta( '_mtal_booking_suite_id' ) ) !== $suite_id ) {
+			return 0;
+		}
+		$stored = (string) $order->get_meta( '_mtal_booking_access_token' );
+		$expires = (int) $order->get_meta( '_mtal_booking_expires_at' );
+		if ( ! $stored || ! hash_equals( $stored, wp_hash( $token ) ) || $expires <= time() || $order->is_paid() ) {
+			return 0;
+		}
+		if ( ! in_array( $order->get_status(), array( 'mtal-pending', 'pending' ), true ) ) {
+			return 0;
+		}
+		return $order_id;
+	}
+
+	public static function is_date_held( $suite_id, $jalali_date, $exclude_order_id = 0 ) {
 		global $wpdb;
 		$table = self::table_name();
 		$now = time();
-		$held = $wpdb->get_var( $wpdb->prepare(
-			"SELECT order_id FROM {$table} WHERE suite_id = %d AND stay_date = %s AND (expires_at = 0 OR expires_at > %d) LIMIT 1",
-			absint( $suite_id ), $jalali_date, $now
-		) );
+		$exclude_order_id = absint( $exclude_order_id );
+		$sql = "SELECT order_id FROM {$table} WHERE suite_id = %d AND stay_date = %s AND (expires_at = 0 OR expires_at > %d)";
+		$args = array( absint( $suite_id ), $jalali_date, $now );
+		if ( $exclude_order_id ) {
+			$sql .= " AND order_id != %d";
+			$args[] = $exclude_order_id;
+		}
+		$held = $wpdb->get_var( $wpdb->prepare( $sql . ' LIMIT 1', $args ) );
 		return ! empty( $held );
 	}
 
-	public static function active_held_dates( $suite_id ) {
+	public static function active_held_dates( $suite_id, $exclude_order_id = 0 ) {
 		global $wpdb;
 		$table = self::table_name();
 		$now = time();
-		$dates = $wpdb->get_col( $wpdb->prepare(
-			"SELECT stay_date FROM {$table} WHERE suite_id = %d AND (expires_at = 0 OR expires_at > %d)",
-			absint( $suite_id ), $now
-		) );
+		$exclude_order_id = absint( $exclude_order_id );
+		$sql = "SELECT stay_date FROM {$table} WHERE suite_id = %d AND (expires_at = 0 OR expires_at > %d)";
+		$args = array( absint( $suite_id ), $now );
+		if ( $exclude_order_id ) {
+			$sql .= " AND order_id != %d";
+			$args[] = $exclude_order_id;
+		}
+		$dates = $wpdb->get_col( $wpdb->prepare( $sql, $args ) );
 		return is_array( $dates ) ? $dates : array();
+	}
+
+	/**
+	 * Acquire a short-lived atomic submission lock for a suite.
+	 *
+	 * @return string|false Option name when acquired.
+	 */
+	private static function acquire_submission_lock( $suite_id ) {
+		$key = 'mtal_booking_submit_lock_' . absint( $suite_id );
+		$created_at = (int) get_option( $key, 0 );
+		if ( $created_at && ( time() - $created_at ) > 120 ) {
+			delete_option( $key );
+		}
+		if ( ! add_option( $key, time(), '', false ) ) {
+			return false;
+		}
+		return $key;
+	}
+
+	private static function release_submission_lock( $key ) {
+		if ( is_string( $key ) && 0 === strpos( $key, 'mtal_booking_submit_lock_' ) ) {
+			delete_option( $key );
+		}
 	}
 
 	private static function claim_dates( $suite_id, $dates, $order_id, $expires_at ) {
@@ -148,17 +211,27 @@ final class MTAL_Booking_Workflow {
 	}
 
 	public static function handle_elementor_submission( $record, $handler ) {
+		if ( ! is_user_logged_in() ) {
+			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+				$handler->add_error_message( 'برای ثبت درخواست رزرو، ابتدا وارد حساب کاربری خود شوید.' );
+			}
+			return;
+		}
 		if ( ! function_exists( 'wc_create_order' ) || ! class_exists( 'MTAL_Persian_Calendar' ) ) {
 			return;
 		}
 		$fields = self::extract_fields( $record );
 		$suite_id = isset( $fields['mtal_post_id'] ) ? absint( $fields['mtal_post_id'] ) : 0;
-		if ( ! $suite_id && isset( $_POST['post_id'] ) ) {
-			$suite_id = absint( wp_unslash( $_POST['post_id'] ) );
-		}
 		$range = self::find_date_range( $fields );
 		$guests = isset( $fields['mtal_qty'] ) ? absint( $fields['mtal_qty'] ) : 0;
 		if ( ! $suite_id || ! $range || $guests < 1 ) {
+			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+				$missing = array();
+				if ( ! $suite_id ) $missing[] = 'شناسه سوئیت';
+				if ( ! $range ) $missing[] = 'بازه تاریخ ورود و خروج';
+				if ( $guests < 1 ) $missing[] = 'تعداد مسافران';
+				$handler->add_error_message( 'اطلاعات رزرو به سرور نرسید یا ناقص است: ' . implode( '، ', $missing ) . '. فرم را بررسی کنید و دوباره ارسال نکنید؛ با پشتیبانی تماس بگیرید.' );
+			}
 			return;
 		}
 		$price = MTAL_Persian_Calendar::calculate_stay_price( $suite_id, $range[0], $range[1], $guests );
@@ -169,13 +242,66 @@ final class MTAL_Booking_Workflow {
 			return;
 		}
 
+		// Normalize and validate the stay before creating any WooCommerce order.
+		$start = MTAL_Persian_Calendar::normalize_booking_date( $range[0] );
+		$end = MTAL_Persian_Calendar::normalize_booking_date( $range[1] );
+		if ( ! $start || ! $end || $end['jdn'] <= $start['jdn'] ) {
+			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+				$handler->add_error_message( 'بازه تاریخ انتخابی معتبر نیست؛ لطفاً تاریخ‌ها را دوباره انتخاب کنید.' );
+			}
+			return;
+		}
+		$dates = array();
+		for ( $jdn = $start['jdn']; $jdn < $end['jdn']; $jdn++ ) {
+			$day = MTAL_Persian_Calendar::booking_jdn_to_jalali( $jdn );
+			$dates[] = sprintf( '%04d/%02d/%02d', $day[0], $day[1], $day[2] );
+		}
+		foreach ( $dates as $date ) {
+			if ( self::is_date_held( $suite_id, $date ) ) {
+				if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+					$handler->add_error_message( 'بخشی از تاریخ‌های انتخابی هم‌اکنون در درخواست رزرو دیگری نگه داشته شده است. سفارش جدیدی ساخته نشد؛ لطفاً تاریخ دیگری انتخاب کنید.' );
+				}
+				return;
+			}
+		}
+
+		// Serialize submissions for the same suite to prevent rapid duplicate requests
+		// from creating multiple orders before the date-hold transaction is committed.
+		$submission_lock = self::acquire_submission_lock( $suite_id );
+		if ( ! $submission_lock ) {
+			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+				$handler->add_error_message( 'درخواست رزرو دیگری برای این سوئیت هم‌زمان در حال ثبت است؛ چند لحظه صبر کنید و وضعیت را بررسی کنید.' );
+			}
+			return;
+		}
+
+		// Recheck availability after acquiring the lock; another request may have
+		// completed between the first check and lock acquisition.
+		foreach ( $dates as $date ) {
+			if ( self::is_date_held( $suite_id, $date ) ) {
+				self::release_submission_lock( $submission_lock );
+				if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+					$handler->add_error_message( 'بخشی از تاریخ‌های انتخابی هم‌اکنون رزرو موقت شده است. سفارش جدیدی ساخته نشد؛ لطفاً تاریخ دیگری انتخاب کنید.' );
+				}
+				return;
+			}
+		}
+
 		$expires = time() + ( self::HOLD_MINUTES * MINUTE_IN_SECONDS );
 		try {
 			$order = wc_create_order( array( 'customer_id' => get_current_user_id() ) );
 		} catch ( Exception $e ) {
+			self::release_submission_lock( $submission_lock );
+			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+				$handler->add_error_message( 'ساخت سفارش در ووکامرس انجام نشد. لطفاً با پشتیبانی تماس بگیرید.' );
+			}
 			return;
 		}
 		if ( is_wp_error( $order ) || ! $order ) {
+			self::release_submission_lock( $submission_lock );
+			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+				$handler->add_error_message( 'ووکامرس نتوانست سفارش رزرو را ایجاد کند. لطفاً با پشتیبانی تماس بگیرید.' );
+			}
 			return;
 		}
 
@@ -206,27 +332,20 @@ final class MTAL_Booking_Workflow {
 		$order->update_meta_data( '_mtal_booking_guests', $guests );
 		$order->update_meta_data( '_mtal_booking_expires_at', $expires );
 		$order->update_meta_data( '_mtal_booking_total', (int) $price['totalPrice'] );
+		$access_token = wp_generate_password( 48, false, false );
+		$order->update_meta_data( '_mtal_booking_access_token', wp_hash( $access_token ) );
 		$order->save();
 
-		$dates = array();
-		$start = MTAL_Persian_Calendar::normalize_booking_date( $range[0] );
-		$end = MTAL_Persian_Calendar::normalize_booking_date( $range[1] );
-		if ( ! $start || ! $end ) {
-			$order->update_status( 'cancelled', 'تاریخ‌های درخواست رزرو معتبر نبودند.' );
-			return;
-		}
-		for ( $jdn = $start['jdn']; $jdn < $end['jdn']; $jdn++ ) {
-			$day = MTAL_Persian_Calendar::booking_jdn_to_jalali( $jdn );
-			$dates[] = sprintf( '%04d/%02d/%02d', $day[0], $day[1], $day[2] );
-		}
 		$claimed = self::claim_dates( $suite_id, $dates, $order->get_id(), $expires );
 		if ( is_wp_error( $claimed ) ) {
 			$order->update_status( 'cancelled', $claimed->get_error_message() );
+			self::release_submission_lock( $submission_lock );
 			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
 				$handler->add_error_message( $claimed->get_error_message() );
 			}
 			return;
 		}
+		self::release_submission_lock( $submission_lock );
 		$order->update_status( 'mtal-pending', 'درخواست رزرو ثبت شد؛ مهلت تصمیم‌گیری و پرداخت ۳۰ دقیقه است.' );
 		if ( function_exists( 'wp_schedule_single_event' ) ) {
 			wp_schedule_single_event( $expires, self::CRON_HOOK, array( $order->get_id() ) );
@@ -234,7 +353,76 @@ final class MTAL_Booking_Workflow {
 		if ( is_object( $handler ) && method_exists( $handler, 'add_response_data' ) ) {
 			$handler->add_response_data( 'mtal_booking_order_id', $order->get_id() );
 			$handler->add_response_data( 'mtal_booking_expires_at', $expires );
+			$handler->add_response_data( 'mtal_booking_access_token', $access_token );
+			$handler->add_response_data( 'mtal_booking_check_in', $range[0] );
+			$handler->add_response_data( 'mtal_booking_check_out', $range[1] );
+			$handler->add_response_data( 'mtal_booking_guests', $guests );
 		}
+	}
+
+	public static function ajax_cancel_booking() {
+		$order_id = isset( $_POST['order_id'] ) ? absint( $_POST['order_id'] ) : 0;
+		$token = isset( $_POST['token'] ) ? sanitize_text_field( wp_unslash( $_POST['token'] ) ) : '';
+		$order = $order_id ? wc_get_order( $order_id ) : false;
+		$stored = $order ? (string) $order->get_meta( '_mtal_booking_access_token' ) : '';
+		if ( ! $order || ! $stored || ! $token || ! hash_equals( $stored, wp_hash( $token ) ) ) {
+			wp_send_json_error( array( 'message' => 'درخواست رزرو پیدا نشد یا دسترسی معتبر نیست.' ), 403 );
+		}
+		// حداکثر سه تلاش لغو برای هر درخواست؛ شمارنده سمت سرور قابل دور زدن با رفرش صفحه نیست.
+		$attempt_key = 'mtal_cancel_attempts_' . $order_id . '_' . substr( $stored, 0, 12 );
+		$attempts = (int) get_transient( $attempt_key );
+		if ( $attempts >= 3 ) {
+			wp_send_json_error( array( 'message' => 'حداکثر ۳ بار تلاش برای لغو این درخواست مجاز است.' ), 429 );
+		}
+		set_transient( $attempt_key, $attempts + 1, DAY_IN_SECONDS );
+
+		if ( ! in_array( $order->get_status(), array( 'mtal-pending', 'pending' ), true ) || $order->is_paid() ) {
+			wp_send_json_error( array( 'message' => 'این درخواست دیگر قابل لغو نیست؛ ممکن است پرداخت آن انجام شده یا رزرو نهایی شده باشد.' ), 409 );
+		}
+		$order->update_status( 'cancelled', 'درخواست توسط کاربر از طریق صفحه رزرو لغو شد؛ تاریخ‌ها آزاد شدند.' );
+		self::release_order_holds( $order->get_id() );
+		wp_send_json_success( array( 'message' => 'درخواست شما لغو شد و تاریخ‌های انتخابی آزاد شدند.' ) );
+	}
+
+	public static function ajax_booking_status() {
+		$order_id = isset( $_POST['order_id'] ) ? absint( $_POST['order_id'] ) : 0;
+		$token = isset( $_POST['token'] ) ? sanitize_text_field( wp_unslash( $_POST['token'] ) ) : '';
+		$order = $order_id ? wc_get_order( $order_id ) : false;
+		$stored = $order ? (string) $order->get_meta( '_mtal_booking_access_token' ) : '';
+		if ( ! $order || ! $stored || ! $token || ! hash_equals( $stored, wp_hash( $token ) ) ) {
+			wp_send_json_error( array( 'message' => 'درخواست رزرو پیدا نشد یا دسترسی معتبر نیست.' ), 403 );
+		}
+		$status = $order->get_status();
+		$messages = array(
+			'mtal-pending' => 'درخواست شما ثبت شده و در انتظار بررسی مدیر است.',
+			'pending' => 'درخواست شما تأیید شد؛ برای تکمیل رزرو، پرداخت را انجام دهید.',
+			'cancelled' => 'درخواست رزرو شما رد یا منقضی شد و تاریخ‌ها آزاد شدند.',
+			'processing' => 'پرداخت شما دریافت شد و رزرو تأیید شده است.',
+			'completed' => 'رزرو شما با موفقیت تأیید شد.',
+			'on-hold' => 'پرداخت/رزرو شما نیازمند بررسی مدیر است.',
+		);
+		wp_send_json_success( array(
+			'status' => $status,
+			'statusLabel' => wc_get_order_status_name( $status ),
+			'message' => isset( $messages[ $status ] ) ? $messages[ $status ] : 'وضعیت درخواست شما: ' . wc_get_order_status_name( $status ),
+			'expiresAt' => (int) $order->get_meta( '_mtal_booking_expires_at' ),
+				'paymentUrl' => ( 'pending' === $status && ! $order->is_paid() && ( ! (int) $order->get_meta( '_mtal_booking_expires_at' ) || (int) $order->get_meta( '_mtal_booking_expires_at' ) > time() ) ) ? $order->get_checkout_payment_url() : '',
+			'checkIn' => (string) $order->get_meta( '_mtal_booking_check_in' ),
+			'checkOut' => (string) $order->get_meta( '_mtal_booking_check_out' ),
+			'guests' => (int) $order->get_meta( '_mtal_booking_guests' ),
+			'suiteId' => (int) $order->get_meta( '_mtal_booking_suite_id' ),
+			'isFinal' => ! in_array( $status, array( 'mtal-pending', 'pending' ), true ),
+		) );
+	}
+
+	private static function email_booking_decision( $order, $approved ) {
+		$email = $order->get_billing_email();
+		if ( ! $email || ! is_email( $email ) || ! function_exists( 'WC' ) || ! WC()->mailer() ) return;
+		$subject = $approved ? 'درخواست رزرو شما تأیید شد' : 'وضعیت درخواست رزرو شما';
+		$message = $approved
+			? 'درخواست رزرو شما تأیید شد. برای تکمیل رزرو، از طریق لینک زیر پرداخت را انجام دهید: ' . $order->get_checkout_payment_url()
+			: 'متأسفانه درخواست رزرو شما تأیید نشد و تاریخ‌های انتخابی آزاد شدند. برای اطلاعات بیشتر با پشتیبانی تماس بگیرید.';
+		wp_mail( $email, $subject, $message, array( 'Content-Type: text/plain; charset=UTF-8' ) );
 	}
 
 	public static function add_order_metabox() {
@@ -254,10 +442,8 @@ final class MTAL_Booking_Workflow {
 			echo '<p>این سفارش مربوط به رزرو تقویم MTAL نیست.</p>';
 			return;
 		}
+		self::render_booking_details_panel( $order );
 		$status = $order->get_status();
-		$expires = (int) $order->get_meta( '_mtal_booking_expires_at' );
-		echo '<p>تاریخ: ' . esc_html( $order->get_meta( '_mtal_booking_check_in' ) . ' تا ' . $order->get_meta( '_mtal_booking_check_out' ) ) . '</p>';
-		echo '<p>مهلت: ' . esc_html( $expires ? wp_date( 'Y-m-d H:i:s', $expires ) : 'پایان یافته' ) . '</p>';
 		if ( 'mtal-pending' !== $status ) {
 			echo '<p>وضعیت فعلی: ' . esc_html( wc_get_order_status_name( $status ) ) . '</p>';
 			return;
@@ -268,6 +454,38 @@ final class MTAL_Booking_Workflow {
 		echo '<p><a class="button" href="' . esc_url( add_query_arg( array( 'decision' => 'reject', '_wpnonce' => $nonce ), $url ) ) . '" onclick="return confirm(\'درخواست رد و تاریخ‌ها آزاد شوند؟\')">رد درخواست و آزادسازی تاریخ‌ها</a></p>';
 	}
 
+
+	/**
+	 * Display the booking metadata stored on the WooCommerce order.
+	 * Shared by the HPOS order screen and the legacy order metabox.
+	 */
+	public static function render_booking_details_panel( $order ) {
+		if ( ! $order || ! is_a( $order, 'WC_Order' ) || ! $order->get_meta( '_mtal_booking_suite_id' ) ) {
+			return;
+		}
+		$suite_id = absint( $order->get_meta( '_mtal_booking_suite_id' ) );
+		$suite_name = get_the_title( $suite_id );
+		$suite_name = $suite_name ? $suite_name : 'سوئیت #' . $suite_id;
+		$check_in = (string) $order->get_meta( '_mtal_booking_check_in' );
+		$check_out = (string) $order->get_meta( '_mtal_booking_check_out' );
+		$guests = absint( $order->get_meta( '_mtal_booking_guests' ) );
+		$total = $order->get_meta( '_mtal_booking_total' );
+		$expires = absint( $order->get_meta( '_mtal_booking_expires_at' ) );
+		echo '<div class="mtal-booking-order-details"><h3>جزئیات رزرو تقویم MTAL</h3><table class="widefat striped"><tbody>';
+		$rows = array(
+			'سوئیت' => $suite_name,
+			'تاریخ ورود' => $check_in ? $check_in : '—',
+			'تاریخ خروج' => $check_out ? $check_out : '—',
+			'تعداد نفرات' => $guests ? $guests . ' نفر' : '—',
+			'مبلغ رزرو' => null !== $total && '' !== $total ? wp_strip_all_tags( wc_price( (float) $total, array( 'currency' => $order->get_currency() ) ) ) : wp_strip_all_tags( wc_price( (float) $order->get_total(), array( 'currency' => $order->get_currency() ) ) ),
+			'وضعیت سفارش' => wc_get_order_status_name( $order->get_status() ),
+			'مهلت درخواست/پرداخت' => $expires ? wp_date( 'Y-m-d H:i:s', $expires ) : '—',
+		);
+		foreach ( $rows as $label => $value ) {
+			echo '<tr><th style="width:35%">' . esc_html( $label ) . '</th><td>' . esc_html( $value ) . '</td></tr>';
+		}
+		echo '</tbody></table></div>';
+	}
 
 	public static function render_hpos_order_actions( $order ) {
 		if ( ! $order || ! is_a( $order, 'WC_Order' ) || ! $order->get_meta( '_mtal_booking_suite_id' ) || 'mtal-pending' !== $order->get_status() ) {
@@ -316,9 +534,11 @@ final class MTAL_Booking_Workflow {
 		if ( 'reject' === $decision ) {
 			$order->update_status( 'cancelled', 'درخواست رزرو توسط مدیر رد شد؛ تاریخ‌ها آزاد شدند.' );
 			self::release_order_holds( $order_id );
+			self::email_booking_decision( $order, false );
 		} else {
 			$order->update_status( 'pending', 'درخواست توسط مدیر تأیید شد؛ لینک پرداخت برای مشتری فعال است.' );
 			$order->add_order_note( 'لینک پرداخت: ' . $order->get_checkout_payment_url() );
+			self::email_booking_decision( $order, true );
 		}
 		$redirect = wp_get_referer();
 		if ( ! $redirect ) {

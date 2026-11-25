@@ -1054,6 +1054,10 @@ html.mtal-modal-open {
 	grid-column: 1;
 	grid-row: 3;
 }
+/* Hide the helper box once the countdown is visible; status is shown in the timer itself. */
+.mtal-booking-action.has-countdown .mtal-booking-form-hint {
+	display: none !important;
+}
 @keyframes mtal-countdown-enter {
 	from { opacity: 0; transform: translateX(-12px); }
 	to { opacity: 1; transform: translateX(0); }
@@ -1146,3 +1150,107 @@ html.mtal-modal-open {
 	font-size: 12px;
 	line-height: 1.8;
 }
+
+
+/* وضعیت رد درخواست رزرو */
+.mtal-booking-countdown.is-rejected {
+	border-color: rgba(185, 28, 28, 0.3);
+	background: #fef2f2;
+	color: #b91c1c;
+}
+.mtal-booking-countdown.is-approved-payment {
+	border-color: rgba(37, 99, 235, 0.28);
+	background: #eff6ff;
+	color: #1d4ed8;
+}
+.mtal-booking-countdown.is-final-status {
+	font-weight: 700;
+}
+
+
+/* دکمه لغو درخواست در زمان انتظار */
+.mtal-booking-submit.is-cancel-action,
+.mtal-booking-submit.is-cancel-action:hover:not(:disabled) {
+	background: #fce8e8 !important;
+	border-color: #f3b4b4 !important;
+	color: #a83232 !important;
+}
+.mtal-booking-submit.is-cancel-action:disabled { opacity: .65; cursor: wait; }
+
+
+/* نمایش وضعیت پردازش هنگام لغو درخواست */
+.mtal-booking-submit.is-cancelling {
+	cursor: wait !important;
+	opacity: .85;
+}
+.mtal-booking-submit.is-cancelling::before {
+	content: '';
+	display: inline-block;
+	width: 13px;
+	height: 13px;
+	margin-left: 8px;
+	vertical-align: -2px;
+	border: 2px solid rgba(168, 50, 50, .25);
+	border-top-color: #a83232;
+	border-radius: 50%;
+	animation: mtal-cancel-spin .7s linear infinite;
+}
+@keyframes mtal-cancel-spin {
+	to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+	.mtal-booking-submit.is-cancelling::before { animation: none; }
+}
+
+
+/* لودر در محل تایمر رزرو هنگام ارسال درخواست لغو */
+.mtal-booking-countdown.is-cancelling {
+	color: #a83232 !important;
+	border-color: rgba(168, 50, 50, .28) !important;
+	background: #fff5f5 !important;
+	font-weight: 700;
+}
+.mtal-booking-countdown.is-cancelling::before {
+	content: '';
+	display: inline-block;
+	width: 13px;
+	height: 13px;
+	margin-left: 8px;
+	vertical-align: -2px;
+	border: 2px solid rgba(168, 50, 50, .25);
+	border-top-color: #a83232;
+	border-radius: 50%;
+	animation: mtal-cancel-spin .7s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+	.mtal-booking-countdown.is-cancelling::before { animation: none; }
+}
+
+/* دکمه پرداخت رزرو: هماهنگ با رنگ دکمه ارسال */
+.mtal-booking-payment-button {
+	background: #637426 !important;
+	border: 1px solid #637426 !important;
+	color: #fff !important;
+	font-weight: 700;
+	box-shadow: 0 3px 10px rgba(99, 116, 38, 0.22);
+	transition: background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+	animation: mtal-payment-button-pulse 2.8s ease-in-out infinite;
+}
+.mtal-booking-payment-button:hover,
+.mtal-booking-payment-button:focus-visible {
+	background: #56651f !important;
+	border-color: #56651f !important;
+	box-shadow: 0 5px 15px rgba(99, 116, 38, 0.3);
+	transform: translateY(-1px);
+}
+@keyframes mtal-payment-button-pulse {
+	0%, 100% { box-shadow: 0 3px 10px rgba(99, 116, 38, 0.18); }
+	50% { box-shadow: 0 4px 16px rgba(99, 116, 38, 0.34); }
+}
+@media (prefers-reduced-motion: reduce) {
+	.mtal-booking-payment-button {
+		animation: none;
+		transition: none;
+	}
+}
+
