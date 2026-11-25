@@ -458,16 +458,16 @@ final class MTAL_Persian_Calendar {
 		$widget_file = MTAL_PC_PATH . 'includes/class-mtal-inline-calendar-widget.php';
 		if ( file_exists( $widget_file ) ) {
 			require_once $widget_file;
-			if ( class_exists( '\MTAL_Inline_Calendar_Widget' ) ) {
-				$widgets_manager->register( new \MTAL_Inline_Calendar_Widget() );
+			if ( class_exists( '\\MTAL_Inline_Calendar_Widget' ) ) {
+				$widgets_manager->register( new \\MTAL_Inline_Calendar_Widget() );
 			}
 		}
 
 		$admin_widget_file = MTAL_PC_PATH . 'includes/class-mtal-admin-calendar-widget.php';
 		if ( file_exists( $admin_widget_file ) ) {
 			require_once $admin_widget_file;
-			if ( class_exists( '\MTAL_Admin_Calendar_Widget' ) ) {
-				$widgets_manager->register( new \MTAL_Admin_Calendar_Widget() );
+			if ( class_exists( '\\MTAL_Admin_Calendar_Widget' ) ) {
+				$widgets_manager->register( new \\MTAL_Admin_Calendar_Widget() );
 			}
 		}
 	}
@@ -476,8 +476,8 @@ final class MTAL_Persian_Calendar {
 		$field_file = MTAL_PC_PATH . 'includes/class-mtal-elementor-form-field.php';
 		if ( file_exists( $field_file ) ) {
 			require_once $field_file;
-			if ( class_exists( '\MTAL_Elementor_Form_Field' ) ) {
-				$form_fields_registrar->register( new \MTAL_Elementor_Form_Field() );
+			if ( class_exists( '\\MTAL_Elementor_Form_Field' ) ) {
+				$form_fields_registrar->register( new \\MTAL_Elementor_Form_Field() );
 			}
 		}
 	}
@@ -488,5 +488,6 @@ MTAL_Suite_Registry::init();
 
 require_once MTAL_PC_PATH . 'includes/class-mtal-booking-workflow.php';
 require_once MTAL_PC_PATH . 'includes/class-mtal-booking-admin.php';
+require_once MTAL_PC_PATH . 'includes/class-mtal-suite-admin.php';
 register_activation_hook( __FILE__, array( 'MTAL_Booking_Workflow', 'activate' ) );
 MTAL_Persian_Calendar::instance();
