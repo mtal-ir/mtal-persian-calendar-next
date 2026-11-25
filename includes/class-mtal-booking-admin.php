@@ -27,7 +27,7 @@ final class MTAL_Booking_Admin {
 
 		add_menu_page(
 			'مدیریت رزروها',
-			'MTAL-booking',
+			'مدیریت رزروها',
 			'read',
 			'mtal-booking-management',
 			array( __CLASS__, 'render_page' ),
