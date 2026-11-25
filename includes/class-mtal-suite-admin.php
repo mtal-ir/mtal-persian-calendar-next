@@ -43,6 +43,7 @@ final class MTAL_Suite_Admin {
 
 		$state_v1 = get_option( '_mtal_suite_calendar_migration_v1', array() );
 		$state_v2 = get_option( '_mtal_suite_calendar_migration_v2', array() );
+		$state_v3 = get_option( '_mtal_suite_calendar_migration_v3', array() );
 		$statuses = array( 'publish', 'private', 'draft', 'pending', 'future' );
 		$meta_keys = array(
 			'_mtal_blocked_dates',
@@ -53,13 +54,6 @@ final class MTAL_Suite_Admin {
 			'_mtal_base_capacity',
 			'_mtal_extra_guest_price',
 		);
-		$calendar_meta_query = array( 'relation' => 'OR' );
-		foreach ( $meta_keys as $meta_key ) {
-			$calendar_meta_query[] = array(
-				'key'     => $meta_key,
-				'compare' => 'EXISTS',
-			);
-		}
 
 		$all_sources_count = new WP_Query(
 			array(
@@ -81,16 +75,26 @@ final class MTAL_Suite_Admin {
 				'no_found_rows'  => true,
 			)
 		);
-		$calendar_sources = new WP_Query(
+		$calendar_source_ids = new WP_Query(
 			array(
-				'post_type'      => 'suites',
-				'post_status'    => $statuses,
-				'posts_per_page' => 1,
-				'fields'         => 'ids',
-				'no_found_rows'  => false,
-				'meta_query'     => $calendar_meta_query,
+				'post_type'              => 'suites',
+				'post_status'            => $statuses,
+				'posts_per_page'         => -1,
+				'fields'                 => 'ids',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
 			)
 		);
+		$calendar_sources_count = 0;
+		foreach ( $calendar_source_ids->posts as $source_post_id ) {
+			foreach ( $meta_keys as $meta_key ) {
+				if ( metadata_exists( 'post', $source_post_id, $meta_key ) ) {
+					$calendar_sources_count++;
+					break;
+				}
+			}
+		}
 		$mtal_count = new WP_Query(
 			array(
 				'post_type'      => MTAL_Suite_Registry::POST_TYPE,
@@ -107,10 +111,11 @@ final class MTAL_Suite_Admin {
 		echo '<ul style="list-style:disc;padding-right:20px;">';
 		echo '<li>وضعیت ثبت نوع نوشته <code>suites</code>: <strong>' . ( post_type_exists( 'suites' ) ? 'ثبت شده' : 'ثبت نشده' ) . '</strong></li>';
 		echo '<li>تعداد کل نوشته‌های <code>suites</code> در وضعیت‌های بررسی‌شده: <strong>' . absint( $all_sources_count->found_posts ) . '</strong></li>';
-		echo '<li>تعداد نوشته‌های <code>suites</code> دارای حداقل یکی از ۷ کلید تقویم: <strong>' . absint( $calendar_sources->found_posts ) . '</strong></li>';
+		echo '<li>تعداد نوشته‌های <code>suites</code> دارای حداقل یکی از ۷ کلید تقویم: <strong>' . absint( $calendar_sources_count ) . '</strong></li>';
 		echo '<li>تعداد رکوردهای مستقل <code>' . esc_html( MTAL_Suite_Registry::POST_TYPE ) . '</code>: <strong>' . absint( $mtal_count->found_posts ) . '</strong></li>';
 		echo '<li>وضعیت مهاجرت v1: <code>' . esc_html( wp_json_encode( $state_v1 ) ) . '</code></li>';
 		echo '<li>وضعیت مهاجرت v2: <code>' . esc_html( wp_json_encode( $state_v2 ) ) . '</code></li>';
+		echo '<li>وضعیت مهاجرت v3: <code>' . esc_html( wp_json_encode( $state_v3 ) ) . '</code></li>';
 		echo '</ul>';
 
 		if ( ! empty( $source_samples->posts ) ) {
