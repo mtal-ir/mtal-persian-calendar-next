@@ -10,6 +10,8 @@
 	}
 
 	const cfg = window.mtalCalendarConfig || {};
+	// WordPress may localize a guest boolean as an empty string.
+	const isGuestUser = [false, '', null, 0, '0'].includes(cfg.isUserLoggedIn);
 	const globalMaxMonths = cfg.maxMonths ? parseInt(cfg.maxMonths, 10) : 3;
 
 	const VALID_MODES = ['inline', 'inline_2col', 'modal_3months'];
@@ -790,7 +792,7 @@
 			}
 			button.textContent = 'ارسال درخواست رزرو';
 			// Guests must be able to click through to login without completing the form.
-			if (cfg.isUserLoggedIn === false) {
+			if (isGuestUser) {
 				button.disabled = false;
 				message.textContent = 'برای ثبت درخواست رزرو، ابتدا وارد حساب کاربری شوید یا ثبت‌نام کنید.';
 				return;
@@ -812,7 +814,7 @@
 		}
 		button.addEventListener('click', () => {
 			// Guests may browse the calendar, but must sign in before submitting a booking.
-			if (cfg.isUserLoggedIn === false && !(form && form._mtalBookingSubmitted)) {
+			if (isGuestUser && !(form && form._mtalBookingSubmitted)) {
 				const loginUrl = cfg.loginUrl || '';
 				if (loginUrl) {
 					const target = new URL(loginUrl, window.location.origin);
