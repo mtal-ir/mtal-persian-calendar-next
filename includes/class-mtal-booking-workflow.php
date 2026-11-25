@@ -221,19 +221,29 @@ final class MTAL_Booking_Workflow {
 			return;
 		}
 		$fields = self::extract_fields( $record );
-		$suite_id = isset( $fields['mtal_post_id'] ) ? absint( $fields['mtal_post_id'] ) : 0;
+		$suite_reference_id = isset( $fields['mtal_post_id'] ) ? absint( $fields['mtal_post_id'] ) : 0;
+		$suite_id = $suite_reference_id ? MTAL_Persian_Calendar::resolve_suite_id( $suite_reference_id ) : 0;
 		$range = self::find_date_range( $fields );
 		$guests = isset( $fields['mtal_qty'] ) ? absint( $fields['mtal_qty'] ) : 0;
 		if ( ! $suite_id || ! $range || $guests < 1 ) {
 			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
 				$missing = array();
-				if ( ! $suite_id ) $missing[] = 'شناسه سوئیت';
+				if ( ! $suite_id ) $missing[] = 'شناسه سوئیت معتبر';
 				if ( ! $range ) $missing[] = 'بازه تاریخ ورود و خروج';
 				if ( $guests < 1 ) $missing[] = 'تعداد مسافران';
 				$handler->add_error_message( 'اطلاعات رزرو به سرور نرسید یا ناقص است: ' . implode( '، ', $missing ) . '. فرم را بررسی کنید و دوباره ارسال نکنید؛ با پشتیبانی تماس بگیرید.' );
 			}
 			return;
 		}
+		$source_post = class_exists( 'MTAL_Suite_Registry' ) ? MTAL_Suite_Registry::get_source_post( $suite_id ) : null;
+		if ( ! $source_post || 'publish' !== $source_post->post_status ) {
+			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+				$handler->add_error_message( 'سوئیت انتخاب‌شده معتبر یا منتشرشده نیست؛ لطفاً صفحه سوئیت را دوباره بارگذاری کنید.' );
+			}
+			return;
+		}
+		// The canonical MTAL suite ID is now used for pricing, locking, holds
+		// and the WooCommerce order metadata below.
 		$price = MTAL_Persian_Calendar::calculate_stay_price( $suite_id, $range[0], $range[1], $guests );
 		if ( is_wp_error( $price ) ) {
 			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
