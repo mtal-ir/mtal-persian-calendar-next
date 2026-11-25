@@ -103,20 +103,47 @@ final class MTAL_Persian_Calendar {
 		return $clean;
 	}
 
-	public static function get_suite_calendar_data( $post_id ) {
-		$post_id = absint( $post_id );
+	/**
+	 * Resolve either an MTAL suite ID or a linked display-post ID to the
+	 * independent MTAL suite record. Display-post IDs are accepted only as
+	 * compatibility references; operational data is always read from MTAL.
+	 */
+	public static function resolve_suite_id( $reference_id ) {
+		$reference_id = absint( $reference_id );
+		if ( ! $reference_id || ! class_exists( 'MTAL_Suite_Registry' ) ) {
+			return 0;
+		}
 
-		$blocked_meta      = $post_id ? get_post_meta( $post_id, '_mtal_blocked_dates', true ) : array();
-		$holiday_meta      = $post_id ? get_post_meta( $post_id, '_mtal_holiday_dates', true ) : array();
-		$manual_meta       = $post_id ? get_post_meta( $post_id, '_mtal_manual_prices', true ) : array();
-		$regular_price     = $post_id ? intval( get_post_meta( $post_id, '_mtal_regular_price', true ) ) : 0;
-		$weekend_price     = $post_id ? intval( get_post_meta( $post_id, '_mtal_weekend_price', true ) ) : 0;
-		$base_capacity_raw = $post_id ? get_post_meta( $post_id, '_mtal_base_capacity', true ) : '';
+		if ( MTAL_Suite_Registry::is_suite( $reference_id ) ) {
+			return $reference_id;
+		}
+
+		return MTAL_Suite_Registry::get_suite_by_source( $reference_id );
+	}
+
+	/**
+	 * Read operational calendar settings from the independent MTAL record.
+	 *
+	 * The legacy postId field remains the caller's reference ID for existing
+	 * Elementor/JavaScript integrations. suiteId identifies the data owner.
+	 */
+	public static function get_suite_calendar_data( $reference_id ) {
+		$reference_id = absint( $reference_id );
+		$suite_id     = self::resolve_suite_id( $reference_id );
+		$storage_id   = $suite_id;
+
+		$blocked_meta      = $storage_id ? get_post_meta( $storage_id, '_mtal_blocked_dates', true ) : array();
+		$holiday_meta      = $storage_id ? get_post_meta( $storage_id, '_mtal_holiday_dates', true ) : array();
+		$manual_meta       = $storage_id ? get_post_meta( $storage_id, '_mtal_manual_prices', true ) : array();
+		$regular_price     = $storage_id ? intval( get_post_meta( $storage_id, '_mtal_regular_price', true ) ) : 0;
+		$weekend_price     = $storage_id ? intval( get_post_meta( $storage_id, '_mtal_weekend_price', true ) ) : 0;
+		$base_capacity_raw = $storage_id ? get_post_meta( $storage_id, '_mtal_base_capacity', true ) : '';
 		$base_capacity     = '' !== $base_capacity_raw ? max( 1, intval( $base_capacity_raw ) ) : 2;
-		$extra_guest_price = $post_id ? intval( get_post_meta( $post_id, '_mtal_extra_guest_price', true ) ) : 0;
+		$extra_guest_price = $storage_id ? intval( get_post_meta( $storage_id, '_mtal_extra_guest_price', true ) ) : 0;
 
 		return array(
-			'postId'          => $post_id,
+			'postId'          => $reference_id,
+			'suiteId'         => $suite_id,
 			'blockedDates'    => self::normalize_date_list( $blocked_meta ),
 			'holidayDates'    => self::normalize_date_list( $holiday_meta ),
 			'manualPrices'    => self::normalize_manual_prices( $manual_meta ),
@@ -125,6 +152,27 @@ final class MTAL_Persian_Calendar {
 			'baseCapacity'    => $base_capacity,
 			'extraGuestPrice' => max( 0, $extra_guest_price ),
 		);
+	}
+
+	/**
+	 * Persist operational calendar settings to the independent MTAL record.
+	 * The supplied ID may be a suite ID or its linked display-post ID.
+	 */
+	public static function save_suite_calendar_data( $reference_id, $data ) {
+		$suite_id = self::resolve_suite_id( $reference_id );
+		if ( ! $suite_id || ! is_array( $data ) ) {
+			return false;
+		}
+
+		update_post_meta( $suite_id, '_mtal_blocked_dates', self::normalize_date_list( $data['blockedDates'] ?? array() ) );
+		update_post_meta( $suite_id, '_mtal_holiday_dates', self::normalize_date_list( $data['holidayDates'] ?? array() ) );
+		update_post_meta( $suite_id, '_mtal_manual_prices', self::normalize_manual_prices( $data['manualPrices'] ?? array() ) );
+		update_post_meta( $suite_id, '_mtal_regular_price', max( 0, absint( $data['regularPrice'] ?? 0 ) ) );
+		update_post_meta( $suite_id, '_mtal_weekend_price', max( 0, absint( $data['weekendPrice'] ?? 0 ) ) );
+		update_post_meta( $suite_id, '_mtal_base_capacity', max( 1, absint( $data['baseCapacity'] ?? 2 ) ) );
+		update_post_meta( $suite_id, '_mtal_extra_guest_price', max( 0, absint( $data['extraGuestPrice'] ?? 0 ) ) );
+
+		return true;
 	}
 
 	public function enqueue_assets() {
@@ -438,17 +486,26 @@ final class MTAL_Persian_Calendar {
 		$base_capacity     = isset( $_POST['base_capacity'] ) ? max( 1, intval( $_POST['base_capacity'] ) ) : 2;
 		$extra_guest_price = isset( $_POST['extra_guest_price'] ) ? max( 0, intval( $_POST['extra_guest_price'] ) ) : 0;
 
-		update_post_meta( $post_id, '_mtal_blocked_dates', $blocked_dates );
-		update_post_meta( $post_id, '_mtal_holiday_dates', $holiday_dates );
-		update_post_meta( $post_id, '_mtal_manual_prices', $manual_prices );
-		update_post_meta( $post_id, '_mtal_regular_price', $regular_price );
-		update_post_meta( $post_id, '_mtal_weekend_price', $weekend_price );
-		update_post_meta( $post_id, '_mtal_base_capacity', $base_capacity );
-		update_post_meta( $post_id, '_mtal_extra_guest_price', $extra_guest_price );
+		$saved = self::save_suite_calendar_data(
+			$post_id,
+			array(
+				'blockedDates'    => $blocked_dates,
+				'holidayDates'    => $holiday_dates,
+				'manualPrices'    => $manual_prices,
+				'regularPrice'    => $regular_price,
+				'weekendPrice'    => $weekend_price,
+				'baseCapacity'    => $base_capacity,
+				'extraGuestPrice' => $extra_guest_price,
+			)
+		);
+
+		if ( ! $saved ) {
+			wp_send_json_error( array( 'message' => 'برای این نوشته، سوئیت مستقل MTAL پیدا نشد.' ), 404 );
+		}
 
 		wp_send_json_success(
 			array(
-				'message' => 'تنظیمات تقویم و روزها با موفقیت ذخیره شد.',
+				'message' => 'تنظیمات تقویم و روزها با موفقیت در مدل مستقل MTAL ذخیره شد.',
 				'data'    => self::get_suite_calendar_data( $post_id ),
 			)
 		);
