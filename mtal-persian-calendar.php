@@ -309,11 +309,16 @@ final class MTAL_Persian_Calendar {
 	 * @return array|WP_Error
 	 */
 	public static function calculate_stay_price( $post_id, $check_in, $check_out, $guests, $booking_order_id = 0 ) {
-		$post_id = absint( $post_id );
-		$post = $post_id ? get_post( $post_id ) : null;
-		if ( ! $post || 'publish' !== $post->post_status || absint( $guests ) < 1 ) {
+		$reference_id = absint( $post_id );
+		$suite_id = self::resolve_suite_id( $reference_id );
+		$source_post = $suite_id && class_exists( 'MTAL_Suite_Registry' )
+			? MTAL_Suite_Registry::get_source_post( $suite_id )
+			: null;
+		if ( ! $suite_id || ! $source_post || 'publish' !== $source_post->post_status || absint( $guests ) < 1 ) {
 			return new WP_Error( 'mtal_invalid_booking', 'سوئیت یا تعداد مسافران معتبر نیست.' );
 		}
+		// From this point on, all operational lookups use the independent MTAL ID.
+		$post_id = $suite_id;
 		$start = self::normalize_jalali_input( $check_in );
 		$end = self::normalize_jalali_input( $check_out );
 		if ( ! $start || ! $end || $end['jdn'] <= $start['jdn'] || ( $end['jdn'] - $start['jdn'] ) > 94 ) {
@@ -375,11 +380,17 @@ final class MTAL_Persian_Calendar {
 
 	public function ajax_calculate_suite_price() {
 		check_ajax_referer( 'mtal_calendar_rules_nonce', 'nonce' );
-		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
-		$post = $post_id ? get_post( $post_id ) : null;
-		if ( ! $post || ( 'publish' !== $post->post_status && ! current_user_can( 'edit_post', $post_id ) ) ) {
+		$reference_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
+		$suite_id = self::resolve_suite_id( $reference_id );
+		$source_post = $suite_id && class_exists( 'MTAL_Suite_Registry' )
+			? MTAL_Suite_Registry::get_source_post( $suite_id )
+			: null;
+		if ( ! $suite_id || ! $source_post || ( 'publish' !== $source_post->post_status && ! current_user_can( 'edit_post', $source_post->ID ) ) ) {
 			wp_send_json_error( array( 'message' => 'سوئیت معتبر یا در دسترس نیست.' ), 404 );
 		}
+		// Keep the incoming reference for compatibility, but use the MTAL ID for
+		// booking-order validation, calendar data and date-hold checks.
+		$post_id = $suite_id;
 
 		$start = self::normalize_jalali_input( isset( $_POST['check_in'] ) ? wp_unslash( $_POST['check_in'] ) : '' );
 		$end   = self::normalize_jalali_input( isset( $_POST['check_out'] ) ? wp_unslash( $_POST['check_out'] ) : '' );
@@ -453,15 +464,21 @@ final class MTAL_Persian_Calendar {
 	}
 
 	public function ajax_get_suite_calendar_rules() {
-		$post_id = isset( $_REQUEST['post_id'] ) ? absint( $_REQUEST['post_id'] ) : 0;
-		$data = self::get_suite_calendar_data( $post_id );
+		$reference_id = isset( $_REQUEST['post_id'] ) ? absint( $_REQUEST['post_id'] ) : 0;
+		$suite_id = self::resolve_suite_id( $reference_id );
+		if ( ! $suite_id ) {
+			wp_send_json_error( array( 'message' => 'سوئیت معتبر نیست.' ), 404 );
+		}
+		// Preserve the caller's reference in the response while reading all
+		// operational rules and active holds against the independent suite ID.
+		$data = self::get_suite_calendar_data( $reference_id );
 		if ( class_exists( 'MTAL_Booking_Workflow' ) ) {
 			$booking_order_id = MTAL_Booking_Workflow::get_valid_active_booking_order_id(
 				isset( $_REQUEST['order_id'] ) ? absint( $_REQUEST['order_id'] ) : 0,
 				isset( $_REQUEST['token'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['token'] ) ) : '',
-				$post_id
+				$suite_id
 			);
-			$data['blockedDates'] = array_values( array_unique( array_merge( $data['blockedDates'], MTAL_Booking_Workflow::active_held_dates( $post_id, $booking_order_id ) ) ) );
+			$data['blockedDates'] = array_values( array_unique( array_merge( $data['blockedDates'], MTAL_Booking_Workflow::active_held_dates( $suite_id, $booking_order_id ) ) ) );
 		}
 		wp_send_json_success( $data );
 	}
