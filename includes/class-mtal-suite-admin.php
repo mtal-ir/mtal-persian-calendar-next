@@ -33,6 +33,80 @@ final class MTAL_Suite_Admin {
 		);
 	}
 
+	/**
+	 * Show read-only migration diagnostics to site administrators.
+	 */
+	private static function render_migration_diagnostics() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$state_v1 = get_option( '_mtal_suite_calendar_migration_v1', array() );
+		$state_v2 = get_option( '_mtal_suite_calendar_migration_v2', array() );
+		$meta_keys = array(
+			'_mtal_blocked_dates',
+			'_mtal_holiday_dates',
+			'_mtal_manual_prices',
+			'_mtal_regular_price',
+			'_mtal_weekend_price',
+			'_mtal_base_capacity',
+			'_mtal_extra_guest_price',
+		);
+		$calendar_meta_query = array( 'relation' => 'OR' );
+		foreach ( $meta_keys as $meta_key ) {
+			$calendar_meta_query[] = array(
+				'key'     => $meta_key,
+				'compare' => 'EXISTS',
+			);
+		}
+
+		$source_query = new WP_Query(
+			array(
+				'post_type'      => 'suites',
+				'post_status'    => array( 'publish', 'private', 'draft', 'pending', 'future' ),
+				'posts_per_page' => 100,
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+				'fields'         => 'ids',
+				'no_found_rows'  => false,
+				'meta_query'     => $calendar_meta_query,
+			)
+		);
+
+		echo '<div class="notice notice-info" style="padding:12px 16px;margin:16px 0;">';
+		echo '<h2 style="margin-top:0;">گزارش عیب‌یابی مهاجرت (فقط خواندنی)</h2>';
+		echo '<p>این گزارش فقط برای مدیرکل نمایش داده می‌شود و هیچ داده یا تنظیمی را تغییر نمی‌دهد.</p>';
+		echo '<ul style="list-style:disc;padding-right:20px;">';
+		echo '<li>وضعیت مهاجرت v1: <code>' . esc_html( wp_json_encode( $state_v1 ) ) . '</code></li>';
+		echo '<li>وضعیت مهاجرت v2: <code>' . esc_html( wp_json_encode( $state_v2 ) ) . '</code></li>';
+		echo '<li>تعداد نوشته‌های نوع <code>suites</code> دارای حداقل یکی از ۷ کلید تقویم: <strong>' . absint( $source_query->found_posts ) . '</strong></li>';
+		echo '<li>تعداد شناسه‌های نمایش‌داده‌شده در این گزارش: <strong>' . absint( count( $source_query->posts ) ) . '</strong> (حداکثر ۱۰۰)</li>';
+		echo '</ul>';
+
+		if ( ! empty( $source_query->posts ) ) {
+			echo '<table class="widefat striped" style="margin-top:10px;"><thead><tr><th>شناسه نوشته</th><th>عنوان</th><th>کلیدهای تقویم موجود</th><th>شناسه رکورد مستقل</th></tr></thead><tbody>';
+			foreach ( $source_query->posts as $source_post_id ) {
+				$present_keys = array();
+				foreach ( $meta_keys as $meta_key ) {
+					if ( metadata_exists( 'post', $source_post_id, $meta_key ) ) {
+						$present_keys[] = $meta_key;
+					}
+				}
+				$suite_id = MTAL_Suite_Registry::get_suite_by_source( $source_post_id, 'suites' );
+				echo '<tr>';
+				echo '<td>' . absint( $source_post_id ) . '</td>';
+				echo '<td>' . esc_html( get_the_title( $source_post_id ) ) . '</td>';
+				echo '<td><code>' . esc_html( implode( ', ', $present_keys ) ) . '</code></td>';
+				echo '<td>' . ( $suite_id ? absint( $suite_id ) : 'یافت نشد' ) . '</td>';
+				echo '</tr>';
+			}
+			echo '</tbody></table>';
+		} else {
+			echo '<p><strong>هیچ نوشته‌ای با این شرایط پیدا نشد.</strong> اگر تقویم از کلیدهای دیگری استفاده می‌کند یا نوع نوشته متفاوت است، باید همان مورد را بررسی کنیم.</p>';
+		}
+		echo '</div>';
+	}
+
 	public static function render_page() {
 		if (
 			! class_exists( 'MTAL_Booking_Admin' ) ||
@@ -61,6 +135,7 @@ final class MTAL_Suite_Admin {
 		echo '<div class="wrap">';
 		echo '<h1>مدیریت سوئیت‌ها</h1>';
 		echo '<p>این فهرست، سوئیت‌هایی را نشان می‌دهد که در مدل مستقل MTAL ثبت شده‌اند. اطلاعات نوشته منبع فقط برای نمایش عنوان و تصویر جایگزین استفاده می‌شود.</p>';
+		self::render_migration_diagnostics();
 
 		echo '<table class="widefat fixed striped">';
 		echo '<thead><tr>';
