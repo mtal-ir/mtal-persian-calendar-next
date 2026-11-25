@@ -43,6 +43,7 @@ final class MTAL_Suite_Admin {
 
 		$state_v1 = get_option( '_mtal_suite_calendar_migration_v1', array() );
 		$state_v2 = get_option( '_mtal_suite_calendar_migration_v2', array() );
+		$statuses = array( 'publish', 'private', 'draft', 'pending', 'future' );
 		$meta_keys = array(
 			'_mtal_blocked_dates',
 			'_mtal_holiday_dates',
@@ -60,50 +61,76 @@ final class MTAL_Suite_Admin {
 			);
 		}
 
-		$source_query = new WP_Query(
+		$all_sources_count = new WP_Query(
 			array(
 				'post_type'      => 'suites',
-				'post_status'    => array( 'publish', 'private', 'draft', 'pending', 'future' ),
-				'posts_per_page' => 100,
+				'post_status'    => $statuses,
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+				'no_found_rows'  => false,
+			)
+		);
+		$source_samples = new WP_Query(
+			array(
+				'post_type'      => 'suites',
+				'post_status'    => $statuses,
+				'posts_per_page' => 10,
 				'orderby'        => 'ID',
 				'order'          => 'ASC',
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+			)
+		);
+		$calendar_sources = new WP_Query(
+			array(
+				'post_type'      => 'suites',
+				'post_status'    => $statuses,
+				'posts_per_page' => 1,
 				'fields'         => 'ids',
 				'no_found_rows'  => false,
 				'meta_query'     => $calendar_meta_query,
 			)
 		);
+		$mtal_count = new WP_Query(
+			array(
+				'post_type'      => MTAL_Suite_Registry::POST_TYPE,
+				'post_status'    => $statuses,
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+				'no_found_rows'  => false,
+			)
+		);
 
 		echo '<div class="notice notice-info" style="padding:12px 16px;margin:16px 0;">';
 		echo '<h2 style="margin-top:0;">گزارش عیب‌یابی مهاجرت (فقط خواندنی)</h2>';
-		echo '<p>این گزارش فقط برای مدیرکل نمایش داده می‌شود و هیچ داده یا تنظیمی را تغییر نمی‌دهد.</p>';
+		echo '<p>این گزارش فقط برای مدیرکل نمایش داده می‌شود و هیچ داده یا تنظیمی را تغییر نمی‌دهد. از مقادیر متاهای ذخیره‌شده هیچ‌کدام نمایش داده نمی‌شود.</p>';
 		echo '<ul style="list-style:disc;padding-right:20px;">';
+		echo '<li>وضعیت ثبت نوع نوشته <code>suites</code>: <strong>' . ( post_type_exists( 'suites' ) ? 'ثبت شده' : 'ثبت نشده' ) . '</strong></li>';
+		echo '<li>تعداد کل نوشته‌های <code>suites</code> در وضعیت‌های بررسی‌شده: <strong>' . absint( $all_sources_count->found_posts ) . '</strong></li>';
+		echo '<li>تعداد نوشته‌های <code>suites</code> دارای حداقل یکی از ۷ کلید تقویم: <strong>' . absint( $calendar_sources->found_posts ) . '</strong></li>';
+		echo '<li>تعداد رکوردهای مستقل <code>' . esc_html( MTAL_Suite_Registry::POST_TYPE ) . '</code>: <strong>' . absint( $mtal_count->found_posts ) . '</strong></li>';
 		echo '<li>وضعیت مهاجرت v1: <code>' . esc_html( wp_json_encode( $state_v1 ) ) . '</code></li>';
 		echo '<li>وضعیت مهاجرت v2: <code>' . esc_html( wp_json_encode( $state_v2 ) ) . '</code></li>';
-		echo '<li>تعداد نوشته‌های نوع <code>suites</code> دارای حداقل یکی از ۷ کلید تقویم: <strong>' . absint( $source_query->found_posts ) . '</strong></li>';
-		echo '<li>تعداد شناسه‌های نمایش‌داده‌شده در این گزارش: <strong>' . absint( count( $source_query->posts ) ) . '</strong> (حداکثر ۱۰۰)</li>';
 		echo '</ul>';
 
-		if ( ! empty( $source_query->posts ) ) {
-			echo '<table class="widefat striped" style="margin-top:10px;"><thead><tr><th>شناسه نوشته</th><th>عنوان</th><th>کلیدهای تقویم موجود</th><th>شناسه رکورد مستقل</th></tr></thead><tbody>';
-			foreach ( $source_query->posts as $source_post_id ) {
-				$present_keys = array();
-				foreach ( $meta_keys as $meta_key ) {
-					if ( metadata_exists( 'post', $source_post_id, $meta_key ) ) {
-						$present_keys[] = $meta_key;
-					}
-				}
-				$suite_id = MTAL_Suite_Registry::get_suite_by_source( $source_post_id, 'suites' );
+		if ( ! empty( $source_samples->posts ) ) {
+			echo '<h3>نمونه نوشته‌های suites و نام کلیدهای متا (حداکثر ۱۰ مورد)</h3>';
+			echo '<table class="widefat striped"><thead><tr><th>شناسه</th><th>عنوان</th><th>نام کلیدهای متا</th></tr></thead><tbody>';
+			foreach ( $source_samples->posts as $source_post_id ) {
+				$all_meta = get_post_meta( $source_post_id );
+				$keys = array_keys( $all_meta );
+				sort( $keys );
 				echo '<tr>';
 				echo '<td>' . absint( $source_post_id ) . '</td>';
 				echo '<td>' . esc_html( get_the_title( $source_post_id ) ) . '</td>';
-				echo '<td><code>' . esc_html( implode( ', ', $present_keys ) ) . '</code></td>';
-				echo '<td>' . ( $suite_id ? absint( $suite_id ) : 'یافت نشد' ) . '</td>';
+				echo '<td><code>' . esc_html( implode( ', ', $keys ) ) . '</code></td>';
 				echo '</tr>';
 			}
 			echo '</tbody></table>';
 		} else {
-			echo '<p><strong>هیچ نوشته‌ای با این شرایط پیدا نشد.</strong> اگر تقویم از کلیدهای دیگری استفاده می‌کند یا نوع نوشته متفاوت است، باید همان مورد را بررسی کنیم.</p>';
+			echo '<p><strong>هیچ نوشته‌ای از نوع <code>suites</code> در وضعیت‌های بررسی‌شده پیدا نشد.</strong></p>';
 		}
+
 		echo '</div>';
 	}
 
