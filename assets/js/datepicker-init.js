@@ -784,6 +784,7 @@
 		function refreshState() {
 			bookingSubmitted = Boolean(form && form._mtalBookingSubmitted);
 			if (bookingSubmitted) {
+				button.classList.remove('mtal-login');
 				button.disabled = false;
 				button.textContent = 'لغو درخواست رزرو';
 				button.classList.add('is-cancel-action');
@@ -791,12 +792,14 @@
 				return;
 			}
 			button.textContent = 'ارسال درخواست رزرو';
-			// Guests must be able to click through to login without completing the form.
+			// Let the site's SMS login plugin open its modal on this same page.
 			if (isGuestUser) {
+				button.classList.add('mtal-login');
 				button.disabled = false;
 				message.textContent = 'برای ثبت درخواست رزرو، ابتدا وارد حساب کاربری شوید یا ثبت‌نام کنید.';
 				return;
 			}
+			button.classList.remove('mtal-login');
 			const missing = validateBookingForm(form, host, cal);
 			const payload = host._mtalLatestPayload || cal.buildPayload(cal.startDate, cal.endDate);
 			const priceReady = Boolean(payload && Number(payload.totalPrice) > 0);
@@ -815,14 +818,8 @@
 		button.addEventListener('click', () => {
 			// Guests may browse the calendar, but must sign in before submitting a booking.
 			if (isGuestUser && !(form && form._mtalBookingSubmitted)) {
-				const loginUrl = cfg.loginUrl || '';
-				if (loginUrl) {
-					const target = new URL(loginUrl, window.location.origin);
-					target.searchParams.set('redirect', window.location.href);
-					window.location.assign(target.toString());
-				} else {
-					message.textContent = 'برای ثبت رزرو ابتدا وارد حساب کاربری خود شوید.';
-				}
+				// The mtal-login class is handled by the SMS login plugin.
+				// Keep the visitor on this page; server-side login enforcement remains active.
 				return;
 			}
 			// Keep the click handler in sync with the form state set by startBookingCountdown.
