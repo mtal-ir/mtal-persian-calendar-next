@@ -101,30 +101,39 @@ final class MTAL_Suite_Registry {
 			return 0;
 		}
 
-		$query = new WP_Query(
-			array(
-				'post_type'              => self::POST_TYPE,
-				'post_status'            => array( 'publish', 'private', 'draft', 'pending' ),
-				'posts_per_page'         => 1,
-				'fields'                 => 'ids',
-				'no_found_rows'          => true,
-				'update_post_meta_cache' => false,
-				'update_post_term_cache' => false,
-				'meta_query'             => array(
-					'relation' => 'AND',
-					array(
-						'key'   => self::META_SOURCE_POST_TYPE,
-						'value' => $source_post_type,
-					),
-					array(
-						'key'   => self::META_SOURCE_POST_ID,
-						'value' => $source_post_id,
-						'type'  => 'NUMERIC',
-					),
-				),
-			)
-		);
-		return ! empty( $query->posts ) ? absint( $query->posts[0] ) : 0;
+		// Avoid meta_query here: direct metadata reads are more reliable on
+		// installations where WP_Query's meta EXISTS/AND clauses miss records.
+		$offset = 0;
+		$batch_size = 200;
+		do {
+			$query = new WP_Query(
+				array(
+					'post_type'              => self::POST_TYPE,
+					'post_status'            => array( 'publish', 'private', 'draft', 'pending', 'future' ),
+					'posts_per_page'         => $batch_size,
+					'offset'                 => $offset,
+					'orderby'                => 'ID',
+					'order'                  => 'ASC',
+					'fields'                 => 'ids',
+					'no_found_rows'          => true,
+					'update_post_meta_cache' => false,
+					'update_post_term_cache' => false,
+				)
+			);
+
+			foreach ( $query->posts as $suite_id ) {
+				$linked_type = (string) get_post_meta( $suite_id, self::META_SOURCE_POST_TYPE, true );
+				$linked_id = absint( get_post_meta( $suite_id, self::META_SOURCE_POST_ID, true ) );
+				if ( $source_post_type === $linked_type && $source_post_id === $linked_id ) {
+					return absint( $suite_id );
+				}
+			}
+
+			$found = count( $query->posts );
+			$offset += $found;
+		} while ( $found === $batch_size );
+
+		return 0;
 	}
 
 	/**
@@ -189,70 +198,77 @@ final class MTAL_Suite_Registry {
 			return;
 		}
 
-		$state = get_option( '_mtal_suite_calendar_migration_v2', array() );
+		$option_key = '_mtal_suite_calendar_migration_v3';
+		$state = get_option( $option_key, array() );
 		if ( ! empty( $state['complete'] ) ) {
 			return;
-		}
-
-		$meta_query = array( 'relation' => 'OR' );
-		foreach ( self::get_legacy_calendar_meta_keys() as $meta_key ) {
-			$meta_query[] = array(
-				'key'     => $meta_key,
-				'compare' => 'EXISTS',
-			);
 		}
 
 		$source_post_types = get_post_types( array(), 'names' );
 		unset( $source_post_types[ self::POST_TYPE ], $source_post_types['revision'], $source_post_types['nav_menu_item'], $source_post_types['attachment'] );
 		if ( empty( $source_post_types ) ) {
-			update_option( '_mtal_suite_calendar_migration_v2', array( 'complete' => true, 'processed' => 0 ), false );
+			update_option( $option_key, array( 'complete' => true, 'processed' => 0, 'scanned' => 0 ), false );
 			return;
 		}
 
+		$batch_size = 50;
+		$offset = isset( $state['offset'] ) ? absint( $state['offset'] ) : 0;
+		$processed = isset( $state['processed'] ) ? absint( $state['processed'] ) : 0;
 		$query = new WP_Query(
 			array(
 				'post_type'              => array_values( $source_post_types ),
 				'post_status'            => array( 'publish', 'private', 'draft', 'pending', 'future' ),
-				'posts_per_page'         => 50,
-				'offset'                 => isset( $state['offset'] ) ? absint( $state['offset'] ) : 0,
+				'posts_per_page'         => $batch_size,
+				'offset'                 => $offset,
 				'orderby'                => 'ID',
 				'order'                  => 'ASC',
 				'fields'                 => 'ids',
 				'no_found_rows'          => true,
 				'update_post_meta_cache' => false,
 				'update_post_term_cache' => false,
-				'meta_query'             => $meta_query,
 			)
 		);
 
-		$processed = 0;
+		$matched = 0;
+		$meta_keys = self::get_legacy_calendar_meta_keys();
 		foreach ( $query->posts as $source_post_id ) {
-			$source_post = get_post( $source_post_id );
-			if ( ! $source_post ) {
+			$has_calendar_data = false;
+			foreach ( $meta_keys as $meta_key ) {
+				if ( metadata_exists( 'post', $source_post_id, $meta_key ) ) {
+					$has_calendar_data = true;
+					break;
+				}
+			}
+			if ( ! $has_calendar_data ) {
 				continue;
 			}
-			self::get_or_create_for_source( $source_post_id );
-			$processed++;
+
+			$matched++;
+			if ( self::get_or_create_for_source( $source_post_id ) ) {
+				$processed++;
+			}
 		}
 
-		$offset = isset( $state['offset'] ) ? absint( $state['offset'] ) : 0;
-		if ( count( $query->posts ) < 50 ) {
+		$scanned = $offset + count( $query->posts );
+		if ( count( $query->posts ) < $batch_size ) {
 			update_option(
-				'_mtal_suite_calendar_migration_v2',
+				$option_key,
 				array(
 					'complete'     => true,
-					'processed'    => $offset + $processed,
-					'completed_at' => current_time( 'mysql', true ),
+					'processed'    => $processed,
+					'scanned'      => $scanned,
+				'completed_at' => current_time( 'mysql', true ),
 				),
 				false
 			);
 		} else {
 			update_option(
-				'_mtal_suite_calendar_migration_v2',
+				$option_key,
 				array(
 					'complete'  => false,
-					'offset'    => $offset + count( $query->posts ),
-					'processed' => $offset + $processed,
+					'offset'    => $scanned,
+					'processed' => $processed,
+				'scanned'   => $scanned,
 				),
 				false
 			);
