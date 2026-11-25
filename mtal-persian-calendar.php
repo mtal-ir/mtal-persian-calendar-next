@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: MTAL-booking
+ * Plugin Name: MTAL Booking
  * Description: افزونه مستقل تقویم جلالی برای انتخاب بازه دو تاریخی، مدیریت روزهای بسته/تعطیلات و قیمت‌گذاری در المنتور.
  * Version: 0.6.1
  * Author: MTAL
