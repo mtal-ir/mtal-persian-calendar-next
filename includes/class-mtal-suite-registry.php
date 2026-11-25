@@ -189,7 +189,7 @@ final class MTAL_Suite_Registry {
 			return;
 		}
 
-		$state = get_option( '_mtal_suite_calendar_migration_v1', array() );
+		$state = get_option( '_mtal_suite_calendar_migration_v2', array() );
 		if ( ! empty( $state['complete'] ) ) {
 			return;
 		}
@@ -205,7 +205,7 @@ final class MTAL_Suite_Registry {
 		$source_post_types = get_post_types( array(), 'names' );
 		unset( $source_post_types[ self::POST_TYPE ], $source_post_types['revision'], $source_post_types['nav_menu_item'], $source_post_types['attachment'] );
 		if ( empty( $source_post_types ) ) {
-			update_option( '_mtal_suite_calendar_migration_v1', array( 'complete' => true, 'processed' => 0 ), false );
+			update_option( '_mtal_suite_calendar_migration_v2', array( 'complete' => true, 'processed' => 0 ), false );
 			return;
 		}
 
@@ -238,7 +238,7 @@ final class MTAL_Suite_Registry {
 		$offset = isset( $state['offset'] ) ? absint( $state['offset'] ) : 0;
 		if ( count( $query->posts ) < 50 ) {
 			update_option(
-				'_mtal_suite_calendar_migration_v1',
+				'_mtal_suite_calendar_migration_v2',
 				array(
 					'complete'     => true,
 					'processed'    => $offset + $processed,
@@ -248,7 +248,7 @@ final class MTAL_Suite_Registry {
 			);
 		} else {
 			update_option(
-				'_mtal_suite_calendar_migration_v1',
+				'_mtal_suite_calendar_migration_v2',
 				array(
 					'complete'  => false,
 					'offset'    => $offset + count( $query->posts ),
