@@ -469,13 +469,12 @@ final class MTAL_Persian_Calendar {
 	public function ajax_save_suite_calendar_rules() {
 		check_ajax_referer( 'mtal_calendar_rules_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'edit_posts' ) ) {
-			wp_send_json_error( array( 'message' => 'دسترسی غیرمجاز است.' ), 403 );
-		}
-
 		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
-		if ( ! $post_id || ! current_user_can( 'edit_post', $post_id ) ) {
-			wp_send_json_error( array( 'message' => 'شناسه سوئیت نامعتبر یا بدون مجوز است.' ), 400 );
+		$is_mtal_suite = $post_id && class_exists( 'MTAL_Suite_Registry' ) && MTAL_Suite_Registry::is_suite( $post_id );
+		$can_manage_suite = $is_mtal_suite && class_exists( 'MTAL_Booking_Admin' ) && MTAL_Booking_Admin::current_user_can_manage_bookings();
+		$can_edit_legacy_post = $post_id && ! $is_mtal_suite && current_user_can( 'edit_posts' ) && current_user_can( 'edit_post', $post_id );
+		if ( ! $can_manage_suite && ! $can_edit_legacy_post ) {
+			wp_send_json_error( array( 'message' => 'شناسه سوئیت نامعتبر یا بدون مجوز است.' ), 403 );
 		}
 
 		$blocked_dates     = self::normalize_date_list( isset( $_POST['blocked_dates'] ) ? wp_unslash( $_POST['blocked_dates'] ) : array() );
