@@ -151,6 +151,7 @@ class MTAL_Inline_Calendar_Widget extends Widget_Base {
 		$storage_scope        = 'suite_' . $post_id;
 		$host_class           = 'modal_3months' === $mode ? 'mtal-cal-modal-host' : 'mtal-cal-inline-host';
 		$suite_data           = \MTAL_Persian_Calendar::get_suite_calendar_data( $post_id );
+		$visible_blocked_dates = $suite_data['blockedDates'];
 		?>
 		<div
 			id="<?php echo $widget_id; ?>"
