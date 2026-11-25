@@ -979,7 +979,7 @@
 			const triggerLabel = host.getAttribute('data-mtal-trigger-label') || 'انتخاب تاریخ سفر';
 			const attrMax = parsePositiveInt(host.getAttribute('data-mtal-max-months'), NaN);
 			const maxMonths = !Number.isNaN(attrMax) ? Math.max(1, Math.min(3, attrMax)) : globalMaxMonths;
-			const postId = parsePositiveInt(host.getAttribute('data-mtal-suite-id') || host.getAttribute('data-mtal-post-id') || cfg.postId, 0);
+			const postId = parsePositiveInt(host.getAttribute('data-mtal-post-id') || cfg.postId, 0);
 			// Each suite needs isolated date/guest persistence and sibling synchronization.
 			const scope = `${baseScope}::suite-${postId || 'unknown'}`;
 
@@ -1176,7 +1176,7 @@
 		adminHosts.forEach((host) => {
 			host.setAttribute('data-mtal-admin-init', '1');
 			const mount = host.querySelector('.mtal-admin-cal-mount') || host;
-			const postId = parsePositiveInt(host.getAttribute('data-mtal-post-id') || cfg.postId, 0);
+			const postId = parsePositiveInt(host.getAttribute('data-mtal-suite-id') || host.getAttribute('data-mtal-post-id') || cfg.postId, 0);
 
 			let blockedList = Array.isArray(parseJsonAttr(host.getAttribute('data-mtal-blocked-dates'), []))
 				? [...parseJsonAttr(host.getAttribute('data-mtal-blocked-dates'), [])]
