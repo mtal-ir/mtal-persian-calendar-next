@@ -28,6 +28,7 @@ final class MTAL_Suite_Registry {
 	 */
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'register_post_type' ), 5 );
+		add_action( 'admin_init', array( __CLASS__, 'migrate_legacy_calendar_data' ), 20 );
 	}
 
 	public static function register_post_type() {
@@ -66,6 +67,196 @@ final class MTAL_Suite_Registry {
 	public static function is_suite( $suite_id ) {
 		$suite = get_post( absint( $suite_id ) );
 		return $suite && self::POST_TYPE === $suite->post_type;
+	}
+
+
+	/**
+	 * Calendar settings stored on legacy display posts before the independent
+	 * suite model was introduced.
+	 */
+	private static function get_legacy_calendar_meta_keys() {
+		return array(
+			'_mtal_blocked_dates',
+			'_mtal_holiday_dates',
+			'_mtal_manual_prices',
+			'_mtal_regular_price',
+			'_mtal_weekend_price',
+			'_mtal_base_capacity',
+			'_mtal_extra_guest_price',
+		);
+	}
+
+	/**
+	 * Find the MTAL suite linked to one display post.
+	 */
+	public static function get_suite_by_source( $source_post_id, $source_post_type = '' ) {
+		$source_post_id = absint( $source_post_id );
+		$source_post = $source_post_id ? get_post( $source_post_id ) : null;
+		if ( ! $source_post ) {
+			return 0;
+		}
+
+		$source_post_type = $source_post_type ? sanitize_key( $source_post_type ) : $source_post->post_type;
+		if ( $source_post_type !== $source_post->post_type || self::POST_TYPE === $source_post_type ) {
+			return 0;
+		}
+
+		$query = new WP_Query(
+			array(
+				'post_type'              => self::POST_TYPE,
+				'post_status'            => array( 'publish', 'private', 'draft', 'pending' ),
+				'posts_per_page'         => 1,
+				'fields'                 => 'ids',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+				'meta_query'             => array(
+					'relation' => 'AND',
+					array(
+						'key'   => self::META_SOURCE_POST_TYPE,
+						'value' => $source_post_type,
+					),
+					array(
+						'key'   => self::META_SOURCE_POST_ID,
+						'value' => $source_post_id,
+						'type'  => 'NUMERIC',
+					),
+				),
+			)
+		);
+		return ! empty( $query->posts ) ? absint( $query->posts[0] ) : 0;
+	}
+
+	/**
+	 * Copy legacy settings without overwriting values already on the MTAL suite.
+	 */
+	public static function migrate_calendar_settings( $source_post_id, $suite_id ) {
+		$source_post_id = absint( $source_post_id );
+		$suite_id = absint( $suite_id );
+		if ( ! $source_post_id || ! self::is_suite( $suite_id ) ) {
+			return false;
+		}
+
+		foreach ( self::get_legacy_calendar_meta_keys() as $meta_key ) {
+			if ( metadata_exists( 'post', $suite_id, $meta_key ) ) {
+				continue;
+			}
+			if ( metadata_exists( 'post', $source_post_id, $meta_key ) ) {
+				update_post_meta( $suite_id, $meta_key, get_post_meta( $source_post_id, $meta_key, true ) );
+			}
+		}
+		update_post_meta( $suite_id, '_mtal_calendar_settings_migrated_from', $source_post_id );
+		return true;
+	}
+
+	/**
+	 * Return the linked suite, creating it only when no relationship exists.
+	 */
+	public static function get_or_create_for_source( $source_post_id ) {
+		$source_post_id = absint( $source_post_id );
+		$source_post = $source_post_id ? get_post( $source_post_id ) : null;
+		if ( ! $source_post || self::POST_TYPE === $source_post->post_type || in_array( $source_post->post_status, array( 'trash', 'auto-draft' ), true ) ) {
+			return 0;
+		}
+
+		$suite_id = self::get_suite_by_source( $source_post_id, $source_post->post_type );
+		if ( ! $suite_id ) {
+			$suite_id = wp_insert_post(
+				array(
+					'post_type'   => self::POST_TYPE,
+					'post_status' => 'publish' === $source_post->post_status ? 'publish' : 'draft',
+					'post_title'  => wp_strip_all_tags( get_the_title( $source_post ) ),
+				),
+				true
+			);
+			if ( is_wp_error( $suite_id ) || ! $suite_id ) {
+				return 0;
+			}
+			update_post_meta( $suite_id, self::META_SOURCE_POST_TYPE, $source_post->post_type );
+			update_post_meta( $suite_id, self::META_SOURCE_POST_ID, $source_post_id );
+		}
+
+		self::migrate_calendar_settings( $source_post_id, $suite_id );
+		return absint( $suite_id );
+	}
+
+	/**
+	 * Migrate existing posts with MTAL calendar metadata in small admin batches.
+	 * Legacy values remain on source posts; existing MTAL values take precedence.
+	 */
+	public static function migrate_legacy_calendar_data() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$state = get_option( '_mtal_suite_calendar_migration_v1', array() );
+		if ( ! empty( $state['complete'] ) ) {
+			return;
+		}
+
+		$meta_query = array( 'relation' => 'OR' );
+		foreach ( self::get_legacy_calendar_meta_keys() as $meta_key ) {
+			$meta_query[] = array(
+				'key'     => $meta_key,
+				'compare' => 'EXISTS',
+			);
+		}
+
+		$source_post_types = get_post_types( array(), 'names' );
+		unset( $source_post_types[ self::POST_TYPE ], $source_post_types['revision'], $source_post_types['nav_menu_item'], $source_post_types['attachment'] );
+		if ( empty( $source_post_types ) ) {
+			update_option( '_mtal_suite_calendar_migration_v1', array( 'complete' => true, 'processed' => 0 ), false );
+			return;
+		}
+
+		$query = new WP_Query(
+			array(
+				'post_type'              => array_values( $source_post_types ),
+				'post_status'            => array( 'publish', 'private', 'draft', 'pending', 'future' ),
+				'posts_per_page'         => 50,
+				'offset'                 => isset( $state['offset'] ) ? absint( $state['offset'] ) : 0,
+				'orderby'                => 'ID',
+				'order'                  => 'ASC',
+				'fields'                 => 'ids',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+				'meta_query'             => $meta_query,
+			)
+		);
+
+		$processed = 0;
+		foreach ( $query->posts as $source_post_id ) {
+			$source_post = get_post( $source_post_id );
+			if ( ! $source_post ) {
+				continue;
+			}
+			self::get_or_create_for_source( $source_post_id );
+			$processed++;
+		}
+
+		$offset = isset( $state['offset'] ) ? absint( $state['offset'] ) : 0;
+		if ( count( $query->posts ) < 50 ) {
+			update_option(
+				'_mtal_suite_calendar_migration_v1',
+				array(
+					'complete'     => true,
+					'processed'    => $offset + $processed,
+					'completed_at' => current_time( 'mysql', true ),
+				),
+				false
+			);
+		} else {
+			update_option(
+				'_mtal_suite_calendar_migration_v1',
+				array(
+					'complete'  => false,
+					'offset'    => $offset + count( $query->posts ),
+					'processed' => $offset + $processed,
+				),
+				false
+			);
+		}
 	}
 
 	/**
