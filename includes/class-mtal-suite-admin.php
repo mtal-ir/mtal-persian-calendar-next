@@ -10,9 +10,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class MTAL_Suite_Admin {
 
 	const PAGE_SLUG = 'mtal-suite-management';
+	const CALENDAR_PAGE_SLUG = 'mtal-suite-calendar';
 
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'register_menu' ), 20 );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_calendar_assets' ) );
 	}
 
 	public static function register_menu() {
@@ -31,6 +33,79 @@ final class MTAL_Suite_Admin {
 			self::PAGE_SLUG,
 			array( __CLASS__, 'render_page' )
 		);
+
+		// Hidden screen: each suite links directly to its own calendar manager.
+		add_submenu_page(
+			null,
+			'مدیریت تقویم سوئیت',
+			'',
+			'read',
+			self::CALENDAR_PAGE_SLUG,
+			array( __CLASS__, 'render_calendar_page' )
+		);
+	}
+
+	public static function enqueue_calendar_assets( $hook_suffix ) {
+		if ( ! isset( $_GET['page'] ) || self::CALENDAR_PAGE_SLUG !== sanitize_key( wp_unslash( $_GET['page'] ) ) ) {
+			return;
+		}
+		$suite_id = isset( $_GET['suite_id'] ) ? absint( $_GET['suite_id'] ) : 0;
+		if ( ! $suite_id || ! class_exists( 'MTAL_Suite_Registry' ) || ! MTAL_Suite_Registry::is_suite( $suite_id ) ) {
+			return;
+		}
+		$data = MTAL_Persian_Calendar::get_suite_calendar_data( $suite_id );
+		wp_enqueue_style( 'mtal-persian-calendar-css', MTAL_PC_URL . 'assets/css/mtal-calendar.css', array(), MTAL_PC_VERSION );
+		wp_enqueue_script( 'mtal-persian-calendar-engine', MTAL_PC_URL . 'assets/js/persian-calendar-standalone.js', array(), MTAL_PC_VERSION, true );
+		wp_enqueue_script( 'mtal-persian-calendar-init', MTAL_PC_URL . 'assets/js/datepicker-init.js', array( 'mtal-persian-calendar-engine' ), MTAL_PC_VERSION, true );
+		wp_localize_script(
+			'mtal-persian-calendar-init',
+			'mtalCalendarConfig',
+			array(
+				'ajaxUrl'         => admin_url( 'admin-ajax.php' ),
+				'isUserLoggedIn'  => true,
+				'nonce'           => wp_create_nonce( 'mtal_calendar_rules_nonce' ),
+				'maxMonths'       => 3,
+				'postId'          => $suite_id,
+				'suiteId'         => $suite_id,
+				'blockedDates'    => $data['blockedDates'],
+				'holidayDates'    => $data['holidayDates'],
+				'manualPrices'    => $data['manualPrices'],
+				'regularPrice'    => $data['regularPrice'],
+				'weekendPrice'    => $data['weekendPrice'],
+				'baseCapacity'    => $data['baseCapacity'],
+				'extraGuestPrice' => $data['extraGuestPrice'],
+			)
+		);
+	}
+
+	public static function render_calendar_page() {
+		if ( ! class_exists( 'MTAL_Booking_Admin' ) || ! MTAL_Booking_Admin::current_user_can_manage_bookings() ) {
+			wp_die( esc_html__( 'شما اجازه دسترسی به این صفحه را ندارید.', 'mtal-persian-calendar' ), '', array( 'response' => 403 ) );
+		}
+		$suite_id = isset( $_GET['suite_id'] ) ? absint( $_GET['suite_id'] ) : 0;
+		if ( ! $suite_id || ! MTAL_Suite_Registry::is_suite( $suite_id ) ) {
+			wp_die( esc_html__( 'شناسه سوئیت معتبر نیست.', 'mtal-persian-calendar' ), '', array( 'response' => 404 ) );
+		}
+		$display = MTAL_Suite_Registry::get_display_data( $suite_id );
+		if ( ! $display ) {
+			wp_die( esc_html__( 'اطلاعات سوئیت در دسترس نیست.', 'mtal-persian-calendar' ), '', array( 'response' => 404 ) );
+		}
+		$data = MTAL_Persian_Calendar::get_suite_calendar_data( $suite_id );
+		$source_post = MTAL_Suite_Registry::get_source_post( $suite_id );
+		$back_url = admin_url( 'admin.php?page=' . self::PAGE_SLUG );
+
+		echo '<div class="wrap" dir="rtl">';
+		echo '<h1>مدیریت تقویم و قیمت‌ها: ' . esc_html( $display['title'] ) . '</h1>';
+		echo '<p>شناسه مستقل MTAL: <strong>' . absint( $suite_id ) . '</strong>';
+		if ( $source_post ) {
+			echo ' | نوشته منبع: ' . esc_html( get_the_title( $source_post ) ) . ' (#' . absint( $source_post->ID ) . ')';
+		}
+		echo '</p><p><a class="button" href="' . esc_url( $back_url ) . '">بازگشت به مدیریت سوئیت‌ها</a></p>';
+		echo '<div id="mtal-admin-cal-suite-' . absint( $suite_id ) . '" class="mtal-admin-cal-host" data-mtal-suite-id="' . absint( $suite_id ) . '" data-mtal-post-id="' . absint( $suite_id ) . '"';
+		echo ' data-mtal-regular-price="' . esc_attr( $data['regularPrice'] ) . '" data-mtal-weekend-price="' . esc_attr( $data['weekendPrice'] ) . '"';
+		echo ' data-mtal-base-capacity="' . esc_attr( $data['baseCapacity'] ) . '" data-mtal-extra-guest-price="' . esc_attr( $data['extraGuestPrice'] ) . '"';
+		echo ' data-mtal-blocked-dates="' . esc_attr( wp_json_encode( $data['blockedDates'] ) ) . '" data-mtal-holiday-dates="' . esc_attr( wp_json_encode( $data['holidayDates'] ) ) . '"';
+		echo ' data-mtal-manual-prices="' . esc_attr( wp_json_encode( $data['manualPrices'] ) ) . '"><div class="mtal-admin-cal-mount"></div></div></div>';
 	}
 
 	/**
@@ -210,7 +285,8 @@ final class MTAL_Suite_Admin {
 				echo '<tr>';
 				echo '<td>' . absint( $suite->ID ) . '</td>';
 				echo '<td><strong>' . esc_html( $display['title'] ) . '</strong><br><small>عنوان از ' . esc_html( 'override' === $display['titleSource'] ? 'تنظیم اختصاصی' : ( 'source' === $display['titleSource'] ? 'نوشته منبع' : 'رکورد MTAL' ) ) . '</small></td>';
-				echo '<td>' . $source_label . '</td>';
+				$calendar_url = add_query_arg( array( 'page' => self::CALENDAR_PAGE_SLUG, 'suite_id' => absint( $suite->ID ) ), admin_url( 'admin.php' ) );
+				echo '<td>' . $source_label . '<br><a class="button button-small" href="' . esc_url( $calendar_url ) . '">مدیریت تقویم و قیمت‌ها</a></td>';
 				echo '<td>';
 				if ( ! empty( $display['imageId'] ) ) {
 					echo wp_kses_post( wp_get_attachment_image( $display['imageId'], array( 56, 56 ), false, array( 'style' => 'width:56px;height:56px;object-fit:cover;' ) ) );
