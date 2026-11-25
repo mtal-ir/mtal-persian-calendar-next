@@ -36,7 +36,7 @@ final class MTAL_Suite_Admin {
 
 		// Hidden screen: each suite links directly to its own calendar manager.
 		add_submenu_page(
-			null,
+			'',
 			'مدیریت تقویم سوئیت',
 			'',
 			'read',
