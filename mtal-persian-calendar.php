@@ -606,4 +606,5 @@ require_once MTAL_PC_PATH . 'includes/class-mtal-my-account-bookings.php';
 require_once MTAL_PC_PATH . 'includes/class-mtal-my-account-suites.php';
 require_once MTAL_PC_PATH . 'includes/class-mtal-suite-admin.php';
 register_activation_hook( __FILE__, array( 'MTAL_My_Account_Bookings', 'activate' ) );
+register_activation_hook( __FILE__, array( 'MTAL_My_Account_Suites', 'activate' ) );
 MTAL_Persian_Calendar::instance();
