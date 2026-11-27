@@ -173,9 +173,9 @@ final class MTAL_My_Account_Suites {
 			}
 		}
 
-		if ( ! $query->have_posts() ) {
+		if ( ! $query->have_posts() && ! $add_requested ) {
 			echo '<div class="mtal-account-suites__empty"><strong>هنوز سوئیتی ثبت نشده است.</strong><p>برای شروع، یک سوئیت مستقل ایجاد کنید.</p><a class="mtal-account-suites__add" href="' . esc_url( self::get_suite_add_url() ) . '">افزودن سوئیت</a></div>';
-		} else {
+		} elseif ( $query->have_posts() ) {
 			echo '<div class="mtal-account-suites__grid">';
 			foreach ( $query->posts as $suite ) {
 				$display = MTAL_Suite_Registry::get_display_data( $suite->ID );
