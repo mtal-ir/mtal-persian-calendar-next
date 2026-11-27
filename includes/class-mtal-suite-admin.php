@@ -479,11 +479,10 @@ JS
 		echo '<th>نوشته منبع</th>';
 		echo '<th style="width:100px;">تصویر</th>';
 		echo '<th style="width:120px;">وضعیت</th>';
-		echo '<th style="width:100px;">عملیات</th>';
 		echo '</tr></thead><tbody>';
 
 		if ( ! $suites_query->have_posts() ) {
-			echo '<tr><td colspan="6">هنوز سوئیتی در مدل مستقل MTAL ثبت نشده است. برای شروع از دکمه «افزودن سوئیت» استفاده کنید.</td></tr>';
+			echo '<tr><td colspan="5">هنوز سوئیتی در مدل مستقل MTAL ثبت نشده است. برای شروع از دکمه «افزودن سوئیت» استفاده کنید.</td></tr>';
 		} else {
 			foreach ( $suites_query->posts as $suite ) {
 				$display = MTAL_Suite_Registry::get_display_data( $suite->ID );
@@ -513,7 +512,8 @@ JS
 
 				echo '<tr>';
 				echo '<td>' . absint( $suite->ID ) . '</td>';
-				echo '<td><strong>' . esc_html( $display['title'] ) . '</strong><br><small>عنوان از ' . esc_html( 'override' === $display['titleSource'] ? 'تنظیم اختصاصی' : ( 'source' === $display['titleSource'] ? 'نوشته منبع' : 'رکورد MTAL' ) ) . '</small></td>';
+				$edit_url = admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&action=edit&suite_id=' . absint( $suite->ID ) );
+				echo '<td><strong>' . esc_html( $display['title'] ) . '</strong><br><small>عنوان از ' . esc_html( 'override' === $display['titleSource'] ? 'تنظیم اختصاصی' : ( 'source' === $display['titleSource'] ? 'نوشته منبع' : 'رکورد MTAL' ) ) . '</small><br><a class="button button-small" style="margin-top:6px;" href="' . esc_url( $edit_url ) . '">ویرایش</a></td>';
 				$calendar_url = add_query_arg( array( 'page' => self::CALENDAR_PAGE_SLUG, 'suite_id' => absint( $suite->ID ) ), admin_url( 'admin.php' ) );
 				echo '<td>' . $source_label . '<br><a class="button button-small" href="' . esc_url( $calendar_url ) . '">مدیریت تقویم و قیمت‌ها</a></td>';
 				echo '<td>';
@@ -524,7 +524,6 @@ JS
 				}
 				echo '</td>';
 				echo '<td>' . esc_html( $status_label ) . '</td>';
-				echo '<td><a class="button button-small" href="' . esc_url( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&action=edit&suite_id=' . absint( $suite->ID ) ) ) . '">ویرایش</a></td>';
 				echo '</tr>';
 			}
 		}
