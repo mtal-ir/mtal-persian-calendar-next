@@ -406,7 +406,7 @@ JS
 			|| ! MTAL_Suite_Registry::is_suite( $suite_id ) || ! current_user_can( 'edit_post', $suite_id ) ) {
 			wp_die( esc_html__( 'شما اجازه مدیریت تقویم این سوئیت را ندارید.', 'mtal-persian-calendar' ), '', array( 'response' => 403 ) );
 		}
-		self::render_calendar_content( $suite_id, $return_url );
+		self::render_calendar_content( $suite_id, $return_url, false );
 	}
 
 	public static function render_calendar_page() {
@@ -420,7 +420,7 @@ JS
 		self::render_calendar_content( $suite_id, admin_url( 'admin.php?page=' . self::PAGE_SLUG ) );
 	}
 
-	private static function render_calendar_content( $suite_id, $back_url ) {
+	private static function render_calendar_content( $suite_id, $back_url, $show_heading = true ) {
 		$display = MTAL_Suite_Registry::get_display_data( $suite_id );
 		if ( ! $display ) {
 			wp_die( esc_html__( 'اطلاعات سوئیت در دسترس نیست.', 'mtal-persian-calendar' ), '', array( 'response' => 404 ) );
@@ -429,7 +429,9 @@ JS
 		$source_post = MTAL_Suite_Registry::get_source_post( $suite_id );
 
 		echo '<div class="mtal-account-calendar" dir="rtl">';
-		echo '<h3>مدیریت تقویم و قیمت‌ها: ' . esc_html( $display['title'] ) . '</h3>';
+		if ( $show_heading ) {
+			echo '<h3>مدیریت تقویم و قیمت‌ها: ' . esc_html( $display['title'] ) . '</h3>';
+		}
 		echo '<p>شناسه مستقل MTAL: <strong>' . absint( $suite_id ) . '</strong>';
 		if ( $source_post ) {
 			echo ' | نوشته منبع: ' . esc_html( get_the_title( $source_post ) ) . ' (#' . absint( $source_post->ID ) . ')';
