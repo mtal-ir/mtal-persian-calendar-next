@@ -351,12 +351,20 @@ JS
 
 	/** Load calendar assets when the calendar is rendered inside WooCommerce My Account. */
 	public static function enqueue_account_calendar_assets() {
-		if ( ! function_exists( 'is_wc_endpoint_url' ) || ! is_wc_endpoint_url( MTAL_My_Account_Suites::ENDPOINT )
-			|| ! isset( $_GET['mtal_suite_action'] ) || 'calendar' !== sanitize_key( wp_unslash( $_GET['mtal_suite_action'] ) ) ) {
+		global $wp;
+		$is_account_endpoint = function_exists( 'is_account_page' )
+			&& is_account_page()
+			&& isset( $wp->query_vars )
+			&& is_array( $wp->query_vars )
+			&& array_key_exists( MTAL_My_Account_Suites::ENDPOINT, $wp->query_vars );
+		if ( ! $is_account_endpoint
+			|| ! isset( $_GET['mtal_suite_action'] )
+			|| 'calendar' !== sanitize_key( wp_unslash( $_GET['mtal_suite_action'] ) ) ) {
 			return;
 		}
 		$suite_id = isset( $_GET['suite_id'] ) ? absint( $_GET['suite_id'] ) : 0;
-		if ( ! $suite_id || ! class_exists( 'MTAL_Booking_Admin' ) || ! MTAL_Booking_Admin::current_user_can_manage_bookings() ) {
+		if ( ! $suite_id || ! class_exists( 'MTAL_Booking_Admin' ) || ! MTAL_Booking_Admin::current_user_can_manage_bookings()
+			|| ! current_user_can( 'edit_post', $suite_id ) ) {
 			return;
 		}
 		self::enqueue_calendar_assets_for_suite( $suite_id );
