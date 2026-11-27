@@ -762,7 +762,7 @@
 
 				const modalTitle = document.createElement('div');
 				modalTitle.className = 'mtal-cal-modal-title';
-				modalTitle.textContent = 'انتخاب تاریخ ورود و خروج';
+				modalTitle.textContent = 'انتخاب تاریخ';
 
 				const closeBtn = document.createElement('button');
 				closeBtn.type = 'button';
@@ -1056,7 +1056,7 @@
 			const note = document.createElement('div');
 			note.className = 'mtal-cal-handover-note';
 			note.innerHTML =
-				'تحویل اقامتگاه تا ساعت <strong>۱۲ ظهر</strong> و تحویل‌گیری مجدد از ساعت <strong>۱۴ (۲ بعدازظهر)</strong> انجام می‌شود؛ خروج در روز مسدود مجاز است اما انتخاب بازه‌ای که روز مسدود بینش باشد امکان‌پذیر نیست.';
+				'ورود از ساعت <strong>۱۴</strong> و خروج تا ساعت <strong>۱۲</strong>؛ انتخاب بازه شامل روز مسدود مجاز نیست.';
 			return note;
 		}
 
@@ -1203,6 +1203,9 @@
 
 			if (this.modalFooterEl) {
 				this.modalFooterEl.innerHTML = '';
+
+				// Keep the modal focused on date selection; omit date summaries,
+				// pricing details and secondary actions that crowd small screens.
 				this.modalFooterEl.appendChild(this.createLegendBar());
 				this.modalFooterEl.appendChild(this.createHandoverNoteBox());
 
@@ -1212,30 +1215,6 @@
 					warnEl.textContent = this.warningMessage;
 					this.modalFooterEl.appendChild(warnEl);
 				}
-
-				this.modalFooterEl.appendChild(this.createSummaryBoxes(this.draftStart, this.draftEnd));
-
-				const modalBreakdownBox = this.createPricingBreakdownBox(this.draftStart, this.draftEnd);
-				if (modalBreakdownBox) {
-					this.modalFooterEl.appendChild(modalBreakdownBox);
-				}
-
-				const actionsRow = document.createElement('div');
-				actionsRow.className = 'mtal-cal-modal-actions';
-
-				const clearBtn = document.createElement('button');
-				clearBtn.type = 'button';
-				clearBtn.className = 'mtal-cal-clear-btn';
-				clearBtn.textContent = 'پاک کردن';
-				clearBtn.addEventListener('click', () => {
-					this.draftStart = null;
-					this.draftEnd = null;
-					this.clear({ notify: true });
-				});
-
-				actionsRow.appendChild(clearBtn);
-
-				this.modalFooterEl.appendChild(actionsRow);
 			}
 		}
 	}
