@@ -88,11 +88,14 @@ final class MTAL_My_Account_Bookings {
 			return;
 		}
 
+		$bookings_css_path = MTAL_PC_PATH . 'assets/css/mtal-my-account-bookings.css';
+		$bookings_css_version = file_exists( $bookings_css_path ) ? (string) filemtime( $bookings_css_path ) : MTAL_PC_VERSION;
+
 		wp_enqueue_style(
 			'mtal-my-account-bookings',
 			MTAL_PC_URL . 'assets/css/mtal-my-account-bookings.css',
 			array(),
-			MTAL_PC_VERSION
+			$bookings_css_version
 		);
 	}
 
