@@ -215,7 +215,13 @@ JS
 			delete_post_meta( $suite_id, MTAL_Suite_Registry::META_SOURCE_POST_ID );
 		}
 
-		wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&updated=1' ) );
+		$return_to = isset( $_POST['return_to'] ) ? esc_url_raw( wp_unslash( $_POST['return_to'] ) ) : '';
+		if ( $return_to && 0 === strpos( $return_to, wc_get_account_endpoint_url( 'mtal-suites' ) ) ) {
+			$return_to = add_query_arg( 'mtal_suite_updated', '1', $return_to );
+			wp_safe_redirect( $return_to );
+		} else {
+			wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&updated=1' ) );
+		}
 		exit;
 	}
 
@@ -233,10 +239,21 @@ JS
 		echo '<p><a class="button button-primary" href="' . esc_url( $edit_url ) . '">ویرایش سوئیت آماده</a> <a class="button" href="' . esc_url( admin_url( 'admin.php?page=' . self::PAGE_SLUG ) ) . '">بازگشت به فهرست سوئیت‌ها</a></p></div></div>';
 	}
 
+	/** Render the existing suite editor inside the WooCommerce account endpoint. */
+	public static function render_account_form( $suite_id, $return_url ) {
+		if ( ! class_exists( 'MTAL_Booking_Admin' ) || ! MTAL_Booking_Admin::current_user_can_manage_bookings() ) {
+			wp_die( 'شما اجازه ویرایش سوئیت را ندارید.', '', array( 'response' => 403 ) );
+		}
+		wp_enqueue_media();
+		wp_enqueue_script( 'jquery' );
+		self::enqueue_suite_form_assets( '' );
+		self::render_suite_form( absint( $suite_id ), $return_url );
+	}
+
 	/**
 	 * Render the add/edit form for an independent MTAL suite.
 	 */
-	private static function render_suite_form( $suite_id = 0 ) {
+	private static function render_suite_form( $suite_id = 0, $return_url = '' ) {
 		$suite = $suite_id ? get_post( $suite_id ) : null;
 		if ( $suite_id && ( ! $suite || MTAL_Suite_Registry::POST_TYPE !== $suite->post_type ) ) {
 			wp_die( esc_html__( 'شناسه سوئیت معتبر نیست.', 'mtal-persian-calendar' ), '', array( 'response' => 404 ) );
@@ -289,6 +306,7 @@ JS
 		echo '<div class="wrap" dir="rtl">';
 		echo '<h1>' . ( $suite_id ? 'ویرایش سوئیت' : 'افزودن سوئیت جدید' ) . '</h1>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<input type="hidden" name="return_to" value="' . esc_attr( $return_url ) . '">';
 		echo '<input type="hidden" name="action" value="mtal_save_suite">';
 		echo '<input type="hidden" name="suite_id" value="' . absint( $suite_id ) . '">';
 		wp_nonce_field( 'mtal_save_suite', 'mtal_suite_nonce' );
@@ -317,7 +335,7 @@ JS
 		echo '<tr><th><label for="mtal-suite-status">وضعیت</label></th><td><select id="mtal-suite-status" name="suite_status"><option value="draft"' . selected( $status, 'draft', false ) . '>پیش‌نویس</option><option value="publish"' . selected( $status, 'publish', false ) . '>منتشرشده</option></select></td></tr>';
 		echo '</tbody></table>';
 		submit_button( $suite_id ? 'ذخیره تغییرات' : 'ایجاد سوئیت' );
-		echo ' <a class="button" href="' . esc_url( admin_url( 'admin.php?page=' . self::PAGE_SLUG ) ) . '">انصراف</a>';
+		echo ' <a class="button" href="' . esc_url( $return_url ? $return_url : admin_url( 'admin.php?page=' . self::PAGE_SLUG ) ) . '">انصراف</a>';
 		echo '</form></div>';
 	}
 
