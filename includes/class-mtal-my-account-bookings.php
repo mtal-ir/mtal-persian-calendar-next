@@ -229,7 +229,7 @@ final class MTAL_My_Account_Bookings {
 		echo '<div class="mtal-account-bookings-filter__scroll" role="group" aria-label="فیلتر وضعیت رزروها">';
 		foreach ( $options as $value => $label ) {
 			$is_selected = $status === $value;
-			echo '<button type="submit" name="mtal_booking_status" value="' . esc_attr( $value ) . '" class="mtal-account-bookings-filter__option' . ( $is_selected ? ' is-active' : '' ) . '" aria-pressed="' . ( $is_selected ? 'true' : 'false' ) . '">' . esc_html( $label ) . '</button>';
+			echo '<button type="submit" name="mtal_booking_status" value="' . esc_attr( $value ) . '" class="mtal-account-bookings-filter__option mtal-account-bookings-filter__option--' . esc_attr( sanitize_html_class( $value ) ) . ( $is_selected ? ' is-active' : '' ) . '" aria-pressed="' . ( $is_selected ? 'true' : 'false' ) . '">' . esc_html( $label ) . '</button>';
 		}
 		echo '</div></form>';
 
