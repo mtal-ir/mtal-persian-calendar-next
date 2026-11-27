@@ -439,7 +439,8 @@ html.mtal-modal-open {
 }
 
 .mtal-legend-item .dot.is-red {
-	background: var(--mtal-red);
+	/* The legend sits in the modal footer, outside .mtal-cal-panel where --mtal-red is scoped. */
+	background: #dc2626;
 }
 
 .mtal-legend-item .dot.is-blocked {
