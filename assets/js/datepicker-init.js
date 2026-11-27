@@ -112,40 +112,14 @@
 	}
 
 	function resolveSuiteMaxCapacity(host, fallbackMax) {
-		const attrMax = parsePositiveInt(host.getAttribute('data-mtal-max-guests') || cfg.maxGuests, 0);
-		if (attrMax > 0) return attrMax;
+		// The calendar host carries the suite-specific value from the independent
+		// MTAL suite record. Never replace it with page-wide or title-based guesses.
+		const hostMax = parsePositiveInt(host.getAttribute('data-mtal-max-guests'), 0);
+		if (hostMax > 0) return hostMax;
 
-		const card =
-			host.closest('.jet-listing-grid__item, .elementor-grid-item, .elementor-element, .post-item') ||
-			host.closest('form');
-		const searchContext = card || document.body;
-		const suiteLink = searchContext.querySelector('a.mtal-suite-link, a[href*="suite"], .elementor-post__title a, a');
-		const cardText = searchContext.innerText || '';
-		const urlString = suiteLink ? suiteLink.href : window.location.href;
-
-		if (
-			urlString.includes('suite-one') ||
-			urlString.includes('suite-two') ||
-			cardText.includes('سوئیت ۱') ||
-			cardText.includes('سوئیت ۲')
-		) {
-			return 3;
-		}
-		if (
-			urlString.includes('suite-three') ||
-			urlString.includes('suite-four') ||
-			cardText.includes('سوئیت ۳') ||
-			cardText.includes('سوئیت ۴')
-		) {
-			return 4;
-		}
-		if (urlString.includes('suite-five') || cardText.includes('سوئیت ۵')) {
-			return 5;
-		}
-
+		// Older embeds may not have the host attribute; retain a safe global default.
 		return Math.max(1, parsePositiveInt(fallbackMax, 5));
 	}
-
 	function setElementValue(el, outVal) {
 		if (!el) return;
 		let strVal = outVal !== undefined && outVal !== null ? String(outVal) : '';
