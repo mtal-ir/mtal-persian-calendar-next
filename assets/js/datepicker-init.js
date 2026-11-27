@@ -1239,7 +1239,7 @@
 				nextBtn.type = 'button';
 				nextBtn.className = 'mtal-cal-nav';
 				nextBtn.setAttribute('aria-label', 'ماه بعد');
-				nextBtn.textContent = '‹';
+				nextBtn.textContent = '›';
 				nextBtn.addEventListener('click', () => {
 					const total = viewYear * 12 + (viewMonth - 1) + 1;
 					const maxIdx = helperCal.today.jy * 12 + (helperCal.today.jm - 1) + 2;
@@ -1262,7 +1262,7 @@
 				prevBtn.type = 'button';
 				prevBtn.className = 'mtal-cal-nav';
 				prevBtn.setAttribute('aria-label', 'ماه قبل');
-				prevBtn.textContent = '›';
+				prevBtn.textContent = '‹';
 				prevBtn.addEventListener('click', () => {
 					const total = viewYear * 12 + (viewMonth - 1) - 1;
 					const minIdx = helperCal.today.jy * 12 + (helperCal.today.jm - 1);
