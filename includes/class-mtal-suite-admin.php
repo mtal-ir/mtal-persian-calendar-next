@@ -277,7 +277,6 @@ final class MTAL_Suite_Admin {
 		echo '<div class="wrap">';
 		echo '<h1>مدیریت سوئیت‌ها</h1>';
 		echo '<p>این فهرست، سوئیت‌هایی را نشان می‌دهد که در مدل مستقل MTAL ثبت شده‌اند. اطلاعات نوشته منبع فقط برای نمایش عنوان و تصویر جایگزین استفاده می‌شود.</p>';
-		self::render_migration_diagnostics();
 
 		echo '<table class="widefat fixed striped">';
 		echo '<thead><tr>';
