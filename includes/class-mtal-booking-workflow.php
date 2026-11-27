@@ -323,7 +323,7 @@ final class MTAL_Booking_Workflow {
 		$item->set_tax_status( 'none' );
 		$order->add_item( $item );
 
-		$name = self::find_field_value( $fields, '/(name|fullname|full_name|first_name)/i' );
+		$name = isset( $fields['fullname'] ) ? $fields['fullname'] : '';
 		$phone = self::find_field_value( $fields, '/(phone|mobile|tel|cell)/i' );
 		$email = self::find_field_value( $fields, '/email/i' );
 		if ( $name ) {
