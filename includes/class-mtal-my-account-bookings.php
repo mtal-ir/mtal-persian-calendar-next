@@ -75,7 +75,19 @@ final class MTAL_My_Account_Bookings {
 	}
 
 	public static function enqueue_assets() {
-		if ( ! function_exists( 'is_wc_endpoint_url' ) || ! is_wc_endpoint_url( self::ENDPOINT ) || ! self::can_manage_bookings() ) {
+		$endpoint_function_exists = function_exists( 'is_wc_endpoint_url' );
+		$is_bookings_endpoint     = $endpoint_function_exists && is_wc_endpoint_url( self::ENDPOINT );
+		$can_manage                = self::can_manage_bookings();
+
+		if ( ! headers_sent() ) {
+			header(
+				'X-MTAL-Bookings-Diagnostic: endpoint_function=' . ( $endpoint_function_exists ? '1' : '0' )
+				. '; endpoint=' . ( $is_bookings_endpoint ? '1' : '0' )
+				. '; capability=' . ( $can_manage ? '1' : '0' )
+			);
+		}
+
+		if ( ! $endpoint_function_exists || ! $is_bookings_endpoint || ! $can_manage ) {
 			return;
 		}
 
@@ -85,7 +97,7 @@ final class MTAL_My_Account_Bookings {
 			array(),
 			MTAL_PC_VERSION
 		);
-}
+	}
 
 
 	private static function get_status_options() {
