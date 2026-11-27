@@ -259,10 +259,10 @@ final class MTAL_My_Account_Bookings {
 					self::render_decision_form( $order_id, 'approve', 'تأیید', 'mtal-account-bookings-table__approve' );
 					self::render_decision_form( $order_id, 'reject', 'رد', 'mtal-account-bookings-table__reject' );
 				}
-				echo '<button type="button" class="mtal-account-bookings-table__details" onclick="document.getElementById(\\'' . esc_attr( $template_id ) . '\\').showModal();">جزئیات</button></div></td></tr>';
+				echo '<button type="button" class="mtal-account-bookings-table__details" onclick="document.getElementById(\'' . esc_attr( $template_id ) . '\').showModal();">جزئیات</button></div></td></tr>';
 
 				echo '<dialog id="' . esc_attr( $template_id ) . '" class="mtal-account-booking-dialog">';
-				echo '<div class="mtal-account-booking-modal__head"><h3>جزئیات رزرو #' . esc_html( $order->get_order_number() ) . '</h3><button type="button" class="mtal-account-booking-modal__close" onclick="this.closest(\\'dialog\\').close();" aria-label="بستن">بستن ✕</button></div>';
+				echo '<div class="mtal-account-booking-modal__head"><h3>جزئیات رزرو #' . esc_html( $order->get_order_number() ) . '</h3><button type="button" class="mtal-account-booking-modal__close" onclick="this.closest(\'dialog\').close();" aria-label="بستن">بستن ✕</button></div>';
 				echo '<div class="mtal-account-booking__table-wrap"><table class="mtal-account-booking__table"><tbody>';
 				self::render_table_row( 'نام مشتری', esc_html( $name ) );
 				self::render_table_row( 'شماره تماس', $phone ? esc_html( $phone ) : '—' );
