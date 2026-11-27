@@ -71,7 +71,7 @@ final class MTAL_Suite_Admin {
 		wp_enqueue_media();
 		wp_add_inline_script(
 			'jquery',
-			"(function($){$(function(){var frame;$('#mtal-suite-select-image').on('click',function(e){e.preventDefault();if(frame){frame.open();return;}frame=wp.media({title:'انتخاب تصویر سوئیت',button:{text:'استفاده از تصویر'},multiple:false,library:{type:'image'}});frame.on('select',function(){var item=frame.state().get('selection').first().toJSON();$('#mtal-suite-image-id').val(item.id);$('#mtal-suite-image-preview').html('<img src="'+item.url.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" alt="" style="max-width:180px;height:auto;">');$('#mtal-suite-remove-image').prop('hidden',false);});frame.open();});$('#mtal-suite-remove-image').on('click',function(e){e.preventDefault();$('#mtal-suite-image-id').val('0');$('#mtal-suite-image-preview').empty();$(this).prop('hidden',true);});});})(jQuery);"
+			"(function($){$(function(){var frame;$('#mtal-suite-select-image').on('click',function(e){e.preventDefault();if(frame){frame.open();return;}frame=wp.media({title:'انتخاب تصویر سوئیت',button:{text:'استفاده از تصویر'},multiple:false,library:{type:'image'}});frame.on('select',function(){var item=frame.state().get('selection').first().toJSON();$('#mtal-suite-image-id').val(item.id);$('#mtal-suite-image-preview').empty().append($('<img>',{src:item.url,alt:'',css:{maxWidth:'180px',height:'auto'}}));$('#mtal-suite-remove-image').prop('hidden',false);});frame.open();});$('#mtal-suite-remove-image').on('click',function(e){e.preventDefault();$('#mtal-suite-image-id').val('0');$('#mtal-suite-image-preview').empty();$(this).prop('hidden',true);});});})(jQuery);"
 		);
 	}
 
