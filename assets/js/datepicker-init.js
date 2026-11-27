@@ -1407,7 +1407,6 @@
 				statusMsg.className = 'mtal-admin-status';
 
 				saveBtn.addEventListener('click', () => {
-					syncInputsToState();
 					const payload = getCurrentRulesPayload();
 					applyRulesToSuiteCalendars(postId, payload);
 					host.dispatchEvent(new CustomEvent('mtal:rulesUpdated', { detail: payload, bubbles: true }));
