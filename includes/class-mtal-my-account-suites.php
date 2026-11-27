@@ -19,6 +19,7 @@ final class MTAL_My_Account_Suites {
 		add_action( 'woocommerce_account_' . self::ENDPOINT . '_endpoint', array( __CLASS__, 'render_endpoint' ) );
 		add_action( 'template_redirect', array( __CLASS__, 'protect_endpoint' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
+		add_action( 'wp_enqueue_scripts', array( 'MTAL_Suite_Admin', 'enqueue_account_calendar_assets' ), 20 );
 	}
 
 	private static function can_manage() {
@@ -104,10 +105,10 @@ final class MTAL_My_Account_Suites {
 	private static function get_suite_calendar_url( $suite_id ) {
 		return add_query_arg(
 			array(
-				'page'     => MTAL_Suite_Admin::CALENDAR_PAGE_SLUG,
-				'suite_id' => absint( $suite_id ),
+				'mtal_suite_action' => 'calendar',
+				'suite_id'          => absint( $suite_id ),
 			),
-			admin_url( 'admin.php' )
+			wc_get_account_endpoint_url( self::ENDPOINT )
 		);
 	}
 
@@ -164,6 +165,17 @@ final class MTAL_My_Account_Suites {
 		$query = self::get_suites( $page );
 		$hidden_query = self::get_suites( 1, 50, true );
 		$account_url = wc_get_account_endpoint_url( self::ENDPOINT );
+		$calendar_requested = isset( $_GET['mtal_suite_action'] ) && 'calendar' === sanitize_key( wp_unslash( $_GET['mtal_suite_action'] ) );
+		if ( $calendar_requested ) {
+			$suite_id = isset( $_GET['suite_id'] ) ? absint( $_GET['suite_id'] ) : 0;
+			if ( ! $suite_id || ! MTAL_Suite_Registry::is_suite( $suite_id ) || ! current_user_can( 'edit_post', $suite_id ) ) {
+				wp_die( 'شناسه سوئیت معتبر نیست یا اجازه مدیریت تقویم آن را ندارید.', '', array( 'response' => 403 ) );
+			}
+			echo '<section class="mtal-account-suites" dir="rtl"><header class="mtal-account-suites__header"><div><h2>مدیریت تقویم</h2><p>' . esc_html( get_the_title( $suite_id ) ) . ' — شناسه MTAL: #' . absint( $suite_id ) . '</p></div><a class="mtal-account-suites__add" href="' . esc_url( $account_url ) . '">بازگشت به مدیریت سوئیت‌ها</a></header>';
+			MTAL_Suite_Admin::render_account_calendar( $suite_id, $account_url );
+			echo '</section>';
+			return;
+		}
 
 		echo '<section class="mtal-account-suites" dir="rtl">';
 		echo '<header class="mtal-account-suites__header"><div><h2>مدیریت سوئیت‌ها</h2><p>مشاهده سوئیت‌های مستقل و دسترسی به تنظیمات آن‌ها</p></div>';
