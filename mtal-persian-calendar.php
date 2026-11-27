@@ -140,6 +140,8 @@ final class MTAL_Persian_Calendar {
 		$base_capacity_raw = $storage_id ? get_post_meta( $storage_id, '_mtal_base_capacity', true ) : '';
 		$base_capacity     = '' !== $base_capacity_raw ? max( 1, intval( $base_capacity_raw ) ) : 2;
 		$extra_guest_price = $storage_id ? intval( get_post_meta( $storage_id, '_mtal_extra_guest_price', true ) ) : 0;
+		$max_capacity_raw  = $storage_id ? get_post_meta( $storage_id, '_mtal_suite_max_capacity', true ) : '';
+		$max_capacity      = '' !== $max_capacity_raw ? max( 1, intval( $max_capacity_raw ) ) : 5;
 
 		return array(
 			'postId'          => $reference_id,
@@ -151,6 +153,7 @@ final class MTAL_Persian_Calendar {
 			'weekendPrice'    => max( 0, $weekend_price ),
 			'baseCapacity'    => $base_capacity,
 			'extraGuestPrice' => max( 0, $extra_guest_price ),
+			'maxCapacity'     => $max_capacity,
 		);
 	}
 
@@ -171,6 +174,7 @@ final class MTAL_Persian_Calendar {
 		update_post_meta( $suite_id, '_mtal_weekend_price', max( 0, absint( $data['weekendPrice'] ?? 0 ) ) );
 		update_post_meta( $suite_id, '_mtal_base_capacity', max( 1, absint( $data['baseCapacity'] ?? 2 ) ) );
 		update_post_meta( $suite_id, '_mtal_extra_guest_price', max( 0, absint( $data['extraGuestPrice'] ?? 0 ) ) );
+		update_post_meta( $suite_id, '_mtal_suite_max_capacity', max( 1, absint( $data['maxCapacity'] ?? 5 ) ) );
 
 		return true;
 	}
@@ -219,6 +223,7 @@ final class MTAL_Persian_Calendar {
 				'weekendPrice'    => $suite_data['weekendPrice'],
 				'baseCapacity'    => $suite_data['baseCapacity'],
 				'extraGuestPrice' => $suite_data['extraGuestPrice'],
+				'maxGuests'       => $suite_data['maxCapacity'],
 			)
 		);
 	}
