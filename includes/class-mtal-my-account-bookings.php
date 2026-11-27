@@ -229,12 +229,11 @@ final class MTAL_My_Account_Bookings {
 		if ( empty( $orders ) ) {
 			echo '<p>رزروی با این فیلتر پیدا نشد.</p>';
 		} else {
-			echo '<div class="mtal-account-bookings">';
+			echo '<div class="mtal-account-bookings-table-wrap"><table class="mtal-account-bookings-table"><thead><tr><th>سفارش</th><th>مشتری</th><th>سوئیت</th><th>تاریخ اقامت</th><th>مبلغ</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody>';
 			foreach ( $orders as $order ) {
 				if ( ! $order instanceof WC_Order || ! $order->get_meta( '_mtal_booking_suite_id' ) ) {
 					continue;
 				}
-
 				$order_id = $order->get_id();
 				$suite_id = absint( $order->get_meta( '_mtal_booking_suite_id' ) );
 				$suite_name = self::get_suite_name( $suite_id );
@@ -245,28 +244,25 @@ final class MTAL_My_Account_Bookings {
 				$check_in = (string) $order->get_meta( '_mtal_booking_check_in' );
 				$check_out = (string) $order->get_meta( '_mtal_booking_check_out' );
 				$guests = absint( $order->get_meta( '_mtal_booking_guests' ) );
-				$status_label = wc_get_order_status_name( $order->get_status() );
+				$order_status = $order->get_status();
+				$status_label = wc_get_order_status_name( $order_status );
 				$expires = absint( $order->get_meta( '_mtal_booking_expires_at' ) );
-				$is_actionable = 'mtal-pending' === $order->get_status() && $expires > time();
+				$is_actionable = 'mtal-pending' === $order_status && $expires > time();
 				$template_id = 'mtal-booking-details-' . absint( $order_id );
 
-				echo '<article class="mtal-account-booking">';
-				$status_class = sanitize_html_class( $order->get_status() );
-				echo '<div class="mtal-account-booking__head"><span class="mtal-account-booking__title">رزرو #' . esc_html( $order->get_order_number() ) . '</span><span class="mtal-account-booking__status mtal-account-booking__status--' . esc_attr( $status_class ) . '">' . esc_html( $status_label ) . '</span></div>';
-				echo '<div class="mtal-account-booking__summary">';
-				self::render_field( 'مشتری', esc_html( $name ) );
-				self::render_field( 'سوئیت', esc_html( $suite_name ) );
-				self::render_field( 'تاریخ اقامت', esc_html( ( $check_in ? $check_in : '—' ) . ' تا ' . ( $check_out ? $check_out : '—' ) ) );
-				self::render_field( 'مبلغ', wc_price( $order->get_total(), array( 'currency' => $order->get_currency() ) ) );
-				echo '</div>';
-				if ( $expires && in_array( $order->get_status(), array( 'mtal-pending', 'pending' ), true ) ) {
-					$remaining = $expires > time() ? 'مهلت باقی‌مانده: ' . human_time_diff( time(), $expires ) : 'مهلت درخواست پایان یافته است';
-					echo '<p class="mtal-account-booking__notice">' . esc_html( $remaining ) . '</p>';
+				echo '<tr><td>#' . esc_html( $order->get_order_number() ) . '</td>';
+				echo '<td>' . esc_html( $name ) . '</td><td>' . esc_html( $suite_name ) . '</td>';
+				echo '<td>' . esc_html( ( $check_in ? $check_in : '—' ) . ' تا ' . ( $check_out ? $check_out : '—' ) ) . '</td>';
+				echo '<td>' . wp_kses_post( wc_price( $order->get_total(), array( 'currency' => $order->get_currency() ) ) ) . '</td>';
+				echo '<td>' . self::render_status_badge( $order_status, $status_label ) . '</td><td><div class="mtal-account-bookings-table__actions">';
+				if ( $is_actionable ) {
+					self::render_decision_form( $order_id, 'approve', 'تأیید', 'mtal-account-bookings-table__approve' );
+					self::render_decision_form( $order_id, 'reject', 'رد', 'mtal-account-bookings-table__reject' );
 				}
-				echo '<div class="mtal-account-booking__details"><button type="button" class="mtal-account-booking__details-button" onclick="document.getElementById(\'' . esc_attr( $template_id ) . '\').showModal();">مشاهده جزئیات</button></div>';
+				echo '<button type="button" class="mtal-account-bookings-table__details" onclick="document.getElementById(\\'' . esc_attr( $template_id ) . '\\').showModal();">جزئیات</button></div></td></tr>';
 
 				echo '<dialog id="' . esc_attr( $template_id ) . '" class="mtal-account-booking-dialog">';
-				echo '<div class="mtal-account-booking-modal__head"><h3>جزئیات رزرو #' . esc_html( $order->get_order_number() ) . '</h3><button type="button" class="mtal-account-booking-modal__close" onclick="this.closest(\'dialog\').close();" aria-label="بستن">بستن ✕</button></div>';
+				echo '<div class="mtal-account-booking-modal__head"><h3>جزئیات رزرو #' . esc_html( $order->get_order_number() ) . '</h3><button type="button" class="mtal-account-booking-modal__close" onclick="this.closest(\\'dialog\\').close();" aria-label="بستن">بستن ✕</button></div>';
 				echo '<div class="mtal-account-booking__table-wrap"><table class="mtal-account-booking__table"><tbody>';
 				self::render_table_row( 'نام مشتری', esc_html( $name ) );
 				self::render_table_row( 'شماره تماس', $phone ? esc_html( $phone ) : '—' );
@@ -277,7 +273,7 @@ final class MTAL_My_Account_Bookings {
 				self::render_table_row( 'تاریخ خروج', esc_html( $check_out ? $check_out : '—' ) );
 				self::render_table_row( 'تعداد مسافران', $guests ? esc_html( $guests . ' نفر' ) : '—' );
 				self::render_table_row( 'مبلغ سفارش', wc_price( $order->get_total(), array( 'currency' => $order->get_currency() ) ) );
-				self::render_table_row( 'وضعیت سفارش', self::render_status_badge( $order->get_status(), $status_label ) );
+				self::render_table_row( 'وضعیت سفارش', self::render_status_badge( $order_status, $status_label ) );
 				self::render_table_row( 'تاریخ ثبت', $order->get_date_created() ? esc_html( class_exists( 'MTAL_Persian_Calendar' ) ? MTAL_Persian_Calendar::format_jalali_datetime( ( new DateTimeImmutable( '@' . $order->get_date_created()->getTimestamp() ) )->setTimezone( wp_timezone() ) ) : wc_format_datetime( $order->get_date_created() ) ) : '—' );
 				self::render_table_row( 'مهلت درخواست', $expires ? esc_html( class_exists( 'MTAL_Persian_Calendar' ) ? MTAL_Persian_Calendar::format_jalali_datetime( ( new DateTimeImmutable( '@' . $expires ) )->setTimezone( wp_timezone() ) ) : wp_date( 'Y-m-d H:i:s', $expires, wp_timezone() ) ) : '—' );
 				if ( $order->get_customer_note() ) {
@@ -289,13 +285,12 @@ final class MTAL_My_Account_Bookings {
 					self::render_decision_form( $order_id, 'approve', 'تأیید و ارسال لینک پرداخت', 'mtal-account-booking-modal__approve' );
 					self::render_decision_form( $order_id, 'reject', 'رد درخواست و آزادسازی تاریخ‌ها', 'mtal-account-booking-modal__reject' );
 					echo '</div>';
-				} elseif ( 'mtal-pending' === $order->get_status() ) {
+				} elseif ( 'mtal-pending' === $order_status ) {
 					echo '<p class="mtal-account-booking__notice">مهلت این درخواست به پایان رسیده است و امکان تصمیم‌گیری ندارد.</p>';
 				}
 				echo '</dialog>';
-				echo '</article>';
 			}
-			echo '</div>';
+			echo '</tbody></table></div>';
 		}
 
 		if ( $total_pages > 1 ) {
