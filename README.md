@@ -1,78 +1,110 @@
-# MTAL Persian Calendar
+# افزونه MTAL Booking
 
-Independent continuation of the MTAL Persian Calendar WordPress plugin.
+افزونه **MTAL Booking** یک سیستم تقویم جلالی، قیمت‌گذاری و مدیریت درخواست رزرو سوئیت برای وردپرس است که با Elementor و WooCommerce کار می‌کند.
 
-## Version 0.5.0
+این افزونه امکان تعریف سوئیت‌های مستقل، تنظیم ظرفیت و قیمت، مدیریت تقویم اقامت، دریافت درخواست رزرو و بررسی و تصمیم‌گیری درباره درخواست‌ها را فراهم می‌کند.
 
-This repository starts from the current 0.4.0 plugin source and adds server-side stay-price calculation.
+> **وضعیت توسعه:** این مخزن نسخه توسعه‌ای افزونه است. تغییرات توسعه روی شاخه `fix/inline-widget-blocked-dates` انجام می‌شوند و شاخه `main` نسخه پایدار محسوب می‌شود.
 
-### Server-side price calculation
+## امکانات اصلی
 
-The public AJAX action `mtal_calculate_suite_price` accepts:
+### ۱. مدیریت سوئیت‌ها
+- تعریف سوئیت مستقل در پنل مدیریت MTAL
+- اتصال اختیاری سوئیت به یک نوشته از نوع محتوای نمایشی سایت
+- نگهداری اطلاعات عملیاتی سوئیت مستقل از نوشته نمایشی
+- تنظیم عنوان و تصویر اختصاصی
+- تعیین ظرفیت پایه و حداکثر ظرفیت
+- تعریف قیمت عادی، قیمت آخر هفته و هزینه نفر اضافه
+- ویرایش مشخصات سوئیت و دسترسی به تقویم اختصاصی آن
 
-- `post_id`: published page/post containing the suite pricing metadata
-- `check_in`, `check_out`: Jalali dates in `YYYY/MM/DD` format (Persian and Arabic digits are normalized)
-- `guests`: guest count
-- `max_months`: calendar horizon, limited to 1–3
-- `nonce`: WordPress nonce created for `mtal_calendar_rules_nonce`
+### ۲. تقویم جلالی
+- نمایش تقویم فارسی و انتخاب تاریخ ورود و خروج
+- پشتیبانی از حالت‌های نمایش اینلاین و مودال
+- امکان تعریف روزهای مسدود و تعطیلات
+- امکان تعیین قیمت دستی برای تاریخ‌های مشخص
+- دریافت اطلاعات تقویم از تنظیمات سوئیت مستقل
 
-The server validates the dates, date horizon, blocked nights, and guest count, then calculates each night using the existing priority: manual date price, weekend price (Jalali weekday indexes 4 and 5), then regular price. Checkout is exclusive; the checkout date is not charged or treated as an occupied night. Extra-guest charges are applied per night above the saved base capacity.
+### ۳. قیمت‌گذاری اقامت
+- محاسبه قیمت اقامت بر اساس تعداد شب‌ها
+- پشتیبانی از قیمت عادی، آخر هفته و قیمت دستی
+- محاسبه هزینه نفرات اضافه بر اساس ظرفیت پایه
+- انجام محاسبه مجدد قیمت در سمت سرور پیش از ایجاد سفارش
 
-The calendar requests this endpoint after a complete date selection. The total-price target field is cleared while the server calculation is pending and receives the server response only after success. Errors are exposed through the `mtal:serverPriceError` event; success is exposed through `mtal:serverPriceCalculated`.
+### ۴. گردش درخواست رزرو
+در صورت فعال بودن WooCommerce، درخواست‌های ثبت‌شده از طریق فرم Elementor می‌توانند به سفارش ووکامرس تبدیل شوند.
 
-### Important integration note
+گردش کلی درخواست شامل این مراحل است:
+1. انتخاب تاریخ و تعداد مسافران
+2. محاسبه و اعتبارسنجی قیمت در سمت سرور
+3. ایجاد سفارش و ثبت درخواست در وضعیت انتظار تأیید مدیر
+4. نگهداری موقت تاریخ‌های انتخاب‌شده
+5. تأیید یا رد درخواست توسط مدیر
+6. در صورت تأیید، فراهم شدن امکان پرداخت از طریق ووکامرس
 
-This plugin does not currently contain a booking/order/payment processor integration. The AJAX result is authoritative for the calendar's displayed/submitted total, but a separate checkout/payment integration must call the same server-side calculation and validate the amount immediately before creating an order or charging a customer. Do not trust a browser-submitted total as a payment amount.
+### ۵. مدیریت رزروها
+- مشاهده درخواست‌های رزرو در پیشخوان وردپرس
+- فیلتر درخواست‌ها بر اساس وضعیت
+- صفحه‌بندی فهرست رزروها
+- مشاهده اطلاعات سفارش و مشتری
+- تأیید یا رد درخواست‌های در انتظار بررسی
+- نمایش مهلت باقی‌مانده درخواست‌های دارای مهلت
 
-## Installation
+## پیش‌نیازها
 
-Upload this repository as a WordPress plugin directory and activate `mtal-persian-calendar.php`. Elementor is required for the widgets.
+- WordPress
+- افزونه Elementor برای استفاده از ویجت‌های تقویم
+- WooCommerce برای استفاده از گردش سفارش و رزرو
+- Elementor Pro برای استفاده از فرم‌های Elementor در گردش ثبت درخواست رزرو
 
+## نصب
 
-## WooCommerce booking approval workflow (0.6.0)
+۱. فایل‌های افزونه را در مسیر افزونه‌های وردپرس قرار دهید.
 
-When WooCommerce is active, the plugin can turn submissions from the existing Elementor Pro form into WooCommerce booking orders. It does not create a replacement form and it never trusts the submitted total-price field.
+۲. افزونه را از بخش افزونه‌های وردپرس فعال کنید.
 
-### Existing Elementor form fields
+۳. افزونه‌های موردنیاز را نصب و فعال نگه دارید.
 
-- Keep the existing date-range field connected to the calendar widget's date target selector.
-- Keep a hidden Elementor field with **Field ID** `mtal_qty`; the calendar fills it with the selected guest count.
-- If the form is embedded directly on the suite page, the suite post ID is taken from Elementor's submitted page ID. If the form is in a template/listing or another page, add a hidden field with **Field ID** `mtal_post_id`; the calendar fills it automatically from the calendar widget.
-- For customer SMS/payment details, use recognizable field IDs such as `phone` or `mobile`. Email and name fields are detected from IDs containing `email`, `name`, or `fullname`.
+۴. سوئیت‌های مستقل را از بخش مدیریت سوئیت‌های MTAL تعریف کنید.
 
-### Workflow
+۵. قیمت‌ها، ظرفیت‌ها و تقویم هر سوئیت را تنظیم کنید.
 
-1. On valid form submission, the plugin recalculates the stay price on the server and creates a WooCommerce order with status **در انتظار تأیید مدیر**.
-2. Every occupied night (check-in inclusive, check-out exclusive) is held for 30 minutes. The calendar and server-side price validation both treat active holds as unavailable.
-3. The user sees a 30-minute countdown. The server expiry timestamp is authoritative; the browser timer is only a display.
-4. The manager approves or rejects the request from the WooCommerce order screen. Rejection releases the dates immediately. Approval changes the order to WooCommerce's standard **pending payment** status; the existing WooCommerce payment URL is then available.
-5. Successful payment makes the hold permanent. If the manager has not approved or the customer has not paid by the original 30-minute deadline, the order expires and the dates become available again.
+۶. ویجت تقویم MTAL را در صفحه یا قالب Elementor قرار دهید و تنظیمات فیلدهای فرم را انجام دهید.
 
-The database hold table is created/upgraded automatically. Expired holds are ignored by availability checks even if WP-Cron has not yet run; WP-Cron updates the corresponding order status and removes expired rows.
+## مستندات
 
-### FarazSMS notifications
+راهنمای کامل هر بخش در پوشه `docs` نگهداری می‌شود:
 
-The booking workflow uses WooCommerce order-status changes, not SMS commands. In FarazSMS → WooCommerce order SMS settings:
+| فایل | موضوع |
+|---|---|
+| `docs/01-user-guide.md` | راهنمای کلی استفاده از افزونه |
+| `docs/02-suite-management.md` | مدیریت سوئیت‌های مستقل |
+| `docs/03-pricing-and-capacity.md` | قیمت‌گذاری و ظرفیت |
+| `docs/04-calendar-management.md` | مدیریت تقویم و روزهای مسدود |
+| `docs/05-booking-workflow.md` | گردش ثبت و پردازش درخواست رزرو |
+| `docs/06-booking-management.md` | مدیریت رزروها در پیشخوان |
+| `docs/07-elementor-setup.md` | تنظیم ویجت‌ها و فرم‌های Elementor |
+| `docs/08-troubleshooting.md` | عیب‌یابی مشکلات متداول |
+| `docs/09-technical-architecture.md` | معماری فنی افزونه |
 
-- Enable the **admin** notification for **در انتظار تأیید مدیر** to notify the manager when a request is submitted.
-- Enable the **customer** notification for **در انتظار پرداخت** to notify the customer after manager approval.
-- Optionally enable the **customer** notification for **لغو شده** so a rejected or expired request also generates an SMS.
-- Include `%payment_url%` in the customer message for the WooCommerce payment link. FarazSMS 3.22.320 supports this order variable.
+برای شروع، پیشنهاد می‌شود ابتدا راهنمای کاربری و سپس مستندات مدیریت سوئیت و تقویم مطالعه شوند.
 
-No FarazSMS API credentials are copied into this plugin. SMS delivery remains controlled by the existing FarazSMS configuration.
+## یکپارچگی با سرویس‌های جانبی
 
-### Important setup and test notes
+MTAL Booking برای مدیریت درخواست‌ها و سفارش‌های رزرو از سازوکار WooCommerce استفاده می‌کند. ارسال پیامک، اعلان‌ها و امکانات ورود و عضویت می‌توانند از طریق افزونه‌ها و سرویس‌های جانبی مستقل مدیریت شوند.
 
-- The Elementor Pro form must contain the `mtal_qty` field. If the form is not on the suite page, it must also contain `mtal_post_id`.
-- Make sure the form's phone field ID contains `phone`, `mobile`, or `tel` so WooCommerce can populate the billing phone used by FarazSMS.
-- Configure WooCommerce's store currency/price unit consistently with the calendar's configured prices (the calendar price fields are documented in toman).
-- The admin decision controls are available on the WooCommerce order detail screen. The workflow supports the classic order editor and the HPOS order details screen.
-- Test the complete process on a staging site with the actual Elementor form, WooCommerce payment gateway, and FarazSMS settings before using it for live reservations.
+افزونه به ارائه‌دهنده خاصی برای پیامک یا ورود و عضویت وابسته نیست. انتخاب و پیکربندی این سرویس‌ها بر اساس ابزارهای مورد استفاده سایت انجام می‌شود.
 
+## تاریخچه تغییرات
 
-### Booking management dashboard
+تغییرات نسخه‌ها و اصلاحات مهم در فایل `CHANGELOG.md` ثبت می‌شوند.
 
-- Users with the WooCommerce `manage_woocommerce` capability can open **تقویم فارسی MTAL → مدیریت رزروها** in the WordPress dashboard.
-- The page lists MTAL booking orders and supports filtering by order status, pagination, and links to the full WooCommerce order details.
-- Pending requests can be approved or rejected directly from the list. These actions use the same nonce-protected WooCommerce booking decision handler as the order details screen; approval enables the normal payment URL and rejection releases the held dates.
-- An admin-only shortcut to this page is also available in the Elementor settings panels for both MTAL calendar widgets. It is an editor/admin shortcut, not a public-facing frontend control.
+## نکات توسعه
+
+- شاخه `main` نسخه پایدار است.
+- توسعه قابلیت‌ها و اصلاحات در شاخه‌های فرعی انجام می‌شود.
+- اطلاعات عملیاتی سوئیت‌ها در موجودیت مستقل MTAL نگهداری می‌شوند؛ نوشته متصل به سوئیت نقش محتوای نمایشی را دارد.
+- مبلغ نهایی رزرو باید در سمت سرور محاسبه و اعتبارسنجی شود؛ مبلغ ارسالی مرورگر به‌تنهایی مبنای پرداخت نیست.
+
+## مخزن
+
+[MTAL Persian Calendar Next – GitHub](https://github.com/mtal-ir/mtal-persian-calendar-next)
