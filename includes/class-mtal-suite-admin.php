@@ -147,15 +147,7 @@ final class MTAL_Suite_Admin {
 		$state_v2 = get_option( '_mtal_suite_calendar_migration_v2', array() );
 		$state_v3 = get_option( '_mtal_suite_calendar_migration_v3', array() );
 		$statuses = array( 'publish', 'private', 'draft', 'pending', 'future' );
-		$meta_keys = array(
-			'_mtal_blocked_dates',
-			'_mtal_holiday_dates',
-			'_mtal_manual_prices',
-			'_mtal_regular_price',
-			'_mtal_weekend_price',
-			'_mtal_base_capacity',
-			'_mtal_extra_guest_price',
-		);
+
 
 		$source_status_counts = wp_count_posts( 'suites' );
 		$all_sources_count = 0;
@@ -165,33 +157,7 @@ final class MTAL_Suite_Admin {
 			}
 		}
 
-		$calendar_sources_count = 0;
-		if ( post_type_exists( 'suites' ) ) {
-			$calendar_sources_query = new WP_Query(
-				array(
-					'post_type'              => 'suites',
-					'post_status'            => $statuses,
-					'posts_per_page'         => 1,
-					'fields'                 => 'ids',
-					'no_found_rows'          => false,
-					'update_post_meta_cache' => false,
-					'update_post_term_cache' => false,
-					'meta_query'             => array_merge(
-						array( 'relation' => 'OR' ),
-						array_map(
-							static function ( $meta_key ) {
-								return array(
-									'key'     => $meta_key,
-								'compare' => 'EXISTS',
-								);
-							},
-							$meta_keys
-						)
-					)
-				)
-			);
-			$calendar_sources_count = (int) $calendar_sources_query->found_posts;
-		}
+
 
 		$mtal_status_counts = wp_count_posts( MTAL_Suite_Registry::POST_TYPE );
 		$mtal_count = 0;
@@ -221,7 +187,7 @@ final class MTAL_Suite_Admin {
 		echo '<ul style="list-style:disc;padding-right:20px;">';
 		echo '<li>وضعیت ثبت نوع نوشته <code>suites</code>: <strong>' . ( post_type_exists( 'suites' ) ? 'ثبت شده' : 'ثبت نشده' ) . '</strong></li>';
 		echo '<li>تعداد کل نوشته‌های <code>suites</code> در وضعیت‌های بررسی‌شده: <strong>' . absint( $all_sources_count ) . '</strong></li>';
-		echo '<li>تعداد نوشته‌های <code>suites</code> دارای حداقل یکی از ۷ کلید تقویم: <strong>' . absint( $calendar_sources_count ) . '</strong></li>';
+
 		echo '<li>تعداد رکوردهای مستقل <code>' . esc_html( MTAL_Suite_Registry::POST_TYPE ) . '</code>: <strong>' . absint( $mtal_count ) . '</strong></li>';
 		echo '<li>وضعیت مهاجرت v1: <code>' . esc_html( wp_json_encode( $state_v1 ) ) . '</code></li>';
 		echo '<li>وضعیت مهاجرت v2: <code>' . esc_html( wp_json_encode( $state_v2 ) ) . '</code></li>';
