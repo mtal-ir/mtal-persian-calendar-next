@@ -128,6 +128,9 @@ JS
 		}
 
 		$suite_id = isset( $_POST['suite_id'] ) ? absint( $_POST['suite_id'] ) : 0;
+		if ( ! $suite_id && MTAL_Suite_Registry::get_unlinked_suite_id() ) {
+			wp_die( 'یک سوئیت مستقلِ بدون اتصال از قبل وجود دارد. لطفاً همان سوئیت را ویرایش کنید یا ابتدا آن را به نوشته منبع متصل کنید.', 'امکان افزودن سوئیت جدید وجود ندارد', array( 'response' => 409 ) );
+		}
 		$title = isset( $_POST['suite_title'] ) ? sanitize_text_field( wp_unslash( $_POST['suite_title'] ) ) : '';
 		$status = isset( $_POST['suite_status'] ) ? sanitize_key( wp_unslash( $_POST['suite_status'] ) ) : 'draft';
 		$image_id = isset( $_POST['suite_image_id'] ) ? absint( $_POST['suite_image_id'] ) : 0;
@@ -214,6 +217,20 @@ JS
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&updated=1' ) );
 		exit;
+	}
+
+	/** Explain why a second unlinked suite cannot be created. */
+	private static function render_unlinked_suite_notice( $suite_id ) {
+		$display = MTAL_Suite_Registry::get_display_data( $suite_id );
+		$title = $display ? $display['title'] : get_the_title( $suite_id );
+		$edit_url = admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&action=edit&suite_id=' . absint( $suite_id ) );
+		echo '<div class="wrap" dir="rtl"><h1>سوئیت مستقل آماده ویرایش است</h1>';
+		echo '<div class="notice notice-info" style="padding:12px 16px;"><p>در حال حاضر یک سوئیت مستقلِ بدون اتصال وجود دارد. برای جلوگیری از ایجاد سوئیت‌های بلااستفاده، امکان ساخت سوئیت مستقل دوم تا زمان اتصال سوئیت فعلی به نوشته منبع وجود ندارد.</p>';
+		echo '<p><strong>' . esc_html( $title ) . '</strong> — شناسه MTAL: #' . absint( $suite_id ) . '</p>';
+		if ( MTAL_Suite_Registry::is_hidden( $suite_id ) ) {
+			echo '<p>این سوئیت در حال حاضر پنهان است؛ برای ویرایش نیازی به بازگردانی آن نیست.</p>';
+		}
+		echo '<p><a class="button button-primary" href="' . esc_url( $edit_url ) . '">ویرایش سوئیت آماده</a> <a class="button" href="' . esc_url( admin_url( 'admin.php?page=' . self::PAGE_SLUG ) ) . '">بازگشت به فهرست سوئیت‌ها</a></p></div></div>';
 	}
 
 	/**
@@ -482,6 +499,13 @@ JS
 		$screen_action = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : '';
 		if ( in_array( $screen_action, array( 'add', 'edit' ), true ) ) {
 			$suite_id = isset( $_GET['suite_id'] ) ? absint( $_GET['suite_id'] ) : 0;
+			if ( 'add' === $screen_action && ! $suite_id ) {
+				$existing_unlinked_id = MTAL_Suite_Registry::get_unlinked_suite_id();
+				if ( $existing_unlinked_id ) {
+					self::render_unlinked_suite_notice( $existing_unlinked_id );
+					return;
+				}
+			}
 			self::render_suite_form( 'edit' === $screen_action ? $suite_id : 0 );
 			return;
 		}
