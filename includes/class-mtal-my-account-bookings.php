@@ -294,7 +294,7 @@ final class MTAL_My_Account_Bookings {
 				self::render_field( 'تاریخ اقامت', esc_html( ( $check_in ? $check_in : '—' ) . ' تا ' . ( $check_out ? $check_out : '—' ) ) );
 				self::render_field( 'تعداد مسافران', $guests ? esc_html( $guests . ' نفر' ) : '—' );
 				self::render_field( 'مبلغ', wc_price( $order->get_total(), array( 'currency' => $order->get_currency() ) ) );
-				self::render_field( 'تاریخ ثبت', $order->get_date_created() ? esc_html( ( class_exists( 'MTAL_Persian_Calendar' ) ? MTAL_Persian_Calendar::format_jalali_datetime( $order->get_date_created() ) : wc_format_datetime( $order->get_date_created() ) ) ) : '—' );
+				self::render_field( 'تاریخ ثبت', $order->get_date_created() ? esc_html( ( class_exists( 'MTAL_Persian_Calendar' ) ? MTAL_Persian_Calendar::format_jalali_datetime( $order->get_date_created() ) : ( class_exists( 'MTAL_Persian_Calendar' ) ? MTAL_Persian_Calendar::format_jalali_datetime( $order->get_date_created() ) : wc_format_datetime( $order->get_date_created() ) ) ) ) : '—' );
 				echo '</div>';
 				if ( $expires && in_array( $order->get_status(), array( 'mtal-pending', 'pending' ), true ) ) {
 					$remaining = $expires > time() ? 'مهلت باقی‌مانده: ' . human_time_diff( time(), $expires ) : 'مهلت درخواست پایان یافته است';
