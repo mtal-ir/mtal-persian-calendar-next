@@ -1144,7 +1144,6 @@
 		const helperCal = new window.MTALPersianCalendar({
 			mode: 'inline',
 			mountEl: document.createElement('div'),
-			maxMonths: 3,
 		});
 
 		adminHosts.forEach((host) => {
@@ -1242,12 +1241,9 @@
 				nextBtn.textContent = '›';
 				nextBtn.addEventListener('click', () => {
 					const total = viewYear * 12 + (viewMonth - 1) + 1;
-					const maxIdx = helperCal.today.jy * 12 + (helperCal.today.jm - 1) + 2;
-					if (total <= maxIdx) {
-						viewYear = Math.floor(total / 12);
-						viewMonth = (total % 12) + 1;
-						renderAdminUI();
-					}
+					viewYear = Math.floor(total / 12);
+					viewMonth = (total % 12) + 1;
+					renderAdminUI();
 				});
 
 				const title = document.createElement('div');
