@@ -18,6 +18,7 @@ final class MTAL_Suite_Registry {
 	const META_SOURCE_POST_ID   = '_mtal_suite_source_post_id';
 	const META_TITLE_OVERRIDE  = '_mtal_suite_title_override';
 	const META_IMAGE_OVERRIDE  = '_mtal_suite_image_override_id';
+	const META_HIDDEN          = '_mtal_suite_hidden';
 
 	/**
 	 * Register the internal suite entity.
@@ -59,6 +60,16 @@ final class MTAL_Suite_Registry {
 				'map_meta_cap'        => true,
 			)
 		);
+	}
+
+	/** Determine whether an independent suite is hidden from management and booking entry points. */
+	public static function is_hidden( $suite_id ) {
+		return '1' === (string) get_post_meta( absint( $suite_id ), self::META_HIDDEN, true );
+	}
+
+	/** A suite may be hidden only while it has no valid source post. */
+	public static function can_hide( $suite_id ) {
+		return self::is_suite( $suite_id ) && ! self::get_source_post( $suite_id );
 	}
 
 	/**
