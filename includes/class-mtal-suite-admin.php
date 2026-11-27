@@ -172,6 +172,10 @@ JS
 			}
 		}
 
+		if ( $suite_id && MTAL_Suite_Registry::is_hidden( $suite_id ) && $source_post_id ) {
+			wp_die( 'برای اتصال سوئیت پنهان به نوشته منبع، ابتدا آن را به پنل‌ها بازگردانی کنید.', '', array( 'response' => 409 ) );
+		}
+
 		$post_data = array(
 			'post_type'   => MTAL_Suite_Registry::POST_TYPE,
 			'post_status' => $status,
