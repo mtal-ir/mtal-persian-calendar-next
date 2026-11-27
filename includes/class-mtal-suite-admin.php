@@ -472,17 +472,17 @@ JS
 		echo '<p><a class="button button-primary" href="' . esc_url( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&action=add' ) ) . '">افزودن سوئیت</a></p>';
 		echo '<p>این فهرست، سوئیت‌هایی را نشان می‌دهد که در مدل مستقل MTAL ثبت شده‌اند. اطلاعات نوشته منبع فقط برای نمایش عنوان و تصویر جایگزین استفاده می‌شود.</p>';
 
-		echo '<table class="widefat fixed striped">';
+		echo '<div style="overflow-x:auto;">';
+		echo '<table class="widefat striped" style="min-width:900px;">';
 		echo '<thead><tr>';
-		echo '<th style="width:80px;">شناسه</th>';
-		echo '<th>عنوان سوئیت</th>';
+		echo '<th style="width:280px;">سوئیت و مدیریت</th>';
+		echo '<th style="width:270px;">ظرفیت و قیمت‌گذاری</th>';
 		echo '<th>نوشته منبع</th>';
-		echo '<th style="width:100px;">تصویر</th>';
 		echo '<th style="width:120px;">وضعیت</th>';
 		echo '</tr></thead><tbody>';
 
 		if ( ! $suites_query->have_posts() ) {
-			echo '<tr><td colspan="5">هنوز سوئیتی در مدل مستقل MTAL ثبت نشده است. برای شروع از دکمه «افزودن سوئیت» استفاده کنید.</td></tr>';
+			echo '<tr><td colspan="4">هنوز سوئیتی در مدل مستقل MTAL ثبت نشده است. برای شروع از دکمه «افزودن سوئیت» استفاده کنید.</td></tr>';
 		} else {
 			foreach ( $suites_query->posts as $suite ) {
 				$display = MTAL_Suite_Registry::get_display_data( $suite->ID );
@@ -510,25 +510,40 @@ JS
 					? $status_object->label
 					: $suite->post_status;
 
+				$base_capacity = absint( get_post_meta( $suite->ID, '_mtal_base_capacity', true ) );
+				$base_capacity = $base_capacity > 0 ? $base_capacity : 2;
+				$max_capacity = absint( get_post_meta( $suite->ID, '_mtal_suite_max_capacity', true ) );
+				$max_capacity = $max_capacity > 0 ? $max_capacity : 5;
+				$regular_price = absint( get_post_meta( $suite->ID, '_mtal_regular_price', true ) );
+				$weekend_price = absint( get_post_meta( $suite->ID, '_mtal_weekend_price', true ) );
+				$extra_guest_price = absint( get_post_meta( $suite->ID, '_mtal_extra_guest_price', true ) );
+
 				echo '<tr>';
-				echo '<td>' . absint( $suite->ID ) . '</td>';
-				$edit_url = admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&action=edit&suite_id=' . absint( $suite->ID ) );
-				echo '<td><strong>' . esc_html( $display['title'] ) . '</strong><br><small>عنوان از ' . esc_html( 'override' === $display['titleSource'] ? 'تنظیم اختصاصی' : ( 'source' === $display['titleSource'] ? 'نوشته منبع' : 'رکورد MTAL' ) ) . '</small><br><a class="button button-small" style="margin-top:6px;" href="' . esc_url( $edit_url ) . '">ویرایش</a></td>';
-				$calendar_url = add_query_arg( array( 'page' => self::CALENDAR_PAGE_SLUG, 'suite_id' => absint( $suite->ID ) ), admin_url( 'admin.php' ) );
-				echo '<td>' . $source_label . '<br><a class="button button-small" href="' . esc_url( $calendar_url ) . '">مدیریت تقویم و قیمت‌ها</a></td>';
-				echo '<td>';
+				echo '<td style="vertical-align:middle;">';
 				if ( ! empty( $display['imageId'] ) ) {
-					echo wp_kses_post( wp_get_attachment_image( $display['imageId'], array( 56, 56 ), false, array( 'style' => 'width:56px;height:56px;object-fit:cover;' ) ) );
+					echo wp_kses_post( wp_get_attachment_image( $display['imageId'], array( 72, 72 ), false, array( 'style' => 'width:72px;height:72px;object-fit:cover;border-radius:6px;float:right;margin-left:12px;' ) ) );
 				} else {
-					echo '—';
+					echo '<span style="display:inline-block;width:72px;height:72px;line-height:72px;text-align:center;background:#f0f0f1;border-radius:6px;float:right;margin-left:12px;color:#646970;">—</span>';
 				}
+				echo '<strong style="display:block;padding-top:5px;">' . esc_html( $display['title'] ) . '</strong>';
+				echo '<small style="display:block;color:#646970;margin:4px 0;">شناسه MTAL: #' . absint( $suite->ID ) . ' · عنوان از ' . esc_html( 'override' === $display['titleSource'] ? 'تنظیم اختصاصی' : ( 'source' === $display['titleSource'] ? 'نوشته منبع' : 'رکورد MTAL' ) ) . '</small>';
+				$edit_url = admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&action=edit&suite_id=' . absint( $suite->ID ) );
+				$calendar_url = add_query_arg( array( 'page' => self::CALENDAR_PAGE_SLUG, 'suite_id' => absint( $suite->ID ) ), admin_url( 'admin.php' ) );
+				echo '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;"><a class="button button-small" href="' . esc_url( $edit_url ) . '">ویرایش</a><a class="button button-small" href="' . esc_url( $calendar_url ) . '">مدیریت تقویم</a></div>';
+				echo '<div style="clear:both;"></div></td>';
+				echo '<td style="vertical-align:middle;line-height:1.9;">';
+				echo '<div>ظرفیت پایه: <strong>' . absint( $base_capacity ) . '</strong> نفر</div>';
+				echo '<div>حداکثر گنجایش: <strong>' . absint( $max_capacity ) . '</strong> نفر</div>';
+				echo '<div>قیمت عادی: <strong>' . esc_html( number_format_i18n( $regular_price ) ) . '</strong></div>';
+				echo '<div style="color:#646970;font-size:12px;">آخر هفته: ' . esc_html( number_format_i18n( $weekend_price ) ) . ' · نفر اضافه: ' . esc_html( number_format_i18n( $extra_guest_price ) ) . '</div>';
 				echo '</td>';
-				echo '<td>' . esc_html( $status_label ) . '</td>';
+				echo '<td style="vertical-align:middle;">' . $source_label . '</td>';
+				echo '<td style="vertical-align:middle;">' . esc_html( $status_label ) . '</td>';
 				echo '</tr>';
 			}
 		}
 
-		echo '</tbody></table>';
+		echo '</tbody></table></div>';
 
 		if ( $suites_query->max_num_pages > 1 ) {
 			$base_url = add_query_arg(
