@@ -15,6 +15,8 @@ final class MTAL_Suite_Admin {
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'register_menu' ), 20 );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_calendar_assets' ) );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_suite_form_assets' ) );
+		add_action( 'admin_post_mtal_save_suite', array( __CLASS__, 'handle_save_suite' ) );
 	}
 
 	public static function register_menu() {
@@ -51,6 +53,172 @@ final class MTAL_Suite_Admin {
 			self::CALENDAR_PAGE_SLUG,
 			array( __CLASS__, 'render_calendar_page' )
 		);
+	}
+
+	/**
+	 * Load the WordPress media picker only on the suite management screen.
+	 */
+	public static function enqueue_suite_form_assets( $hook_suffix ) {
+		if ( ! isset( $_GET['page'] ) || self::PAGE_SLUG !== sanitize_key( wp_unslash( $_GET['page'] ) ) ) {
+			return;
+		}
+
+		$action = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : '';
+		if ( ! in_array( $action, array( 'add', 'edit' ), true ) ) {
+			return;
+		}
+
+		wp_enqueue_media();
+		wp_add_inline_script(
+			'jquery',
+			"(function($){$(function(){var frame;$('#mtal-suite-select-image').on('click',function(e){e.preventDefault();if(frame){frame.open();return;}frame=wp.media({title:'انتخاب تصویر سوئیت',button:{text:'استفاده از تصویر'},multiple:false,library:{type:'image'}});frame.on('select',function(){var item=frame.state().get('selection').first().toJSON();$('#mtal-suite-image-id').val(item.id);$('#mtal-suite-image-preview').html('<img src="'+item.url.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" alt="" style="max-width:180px;height:auto;">');$('#mtal-suite-remove-image').prop('hidden',false);});frame.open();});$('#mtal-suite-remove-image').on('click',function(e){e.preventDefault();$('#mtal-suite-image-id').val('0');$('#mtal-suite-image-preview').empty();$(this).prop('hidden',true);});});})(jQuery);"
+		);
+	}
+
+	/**
+	 * Save a new or existing independent MTAL suite.
+	 */
+	public static function handle_save_suite() {
+		if ( ! class_exists( 'MTAL_Booking_Admin' ) || ! MTAL_Booking_Admin::current_user_can_manage_bookings() ) {
+			wp_die( esc_html__( 'شما اجازه انجام این عملیات را ندارید.', 'mtal-persian-calendar' ), '', array( 'response' => 403 ) );
+		}
+
+		check_admin_referer( 'mtal_save_suite', 'mtal_suite_nonce' );
+
+		if ( ! class_exists( 'MTAL_Suite_Registry' ) ) {
+			wp_die( esc_html__( 'مدل سوئیت‌های MTAL در دسترس نیست.', 'mtal-persian-calendar' ) );
+		}
+
+		$suite_id = isset( $_POST['suite_id'] ) ? absint( $_POST['suite_id'] ) : 0;
+		$title = isset( $_POST['suite_title'] ) ? sanitize_text_field( wp_unslash( $_POST['suite_title'] ) ) : '';
+		$status = isset( $_POST['suite_status'] ) ? sanitize_key( wp_unslash( $_POST['suite_status'] ) ) : 'draft';
+		$image_id = isset( $_POST['suite_image_id'] ) ? absint( $_POST['suite_image_id'] ) : 0;
+		$source_post_id = isset( $_POST['source_post_id'] ) ? absint( $_POST['source_post_id'] ) : 0;
+
+		if ( '' === $title ) {
+			wp_die( esc_html__( 'عنوان سوئیت الزامی است.', 'mtal-persian-calendar' ), '', array( 'response' => 400 ) );
+		}
+		if ( ! in_array( $status, array( 'publish', 'draft' ), true ) ) {
+			$status = 'draft';
+		}
+		if ( $image_id && ( 'attachment' !== get_post_type( $image_id ) || ! wp_attachment_is_image( $image_id ) ) ) {
+			wp_die( esc_html__( 'تصویر انتخاب‌شده معتبر نیست.', 'mtal-persian-calendar' ), '', array( 'response' => 400 ) );
+		}
+
+		if ( $suite_id && ! MTAL_Suite_Registry::is_suite( $suite_id ) ) {
+			wp_die( esc_html__( 'شناسه سوئیت معتبر نیست.', 'mtal-persian-calendar' ), '', array( 'response' => 404 ) );
+		}
+		if ( $suite_id && ! current_user_can( 'edit_post', $suite_id ) ) {
+			wp_die( esc_html__( 'شما اجازه ویرایش این سوئیت را ندارید.', 'mtal-persian-calendar' ), '', array( 'response' => 403 ) );
+		}
+		if ( ! $suite_id && ! current_user_can( 'publish_posts' ) && 'publish' === $status ) {
+			wp_die( esc_html__( 'شما اجازه انتشار سوئیت را ندارید.', 'mtal-persian-calendar' ), '', array( 'response' => 403 ) );
+		}
+
+		$source_post = null;
+		if ( $source_post_id ) {
+			$source_post = get_post( $source_post_id );
+			if ( ! $source_post || 'suites' !== $source_post->post_type || in_array( $source_post->post_status, array( 'trash', 'auto-draft' ), true ) ) {
+				wp_die( esc_html__( 'نوشته منبع انتخاب‌شده معتبر نیست.', 'mtal-persian-calendar' ), '', array( 'response' => 400 ) );
+			}
+			$linked_suite_id = MTAL_Suite_Registry::get_suite_by_source( $source_post_id, 'suites' );
+			if ( $linked_suite_id && $linked_suite_id !== $suite_id ) {
+				wp_die( esc_html__( 'این نوشته منبع قبلاً به سوئیت دیگری متصل شده است.', 'mtal-persian-calendar' ), '', array( 'response' => 409 ) );
+			}
+		}
+
+		$post_data = array(
+			'post_type'   => MTAL_Suite_Registry::POST_TYPE,
+			'post_status' => $status,
+			'post_title'  => $title,
+		);
+		if ( $suite_id ) {
+			$post_data['ID'] = $suite_id;
+			$result = wp_update_post( $post_data, true );
+		} else {
+			$result = wp_insert_post( $post_data, true );
+		}
+		if ( is_wp_error( $result ) || ! $result ) {
+			wp_die( esc_html__( 'ذخیره سوئیت انجام نشد.', 'mtal-persian-calendar' ), '', array( 'response' => 500 ) );
+		}
+		$suite_id = absint( $result );
+
+		update_post_meta( $suite_id, MTAL_Suite_Registry::META_TITLE_OVERRIDE, $title );
+		if ( $image_id ) {
+			update_post_meta( $suite_id, MTAL_Suite_Registry::META_IMAGE_OVERRIDE, $image_id );
+		} else {
+			delete_post_meta( $suite_id, MTAL_Suite_Registry::META_IMAGE_OVERRIDE );
+		}
+
+		if ( $source_post ) {
+			update_post_meta( $suite_id, MTAL_Suite_Registry::META_SOURCE_POST_TYPE, 'suites' );
+			update_post_meta( $suite_id, MTAL_Suite_Registry::META_SOURCE_POST_ID, $source_post_id );
+		} else {
+			delete_post_meta( $suite_id, MTAL_Suite_Registry::META_SOURCE_POST_TYPE );
+			delete_post_meta( $suite_id, MTAL_Suite_Registry::META_SOURCE_POST_ID );
+		}
+
+		wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&updated=1' ) );
+		exit;
+	}
+
+	/**
+	 * Render the add/edit form for an independent MTAL suite.
+	 */
+	private static function render_suite_form( $suite_id = 0 ) {
+		$suite = $suite_id ? get_post( $suite_id ) : null;
+		if ( $suite_id && ( ! $suite || MTAL_Suite_Registry::POST_TYPE !== $suite->post_type ) ) {
+			wp_die( esc_html__( 'شناسه سوئیت معتبر نیست.', 'mtal-persian-calendar' ), '', array( 'response' => 404 ) );
+		}
+		if ( $suite_id && ! current_user_can( 'edit_post', $suite_id ) ) {
+			wp_die( esc_html__( 'شما اجازه ویرایش این سوئیت را ندارید.', 'mtal-persian-calendar' ), '', array( 'response' => 403 ) );
+		}
+
+		$title = $suite_id ? (string) get_post_meta( $suite_id, MTAL_Suite_Registry::META_TITLE_OVERRIDE, true ) : '';
+		if ( '' === $title && $suite_id ) {
+			$title = get_the_title( $suite_id );
+		}
+		$image_id = $suite_id ? absint( get_post_meta( $suite_id, MTAL_Suite_Registry::META_IMAGE_OVERRIDE, true ) ) : 0;
+		$source = $suite_id ? MTAL_Suite_Registry::get_source_post( $suite_id ) : null;
+		$source_id = $source ? absint( $source->ID ) : 0;
+		$status = $suite_id ? $suite->post_status : 'draft';
+		$source_posts = get_posts(
+			array(
+				'post_type'      => 'suites',
+				'post_status'    => array( 'publish', 'private', 'draft', 'pending', 'future' ),
+				'posts_per_page' => 200,
+				'orderby'        => 'title',
+				'order'          => 'ASC',
+			)
+		);
+
+		echo '<div class="wrap" dir="rtl">';
+		echo '<h1>' . ( $suite_id ? 'ویرایش سوئیت' : 'افزودن سوئیت جدید' ) . '</h1>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<input type="hidden" name="action" value="mtal_save_suite">';
+		echo '<input type="hidden" name="suite_id" value="' . absint( $suite_id ) . '">';
+		wp_nonce_field( 'mtal_save_suite', 'mtal_suite_nonce' );
+		echo '<table class="form-table"><tbody>';
+		echo '<tr><th><label for="mtal-suite-title">عنوان سوئیت</label></th><td><input class="regular-text" required type="text" id="mtal-suite-title" name="suite_title" value="' . esc_attr( $title ) . '"></td></tr>';
+		echo '<tr><th>تصویر سوئیت</th><td><input type="hidden" id="mtal-suite-image-id" name="suite_image_id" value="' . absint( $image_id ) . '"><div id="mtal-suite-image-preview">';
+		if ( $image_id && wp_attachment_is_image( $image_id ) ) {
+			echo wp_kses_post( wp_get_attachment_image( $image_id, 'medium', false, array( 'style' => 'max-width:180px;height:auto;' ) ) );
+		}
+		echo '</div><p><button type="button" class="button" id="mtal-suite-select-image">انتخاب تصویر</button> <button type="button" class="button" id="mtal-suite-remove-image"' . ( $image_id ? '' : ' hidden' ) . '>حذف تصویر اختصاصی</button></p><p class="description">در صورت حذف تصویر اختصاصی، تصویر نوشته منبع (در صورت اتصال) قابل استفاده خواهد بود.</p></td></tr>';
+		echo '<tr><th><label for="mtal-suite-source">نوشته منبع</label></th><td><select id="mtal-suite-source" name="source_post_id"><option value="0">بدون نوشته منبع</option>';
+		foreach ( $source_posts as $source_post ) {
+			$linked_suite_id = MTAL_Suite_Registry::get_suite_by_source( $source_post->ID, 'suites' );
+			if ( $linked_suite_id && $linked_suite_id !== $suite_id ) {
+				continue;
+			}
+			echo '<option value="' . absint( $source_post->ID ) . '"' . selected( $source_id, $source_post->ID, false ) . '>' . esc_html( get_the_title( $source_post ) ) . ' (#' . absint( $source_post->ID ) . ')</option>';
+		}
+		echo '</select><p class="description">اتصال به نوشته منبع اختیاری است و هر نوشته فقط می‌تواند به یک سوئیت MTAL متصل باشد.</p></td></tr>';
+		echo '<tr><th><label for="mtal-suite-status">وضعیت</label></th><td><select id="mtal-suite-status" name="suite_status"><option value="draft"' . selected( $status, 'draft', false ) . '>پیش‌نویس</option><option value="publish"' . selected( $status, 'publish', false ) . '>منتشرشده</option></select></td></tr>';
+		echo '</tbody></table>';
+		submit_button( $suite_id ? 'ذخیره تغییرات' : 'ایجاد سوئیت' );
+		echo ' <a class="button" href="' . esc_url( admin_url( 'admin.php?page=' . self::PAGE_SLUG ) ) . '">انصراف</a>';
+		echo '</form></div>';
 	}
 
 	public static function enqueue_calendar_assets( $hook_suffix ) {
@@ -227,6 +395,13 @@ final class MTAL_Suite_Admin {
 			wp_die( esc_html__( 'مدل سوئیت‌های MTAL در دسترس نیست.', 'mtal-persian-calendar' ) );
 		}
 
+		$screen_action = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : '';
+		if ( in_array( $screen_action, array( 'add', 'edit' ), true ) ) {
+			$suite_id = isset( $_GET['suite_id'] ) ? absint( $_GET['suite_id'] ) : 0;
+			self::render_suite_form( 'edit' === $screen_action ? $suite_id : 0 );
+			return;
+		}
+
 		$paged = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
 		$suites_query = new WP_Query(
 			array(
@@ -242,6 +417,7 @@ final class MTAL_Suite_Admin {
 
 		echo '<div class="wrap">';
 		echo '<h1>مدیریت سوئیت‌ها</h1>';
+		echo '<p><a class="button button-primary" href="' . esc_url( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&action=add' ) ) . '">افزودن سوئیت</a></p>';
 		echo '<p>این فهرست، سوئیت‌هایی را نشان می‌دهد که در مدل مستقل MTAL ثبت شده‌اند. اطلاعات نوشته منبع فقط برای نمایش عنوان و تصویر جایگزین استفاده می‌شود.</p>';
 
 		echo '<table class="widefat fixed striped">';
@@ -251,10 +427,11 @@ final class MTAL_Suite_Admin {
 		echo '<th>نوشته منبع</th>';
 		echo '<th style="width:100px;">تصویر</th>';
 		echo '<th style="width:120px;">وضعیت</th>';
+		echo '<th style="width:100px;">عملیات</th>';
 		echo '</tr></thead><tbody>';
 
 		if ( ! $suites_query->have_posts() ) {
-			echo '<tr><td colspan="5">هنوز سوئیتی در مدل مستقل MTAL ثبت نشده است. در این مرحله فقط نمایش فهرست فعال شده و امکان افزودن سوئیت در مرحله جداگانه پیاده‌سازی خواهد شد.</td></tr>';
+			echo '<tr><td colspan="6">هنوز سوئیتی در مدل مستقل MTAL ثبت نشده است. در این مرحله فقط نمایش فهرست فعال شده و امکان افزودن سوئیت در مرحله جداگانه پیاده‌سازی خواهد شد.</td></tr>';
 		} else {
 			foreach ( $suites_query->posts as $suite ) {
 				$display = MTAL_Suite_Registry::get_display_data( $suite->ID );
@@ -295,6 +472,7 @@ final class MTAL_Suite_Admin {
 				}
 				echo '</td>';
 				echo '<td>' . esc_html( $status_label ) . '</td>';
+				echo '<td><a class="button button-small" href="' . esc_url( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&action=edit&suite_id=' . absint( $suite->ID ) ) ) . '">ویرایش</a></td>';
 				echo '</tr>';
 			}
 		}
