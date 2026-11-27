@@ -17,6 +17,7 @@ final class MTAL_Suite_Admin {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_calendar_assets' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_suite_form_assets' ) );
 		add_action( 'admin_post_mtal_save_suite', array( __CLASS__, 'handle_save_suite' ) );
+		add_action( 'admin_post_mtal_toggle_suite_hidden', array( __CLASS__, 'handle_toggle_hidden' ) );
 	}
 
 	public static function register_menu() {
@@ -83,6 +84,33 @@ $('form').on('submit',function(){$('.mtal-price-input').each(function(){this.val
 });})(jQuery);
 JS
 		);
+	}
+
+	/** Securely hide or restore a suite without changing its operational data. */
+	public static function handle_toggle_hidden() {
+		if ( ! class_exists( 'MTAL_Booking_Admin' ) || ! MTAL_Booking_Admin::current_user_can_manage_bookings() ) {
+			wp_die( 'شما اجازه انجام این عملیات را ندارید.', '', array( 'response' => 403 ) );
+		}
+		$suite_id = isset( $_POST['suite_id'] ) ? absint( $_POST['suite_id'] ) : 0;
+		$mode = isset( $_POST['hidden_mode'] ) ? sanitize_key( wp_unslash( $_POST['hidden_mode'] ) ) : '';
+		if ( ! $suite_id || ! MTAL_Suite_Registry::is_suite( $suite_id ) || ! in_array( $mode, array( 'hide', 'restore' ), true ) ) {
+			wp_die( 'درخواست معتبر نیست.', '', array( 'response' => 400 ) );
+		}
+		check_admin_referer( 'mtal_suite_hidden_' . $suite_id . '_' . $mode );
+		if ( 'hide' === $mode ) {
+			if ( ! MTAL_Suite_Registry::can_hide( $suite_id ) ) {
+				wp_die( 'فقط سوئیت بدون اتصال به نوشته منبع قابل پنهان‌کردن است.', '', array( 'response' => 409 ) );
+			}
+			update_post_meta( $suite_id, MTAL_Suite_Registry::META_HIDDEN, '1' );
+		} else {
+			delete_post_meta( $suite_id, MTAL_Suite_Registry::META_HIDDEN );
+		}
+		$redirect = isset( $_POST['redirect_to'] ) ? esc_url_raw( wp_unslash( $_POST['redirect_to'] ) ) : '';
+		if ( ! $redirect || 0 !== strpos( $redirect, home_url( '/' ) ) ) {
+			$redirect = admin_url( 'admin.php?page=' . self::PAGE_SLUG );
+		}
+		wp_safe_redirect( $redirect );
+		exit;
 	}
 
 	/**
@@ -455,17 +483,14 @@ JS
 		}
 
 		$paged = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
-		$suites_query = new WP_Query(
-			array(
-				'post_type'      => MTAL_Suite_Registry::POST_TYPE,
-				'post_status'    => array( 'publish', 'private', 'draft', 'pending' ),
-				'posts_per_page' => 20,
-				'paged'          => $paged,
-				'orderby'        => 'date',
-				'order'          => 'DESC',
-				'no_found_rows'  => false,
-			)
+		$suite_query_args = array(
+			'post_type' => MTAL_Suite_Registry::POST_TYPE,
+			'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future' ),
+			'posts_per_page' => 20, 'paged' => $paged, 'orderby' => 'date', 'order' => 'DESC', 'no_found_rows' => false,
 		);
+		$suite_query_args['meta_query'] = array( 'relation' => 'OR', array( 'key' => MTAL_Suite_Registry::META_HIDDEN, 'compare' => 'NOT EXISTS' ), array( 'key' => MTAL_Suite_Registry::META_HIDDEN, 'value' => '1', 'compare' => '!=' ) );
+		$suites_query = new WP_Query( $suite_query_args );
+		$hidden_query = new WP_Query( array( 'post_type' => MTAL_Suite_Registry::POST_TYPE, 'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future' ), 'posts_per_page' => -1, 'meta_key' => MTAL_Suite_Registry::META_HIDDEN, 'meta_value' => '1', 'orderby' => 'date', 'order' => 'DESC' ) );
 
 		echo '<div class="wrap">';
 		echo '<h1>مدیریت سوئیت‌ها</h1>';
@@ -530,6 +555,11 @@ JS
 				$edit_url = admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&action=edit&suite_id=' . absint( $suite->ID ) );
 				$calendar_url = add_query_arg( array( 'page' => self::CALENDAR_PAGE_SLUG, 'suite_id' => absint( $suite->ID ) ), admin_url( 'admin.php' ) );
 				echo '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;"><a class="button button-small" href="' . esc_url( $edit_url ) . '">ویرایش</a><a class="button button-small" href="' . esc_url( $calendar_url ) . '">مدیریت تقویم</a></div>';
+				if ( ! $source_post ) {
+					echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block;margin-top:5px;">';
+					wp_nonce_field( 'mtal_suite_hidden_' . $suite->ID . '_hide' );
+					echo '<input type="hidden" name="action" value="mtal_toggle_suite_hidden"><input type="hidden" name="suite_id" value="' . absint( $suite->ID ) . '"><input type="hidden" name="hidden_mode" value="hide"><input type="hidden" name="redirect_to" value="' . esc_attr( admin_url( 'admin.php?page=' . self::PAGE_SLUG ) ) . '"><button class="button button-small" type="submit">پنهان‌کردن</button></form>';
+				}
 				echo '<div style="clear:both;"></div></td>';
 				echo '<td style="vertical-align:middle;line-height:1.9;">';
 				echo '<div>ظرفیت پایه: <strong>' . absint( $base_capacity ) . '</strong> نفر</div>';
@@ -544,6 +574,18 @@ JS
 		}
 
 		echo '</tbody></table></div>';
+
+		if ( $hidden_query->have_posts() ) {
+			echo '<h2 style="margin-top:28px;">سوئیت‌های پنهان</h2><p>این سوئیت‌ها در فهرست عمومی و مسیر رزرو جدید نمایش داده نمی‌شوند؛ اطلاعات آن‌ها محفوظ است.</p><div style="overflow-x:auto;"><table class="widefat striped"><thead><tr><th>سوئیت</th><th>شناسه MTAL</th><th>عملیات</th></tr></thead><tbody>';
+			foreach ( $hidden_query->posts as $hidden_suite ) {
+				$hidden_display = MTAL_Suite_Registry::get_display_data( $hidden_suite->ID );
+				$restore_url = admin_url( 'admin-post.php' );
+				echo '<tr><td>' . esc_html( $hidden_display ? $hidden_display['title'] : get_the_title( $hidden_suite ) ) . '</td><td>#' . absint( $hidden_suite->ID ) . '</td><td><a class="button button-small" href="' . esc_url( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&action=edit&suite_id=' . absint( $hidden_suite->ID ) ) ) . '">ویرایش</a> <form method="post" action="' . esc_url( $restore_url ) . '" style="display:inline-block;">';
+				wp_nonce_field( 'mtal_suite_hidden_' . $hidden_suite->ID . '_restore' );
+				echo '<input type="hidden" name="action" value="mtal_toggle_suite_hidden"><input type="hidden" name="suite_id" value="' . absint( $hidden_suite->ID ) . '"><input type="hidden" name="hidden_mode" value="restore"><input type="hidden" name="redirect_to" value="' . esc_attr( admin_url( 'admin.php?page=' . self::PAGE_SLUG ) ) . '"><button class="button button-small" type="submit">بازگردانی به پنل‌ها</button></form></td></tr>';
+			}
+			echo '</tbody></table></div>';
+		}
 
 		if ( $suites_query->max_num_pages > 1 ) {
 			$base_url = add_query_arg(
