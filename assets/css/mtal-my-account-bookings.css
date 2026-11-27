@@ -234,3 +234,45 @@
     box-shadow: inset 0 0 0 1px currentColor !important;
     filter: saturate(1.08);
 }
+
+/* Additional report statuses and selected-chip color consistency. */
+.mtal-account-bookings-filter__option--refunded,
+.mtal-account-bookings-filter__option--refunded.is-active {
+    background-color: #f3e8ff !important;
+    border-color: #f3e8ff !important;
+    color: #7e22ce !important;
+}
+.mtal-account-bookings-filter__option--failed,
+.mtal-account-bookings-filter__option--failed.is-active {
+    background-color: #fee2e2 !important;
+    border-color: #fee2e2 !important;
+    color: #991b1b !important;
+}
+.mtal-account-bookings-filter__option--on-hold,
+.mtal-account-bookings-filter__option--on-hold.is-active {
+    background-color: #fff1d6 !important;
+    border-color: #fff1d6 !important;
+    color: #9a5806 !important;
+}
+/* Selected states retain the exact report palette for every known status. */
+.mtal-account-bookings-filter__option--mtal-pending.is-active {
+    background-color: #fff1d6 !important;
+    border-color: #fff1d6 !important;
+    color: #9a5806 !important;
+}
+.mtal-account-bookings-filter__option--pending.is-active {
+    background-color: #dbeafe !important;
+    border-color: #dbeafe !important;
+    color: #2261dc !important;
+}
+.mtal-account-bookings-filter__option--cancelled.is-active {
+    background-color: #fee2e2 !important;
+    border-color: #fee2e2 !important;
+    color: #991b1b !important;
+}
+.mtal-account-bookings-filter__option--processing.is-active,
+.mtal-account-bookings-filter__option--completed.is-active {
+    background-color: #dcfce7 !important;
+    border-color: #dcfce7 !important;
+    color: #166534 !important;
+}
