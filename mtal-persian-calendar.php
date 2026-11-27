@@ -304,6 +304,35 @@ final class MTAL_Persian_Calendar {
 	}
 
 	/**
+	 * Format a WooCommerce/WordPress date-time using the Jalali calendar.
+	 *
+	 * @param DateTimeInterface|null $datetime Date in the WordPress site timezone.
+	 * @return string
+	 */
+	public static function format_jalali_datetime( $datetime ) {
+		if ( ! $datetime instanceof DateTimeInterface ) {
+			return '';
+		}
+		$year  = (int) $datetime->format( 'Y' );
+		$month = (int) $datetime->format( 'n' );
+		$day   = (int) $datetime->format( 'j' );
+		$jdn   = self::gregorian_to_jdn( $year, $month, $day );
+		$jalali = self::jdn_to_jalali( $jdn );
+		$value = sprintf(
+			'%04d/%02d/%02d %02d:%02d',
+			$jalali[0],
+			$jalali[1],
+			$jalali[2],
+			(int) $datetime->format( 'H' ),
+			(int) $datetime->format( 'i' )
+		);
+		return strtr( $value, array(
+			'0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴',
+			'5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹',
+		) );
+	}
+
+	/**
 	 * Recalculate a stay on the server before creating a WooCommerce order.
 	 *
 	 * @return array|WP_Error
