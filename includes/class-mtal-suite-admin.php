@@ -69,6 +69,7 @@ final class MTAL_Suite_Admin {
 		}
 
 		wp_enqueue_media();
+		wp_enqueue_script( 'jquery' );
 		wp_add_inline_script(
 			'jquery',
 			"(function($){$(function(){var frame;$('#mtal-suite-select-image').on('click',function(e){e.preventDefault();if(frame){frame.open();return;}frame=wp.media({title:'انتخاب تصویر سوئیت',button:{text:'استفاده از تصویر'},multiple:false,library:{type:'image'}});frame.on('select',function(){var item=frame.state().get('selection').first().toJSON();$('#mtal-suite-image-id').val(item.id);$('#mtal-suite-image-preview').empty().append($('<img>',{src:item.url,alt:'',css:{maxWidth:'180px',height:'auto'}}));$('#mtal-suite-remove-image').prop('hidden',false);});frame.open();});$('#mtal-suite-remove-image').on('click',function(e){e.preventDefault();$('#mtal-suite-image-id').val('0');$('#mtal-suite-image-preview').empty();$(this).prop('hidden',true);});});})(jQuery);"
@@ -191,6 +192,22 @@ final class MTAL_Suite_Admin {
 				'order'          => 'ASC',
 			)
 		);
+		$linked_source_ids = array();
+		$linked_suites = get_posts(
+			array(
+				'post_type'      => MTAL_Suite_Registry::POST_TYPE,
+				'post_status'    => array( 'publish', 'private', 'draft', 'pending', 'future' ),
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+			)
+		);
+		foreach ( $linked_suites as $linked_suite_id ) {
+			$linked_type = (string) get_post_meta( $linked_suite_id, MTAL_Suite_Registry::META_SOURCE_POST_TYPE, true );
+			$linked_id = absint( get_post_meta( $linked_suite_id, MTAL_Suite_Registry::META_SOURCE_POST_ID, true ) );
+			if ( 'suites' === $linked_type && $linked_id ) {
+				$linked_source_ids[ $linked_id ] = absint( $linked_suite_id );
+			}
+		}
 
 		echo '<div class="wrap" dir="rtl">';
 		echo '<h1>' . ( $suite_id ? 'ویرایش سوئیت' : 'افزودن سوئیت جدید' ) . '</h1>';
@@ -207,7 +224,7 @@ final class MTAL_Suite_Admin {
 		echo '</div><p><button type="button" class="button" id="mtal-suite-select-image">انتخاب تصویر</button> <button type="button" class="button" id="mtal-suite-remove-image"' . ( $image_id ? '' : ' hidden' ) . '>حذف تصویر اختصاصی</button></p><p class="description">در صورت حذف تصویر اختصاصی، تصویر نوشته منبع (در صورت اتصال) قابل استفاده خواهد بود.</p></td></tr>';
 		echo '<tr><th><label for="mtal-suite-source">نوشته منبع</label></th><td><select id="mtal-suite-source" name="source_post_id"><option value="0">بدون نوشته منبع</option>';
 		foreach ( $source_posts as $source_post ) {
-			$linked_suite_id = MTAL_Suite_Registry::get_suite_by_source( $source_post->ID, 'suites' );
+			$linked_suite_id = isset( $linked_source_ids[ $source_post->ID ] ) ? $linked_source_ids[ $source_post->ID ] : 0;
 			if ( $linked_suite_id && $linked_suite_id !== $suite_id ) {
 				continue;
 			}
@@ -431,7 +448,7 @@ final class MTAL_Suite_Admin {
 		echo '</tr></thead><tbody>';
 
 		if ( ! $suites_query->have_posts() ) {
-			echo '<tr><td colspan="6">هنوز سوئیتی در مدل مستقل MTAL ثبت نشده است. در این مرحله فقط نمایش فهرست فعال شده و امکان افزودن سوئیت در مرحله جداگانه پیاده‌سازی خواهد شد.</td></tr>';
+			echo '<tr><td colspan="6">هنوز سوئیتی در مدل مستقل MTAL ثبت نشده است. برای شروع از دکمه «افزودن سوئیت» استفاده کنید.</td></tr>';
 		} else {
 			foreach ( $suites_query->posts as $suite ) {
 				$display = MTAL_Suite_Registry::get_display_data( $suite->ID );
