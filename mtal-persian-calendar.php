@@ -167,14 +167,30 @@ final class MTAL_Persian_Calendar {
 			return false;
 		}
 
-		update_post_meta( $suite_id, '_mtal_blocked_dates', self::normalize_date_list( $data['blockedDates'] ?? array() ) );
-		update_post_meta( $suite_id, '_mtal_holiday_dates', self::normalize_date_list( $data['holidayDates'] ?? array() ) );
-		update_post_meta( $suite_id, '_mtal_manual_prices', self::normalize_manual_prices( $data['manualPrices'] ?? array() ) );
-		update_post_meta( $suite_id, '_mtal_regular_price', max( 0, absint( $data['regularPrice'] ?? 0 ) ) );
-		update_post_meta( $suite_id, '_mtal_weekend_price', max( 0, absint( $data['weekendPrice'] ?? 0 ) ) );
-		update_post_meta( $suite_id, '_mtal_base_capacity', max( 1, absint( $data['baseCapacity'] ?? 2 ) ) );
-		update_post_meta( $suite_id, '_mtal_extra_guest_price', max( 0, absint( $data['extraGuestPrice'] ?? 0 ) ) );
-		update_post_meta( $suite_id, '_mtal_suite_max_capacity', max( 1, absint( $data['maxCapacity'] ?? 5 ) ) );
+		if ( array_key_exists( 'blockedDates', $data ) ) {
+			update_post_meta( $suite_id, '_mtal_blocked_dates', self::normalize_date_list( $data['blockedDates'] ) );
+		}
+		if ( array_key_exists( 'holidayDates', $data ) ) {
+			update_post_meta( $suite_id, '_mtal_holiday_dates', self::normalize_date_list( $data['holidayDates'] ) );
+		}
+		if ( array_key_exists( 'manualPrices', $data ) ) {
+			update_post_meta( $suite_id, '_mtal_manual_prices', self::normalize_manual_prices( $data['manualPrices'] ) );
+		}
+		if ( array_key_exists( 'regularPrice', $data ) ) {
+			update_post_meta( $suite_id, '_mtal_regular_price', max( 0, absint( $data['regularPrice'] ) ) );
+		}
+		if ( array_key_exists( 'weekendPrice', $data ) ) {
+			update_post_meta( $suite_id, '_mtal_weekend_price', max( 0, absint( $data['weekendPrice'] ) ) );
+		}
+		if ( array_key_exists( 'baseCapacity', $data ) ) {
+			update_post_meta( $suite_id, '_mtal_base_capacity', max( 1, absint( $data['baseCapacity'] ) ) );
+		}
+		if ( array_key_exists( 'extraGuestPrice', $data ) ) {
+			update_post_meta( $suite_id, '_mtal_extra_guest_price', max( 0, absint( $data['extraGuestPrice'] ) ) );
+		}
+		if ( array_key_exists( 'maxCapacity', $data ) ) {
+			update_post_meta( $suite_id, '_mtal_suite_max_capacity', max( 1, absint( $data['maxCapacity'] ) ) );
+		}
 
 		return true;
 	}
@@ -531,21 +547,12 @@ final class MTAL_Persian_Calendar {
 		$blocked_dates     = self::normalize_date_list( isset( $_POST['blocked_dates'] ) ? wp_unslash( $_POST['blocked_dates'] ) : array() );
 		$holiday_dates     = self::normalize_date_list( isset( $_POST['holiday_dates'] ) ? wp_unslash( $_POST['holiday_dates'] ) : array() );
 		$manual_prices     = self::normalize_manual_prices( isset( $_POST['manual_prices'] ) ? wp_unslash( $_POST['manual_prices'] ) : array() );
-		$regular_price     = isset( $_POST['regular_price'] ) ? max( 0, intval( $_POST['regular_price'] ) ) : 0;
-		$weekend_price     = isset( $_POST['weekend_price'] ) ? max( 0, intval( $_POST['weekend_price'] ) ) : 0;
-		$base_capacity     = isset( $_POST['base_capacity'] ) ? max( 1, intval( $_POST['base_capacity'] ) ) : 2;
-		$extra_guest_price = isset( $_POST['extra_guest_price'] ) ? max( 0, intval( $_POST['extra_guest_price'] ) ) : 0;
-
 		$saved = self::save_suite_calendar_data(
 			$post_id,
 			array(
-				'blockedDates'    => $blocked_dates,
-				'holidayDates'    => $holiday_dates,
-				'manualPrices'    => $manual_prices,
-				'regularPrice'    => $regular_price,
-				'weekendPrice'    => $weekend_price,
-				'baseCapacity'    => $base_capacity,
-				'extraGuestPrice' => $extra_guest_price,
+				'blockedDates' => $blocked_dates,
+				'holidayDates' => $holiday_dates,
+				'manualPrices' => $manual_prices,
 			)
 		);
 
