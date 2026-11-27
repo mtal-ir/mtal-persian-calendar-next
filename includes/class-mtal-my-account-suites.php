@@ -106,7 +106,7 @@ final class MTAL_My_Account_Suites {
 		return add_query_arg(
 			array(
 				'page'     => MTAL_Suite_Admin::PAGE_SLUG,
-				'action'   => 'edit',
+				'action'   => $suite_id ? 'edit' : 'add',
 				'suite_id' => absint( $suite_id ),
 			),
 			admin_url( 'admin.php' )
