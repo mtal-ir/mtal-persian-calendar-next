@@ -561,28 +561,86 @@ html.mtal-modal-open {
 	color: #ffffff;
 }
 
-.mtal-admin-prices {
-	margin-top: 14px;
-	padding-top: 12px;
-	border-top: 1px solid #e5e7eb;
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 10px;
+.mtal-admin-mode-hint {
+	margin: 0 0 12px;
+	padding: 9px 11px;
+	border-radius: 8px;
+	background: #f8fafc;
+	color: #475569;
 	font-size: 12px;
+	line-height: 1.7;
 }
 
-.mtal-admin-prices label {
+.mtal-admin-weekdays {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	gap: 4px;
+	margin-bottom: 5px;
+	text-align: center;
+	color: #64748b;
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.mtal-admin-weekdays > div {
+	padding: 5px 0;
+}
+
+.mtal-admin-manual-editor {
+	margin-top: 14px;
+	padding: 14px;
+	border: 1px solid #dbe3cf;
+	border-radius: 10px;
+	background: #fbfcf8;
+}
+
+.mtal-admin-manual-title {
+	margin-bottom: 10px;
+	font-size: 13px;
+	font-weight: 700;
+	color: #334155;
+}
+
+.mtal-admin-manual-editor label {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: 6px;
+	font-size: 12px;
 	font-weight: 600;
 }
 
-.mtal-admin-prices input {
+.mtal-admin-manual-editor input {
+	width: 100%;
+	min-height: 40px;
+	padding: 8px 10px;
 	border: 1px solid #cbd5e1;
 	border-radius: 8px;
-	padding: 6px 8px;
-	font-size: 13px;
+	background: #fff;
+	font-size: 14px;
+}
+
+.mtal-admin-manual-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.mtal-admin-manual-actions button {
+	padding: 8px 12px;
+	border: 1px solid #d1d5db;
+	border-radius: 8px;
+	background: #fff;
+	color: #334155;
+	font-size: 12px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.mtal-admin-manual-actions .mtal-admin-manual-save {
+	border-color: var(--mtal-primary);
+	background: var(--mtal-primary);
+	color: #fff;
 }
 
 .mtal-admin-save-row {
