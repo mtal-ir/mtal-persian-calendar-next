@@ -263,7 +263,7 @@ final class MTAL_My_Account_Bookings {
 					self::render_decision_form( $order_id, 'approve', 'تأیید', 'mtal-account-booking-row__approve' );
 					self::render_decision_form( $order_id, 'reject', 'رد', 'mtal-account-booking-row__reject' );
 				}
-				echo '<button type="button" class="mtal-account-booking-row__details" onclick="document.getElementById(\\'' . esc_attr( $template_id ) . '\\').showModal();">جزئیات</button></div></article>';
+				echo '<button type="button" class="mtal-account-booking-row__details" onclick="document.getElementById(\'' . esc_attr( $template_id ) . '\').showModal();">جزئیات</button></div></article>';
 
 				ob_start();
 				echo '<dialog id="' . esc_attr( $template_id ) . '" class="mtal-account-booking-dialog">';
