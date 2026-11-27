@@ -1373,3 +1373,22 @@ html.mtal-modal-open {
 		line-height: 1.5;
 	}
 }
+
+
+/* Keep the guest-count dialog centered and compact on mobile; only the calendar dialog is full-screen. */
+@media (max-width: 480px) {
+	.mtal-cal-modal-backdrop:has(.mtal-guest-modal-sheet) {
+		align-items: center;
+		justify-content: center;
+		padding: 14px;
+	}
+
+	.mtal-cal-modal-backdrop:has(.mtal-guest-modal-sheet) .mtal-cal-modal-sheet {
+		width: 100%;
+		max-width: 390px;
+		height: auto;
+		max-height: 90vh;
+		max-height: 90dvh;
+		border-radius: 16px;
+	}
+}
