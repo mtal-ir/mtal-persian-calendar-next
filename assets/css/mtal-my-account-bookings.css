@@ -175,3 +175,29 @@
     outline: 2px solid #2563eb;
     outline-offset: 2px;
 }
+
+
+/* Keep the horizontal status rail scrollable inside narrow account layouts. */
+.mtal-account-bookings-filter,
+.mtal-account-bookings-filter__scroll {
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+.mtal-account-bookings-filter__scroll {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    max-width: 100% !important;
+    touch-action: pan-x pan-y;
+}
+.mtal-account-bookings-filter__option {
+    flex: 0 0 auto !important;
+    width: auto !important;
+}
+.mtal-account-bookings-filter__option.is-active {
+    background-color: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
+    color: #fff !important;
+}
