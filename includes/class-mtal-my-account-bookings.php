@@ -222,12 +222,13 @@ final class MTAL_My_Account_Bookings {
 			}
 			echo '<input type="hidden" name="' . esc_attr( sanitize_key( $key ) ) . '" value="' . esc_attr( wp_unslash( $value ) ) . '">';
 		}
-		echo '<label for="mtal-booking-status">فیلتر وضعیت </label> ';
-		echo '<select id="mtal-booking-status" name="mtal_booking_status">';
+		echo '<span class="mtal-account-bookings-filter__label">فیلتر وضعیت</span>';
+		echo '<div class="mtal-account-bookings-filter__scroll" role="group" aria-label="فیلتر وضعیت رزروها">';
 		foreach ( $options as $value => $label ) {
-			echo '<option value="' . esc_attr( $value ) . '" ' . selected( $status, $value, false ) . '>' . esc_html( $label ) . '</option>';
+			$is_selected = $status === $value;
+			echo '<button type="submit" name="mtal_booking_status" value="' . esc_attr( $value ) . '" class="mtal-account-bookings-filter__option' . ( $is_selected ? ' is-active' : '' ) . '" aria-pressed="' . ( $is_selected ? 'true' : 'false' ) . '">' . esc_html( $label ) . '</button>';
 		}
-		echo '</select> <button type="submit">اعمال فیلتر</button></form>';
+		echo '</div></form>';
 
 		$results = self::get_orders( $status, $page );
 		$orders = is_object( $results ) && isset( $results->orders ) ? $results->orders : array();
