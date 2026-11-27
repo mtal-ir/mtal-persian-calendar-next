@@ -67,6 +67,47 @@ final class MTAL_Suite_Registry {
 		return '1' === (string) get_post_meta( absint( $suite_id ), self::META_HIDDEN, true );
 	}
 
+	/**
+	 * Find the first existing independent suite without a valid source post.
+	 * Hidden suites are intentionally included so hiding cannot bypass the
+	 * one-unlinked-suite limit.
+	 *
+	 * @return int Suite ID, or 0 when none exists.
+	 */
+	public static function get_unlinked_suite_id() {
+		$offset = 0;
+		$batch_size = 200;
+		$statuses = array( 'publish', 'private', 'draft', 'pending', 'future' );
+
+		do {
+			$query = new WP_Query(
+				array(
+					'post_type'              => self::POST_TYPE,
+					'post_status'            => $statuses,
+					'posts_per_page'         => $batch_size,
+					'offset'                 => $offset,
+					'orderby'                => 'ID',
+					'order'                  => 'ASC',
+					'fields'                 => 'ids',
+					'no_found_rows'          => true,
+					'update_post_meta_cache' => false,
+					'update_post_term_cache' => false,
+				)
+			);
+
+			foreach ( $query->posts as $suite_id ) {
+				if ( ! self::get_source_post( $suite_id ) ) {
+					return absint( $suite_id );
+				}
+			}
+
+			$found = count( $query->posts );
+			$offset += $found;
+		} while ( $found === $batch_size );
+
+		return 0;
+	}
+
 	/** A suite may be hidden only while it has no valid source post. */
 	public static function can_hide( $suite_id ) {
 		return self::is_suite( $suite_id ) && ! self::get_source_post( $suite_id );
