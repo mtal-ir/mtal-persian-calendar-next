@@ -1204,8 +1204,7 @@
 			if (this.modalFooterEl) {
 				this.modalFooterEl.innerHTML = '';
 
-				// Keep the modal focused on date selection; omit date summaries,
-				// pricing details and secondary actions that crowd small screens.
+				// Keep the modal focused on date selection while retaining the clear action.
 				this.modalFooterEl.appendChild(this.createLegendBar());
 				this.modalFooterEl.appendChild(this.createHandoverNoteBox());
 
@@ -1215,6 +1214,16 @@
 					warnEl.textContent = this.warningMessage;
 					this.modalFooterEl.appendChild(warnEl);
 				}
+
+				const actions = document.createElement('div');
+				actions.className = 'mtal-cal-modal-actions';
+				const clearBtn = document.createElement('button');
+				clearBtn.type = 'button';
+				clearBtn.className = 'mtal-cal-clear-btn';
+				clearBtn.textContent = 'پاک کردن';
+				clearBtn.addEventListener('click', () => this.clear({ notify: true }));
+				actions.appendChild(clearBtn);
+				this.modalFooterEl.appendChild(actions);
 			}
 		}
 	}
