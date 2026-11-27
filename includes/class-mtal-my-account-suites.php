@@ -93,7 +93,7 @@ final class MTAL_My_Account_Suites {
 			'post_type' => MTAL_Suite_Registry::POST_TYPE,
 			'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future' ),
 			'posts_per_page' => $limit, 'paged' => max( 1, absint( $page ) ),
-			'orderby' => 'date', 'order' => 'DESC', 'no_found_rows' => false,
+			'orderby' => 'ID', 'order' => 'ASC', 'no_found_rows' => false,
 		);
 		$args['meta_query'] = $hidden
 			? array( array( 'key' => MTAL_Suite_Registry::META_HIDDEN, 'value' => '1' ) )
@@ -108,6 +108,13 @@ final class MTAL_My_Account_Suites {
 				'suite_id' => absint( $suite_id ),
 			),
 			admin_url( 'admin.php' )
+		);
+	}
+
+	private static function get_suite_editor_url( $suite_id ) {
+		return add_query_arg(
+			array( 'mtal_suite_action' => 'edit', 'suite_id' => absint( $suite_id ) ),
+			wc_get_account_endpoint_url( self::ENDPOINT )
 		);
 	}
 
@@ -134,8 +141,8 @@ final class MTAL_My_Account_Suites {
 	private static function render_unlinked_suite_notice( $suite_id ) {
 		$display = MTAL_Suite_Registry::get_display_data( $suite_id );
 		$title = $display ? $display['title'] : get_the_title( $suite_id );
-		$edit_url = admin_url( 'admin.php?page=' . MTAL_Suite_Admin::PAGE_SLUG . '&action=edit&suite_id=' . absint( $suite_id ) );
-		echo '<div class="mtal-account-suites__empty" role="status"><strong>سوئیت مستقل آماده ویرایش است</strong>';
+		$edit_url = self::get_suite_editor_url( $suite_id );
+		echo '<div class="mtal-account-suites__empty mtal-account-suites__notice" role="status"><button type="button" class="mtal-account-suites__notice-close" aria-label="بستن پیام" onclick="this.parentNode.hidden=true">× <span>بستن</span></button><strong>سوئیت مستقل آماده ویرایش است</strong>';
 		echo '<p>در حال حاضر یک سوئیت مستقلِ بدون اتصال وجود دارد. برای جلوگیری از ایجاد سوئیت‌های بلااستفاده، امکان ساخت سوئیت مستقل دوم تا زمان اتصال سوئیت فعلی به نوشته منبع وجود ندارد.</p>';
 		echo '<p><strong>' . esc_html( $title ) . '</strong> — شناسه MTAL: #' . absint( $suite_id ) . '</p>';
 		if ( MTAL_Suite_Registry::is_hidden( $suite_id ) ) {
@@ -163,6 +170,17 @@ final class MTAL_My_Account_Suites {
 		echo '<a class="mtal-account-suites__add" href="' . esc_url( self::get_suite_add_url() ) . '">افزودن سوئیت جدید</a></header>';
 
 		$add_requested = isset( $_GET['mtal_suite_action'] ) && 'add' === sanitize_key( wp_unslash( $_GET['mtal_suite_action'] ) );
+		$edit_requested = isset( $_GET['mtal_suite_action'] ) && 'edit' === sanitize_key( wp_unslash( $_GET['mtal_suite_action'] ) );
+		if ( $edit_requested ) {
+			$suite_id = isset( $_GET['suite_id'] ) ? absint( $_GET['suite_id'] ) : 0;
+			if ( ! $suite_id || ! MTAL_Suite_Registry::is_suite( $suite_id ) || ! current_user_can( 'edit_post', $suite_id ) ) {
+				wp_die( 'شناسه سوئیت معتبر نیست یا اجازه ویرایش آن را ندارید.', '', array( 'response' => 403 ) );
+			}
+			MTAL_Suite_Admin::render_account_form( $suite_id, $account_url );
+			echo '</section>';
+			return;
+		}
+
 		if ( $add_requested ) {
 			$unlinked_suite_id = MTAL_Suite_Registry::get_unlinked_suite_id();
 			if ( $unlinked_suite_id ) {
@@ -205,7 +223,7 @@ final class MTAL_My_Account_Suites {
 				echo '<div><span>هزینه نفر اضافه</span><strong>' . esc_html( number_format_i18n( $extra ) ) . '</strong></div>';
 				echo '</div>';
 				echo '<div class="mtal-account-suites__source"><span>نوشته منبع</span><strong>' . ( $source ? esc_html( get_the_title( $source ) ) . ' (#' . absint( $source->ID ) . ')' : 'بدون اتصال' ) . '</strong></div>';
-				echo '<div class="mtal-account-suites__actions"><a href="' . esc_url( self::get_suite_edit_url( $suite->ID ) ) . '">ویرایش سوئیت</a><a href="' . esc_url( self::get_suite_calendar_url( $suite->ID ) ) . '">مدیریت تقویم</a></div>';
+				echo '<div class="mtal-account-suites__actions"><a href="' . esc_url( self::get_suite_editor_url( $suite->ID ) ) . '">ویرایش سوئیت</a><a href="' . esc_url( self::get_suite_calendar_url( $suite->ID ) ) . '">مدیریت تقویم</a></div>';
 				if ( ! $source ) {
 					echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="mtal-account-suites__hide-form">';
 					wp_nonce_field( 'mtal_suite_hidden_' . $suite->ID . '_hide' );
@@ -233,7 +251,7 @@ final class MTAL_My_Account_Suites {
 			echo '<section class="mtal-account-suites__hidden"><h3>سوئیت‌های پنهان</h3><p>این سوئیت‌ها در مسیر رزرو جدید نمایش داده نمی‌شوند. اطلاعات و سوابق آن‌ها محفوظ است.</p><div class="mtal-account-suites__grid">';
 			foreach ( $hidden_query->posts as $hidden_suite ) {
 				$hidden_display = MTAL_Suite_Registry::get_display_data( $hidden_suite->ID );
-				echo '<article class="mtal-account-suites__card"><h4>' . esc_html( $hidden_display ? $hidden_display['title'] : get_the_title( $hidden_suite ) ) . '</h4><span>شناسه MTAL: #' . absint( $hidden_suite->ID ) . '</span><div class="mtal-account-suites__actions"><a href="' . esc_url( self::get_suite_edit_url( $hidden_suite->ID ) ) . '">ویرایش</a><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+				echo '<article class="mtal-account-suites__card"><h4>' . esc_html( $hidden_display ? $hidden_display['title'] : get_the_title( $hidden_suite ) ) . '</h4><span>شناسه MTAL: #' . absint( $hidden_suite->ID ) . '</span><div class="mtal-account-suites__actions"><a href="' . esc_url( self::get_suite_editor_url( $hidden_suite->ID ) ) . '">ویرایش</a><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 				wp_nonce_field( 'mtal_suite_hidden_' . $hidden_suite->ID . '_restore' );
 				echo '<input type="hidden" name="action" value="mtal_toggle_suite_hidden"><input type="hidden" name="suite_id" value="' . absint( $hidden_suite->ID ) . '"><input type="hidden" name="hidden_mode" value="restore"><input type="hidden" name="redirect_to" value="' . esc_attr( $account_url ) . '"><button type="submit">بازگردانی به پنل‌ها</button></form></div></article>';
 			}
