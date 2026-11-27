@@ -272,7 +272,7 @@ final class MTAL_My_Account_Bookings {
 				self::render_field( 'مبلغ سفارش', wc_price( $order->get_total(), array( 'currency' => $order->get_currency() ) ) );
 				self::render_field( 'وضعیت سفارش', esc_html( $status_label ) );
 				self::render_field( 'تاریخ ثبت', $order->get_date_created() ? esc_html( ( class_exists( 'MTAL_Persian_Calendar' ) ? MTAL_Persian_Calendar::format_jalali_datetime( $order->get_date_created() ) : wc_format_datetime( $order->get_date_created() ) ) ) : '—' );
-				self::render_field( 'مهلت درخواست', $expires ? esc_html( wp_date( 'Y-m-d H:i:s', $expires ) ) : '—' );
+				self::render_field( 'مهلت درخواست', $expires ? esc_html( class_exists( 'MTAL_Persian_Calendar' ) ? MTAL_Persian_Calendar::format_jalali_datetime( ( new DateTimeImmutable( '@' . $expires ) )->setTimezone( wp_timezone() ) ) : wp_date( 'Y-m-d H:i:s', $expires ) ) : '—' );
 				if ( $order->get_customer_note() ) {
 					self::render_field( 'یادداشت مشتری', esc_html( $order->get_customer_note() ) );
 				}
