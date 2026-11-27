@@ -279,7 +279,6 @@ final class MTAL_My_Account_Bookings {
 					self::render_table_row( 'یادداشت مشتری', esc_html( $order->get_customer_note() ) );
 				}
 				echo '</tbody></table></div>';
->';
 				if ( $is_actionable ) {
 					echo '<div class="mtal-account-booking-modal__actions">';
 					self::render_decision_form( $order_id, 'approve', 'تأیید و ارسال لینک پرداخت', 'mtal-account-booking-modal__approve' );
