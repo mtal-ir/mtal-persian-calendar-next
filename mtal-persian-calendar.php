@@ -577,13 +577,8 @@ final class MTAL_Persian_Calendar {
 			}
 		}
 
-		$admin_widget_file = MTAL_PC_PATH . 'includes/class-mtal-admin-calendar-widget.php';
-		if ( file_exists( $admin_widget_file ) ) {
-			require_once $admin_widget_file;
-			if ( class_exists( '\MTAL_Admin_Calendar_Widget' ) ) {
-				$widgets_manager->register( new \MTAL_Admin_Calendar_Widget() );
-			}
-		}
+		// Legacy Elementor admin settings widget intentionally disabled to keep one source of truth.
+
 	}
 
 	public function register_elementor_form_field( $form_fields_registrar ) {
