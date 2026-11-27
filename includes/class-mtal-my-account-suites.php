@@ -79,18 +79,17 @@ final class MTAL_My_Account_Suites {
 		wp_enqueue_style( 'mtal-my-account-suites', MTAL_PC_URL . 'assets/css/mtal-my-account-suites.css', array(), $version );
 	}
 
-	private static function get_suites( $page, $limit = 12 ) {
-		return new WP_Query(
-			array(
-				'post_type'      => MTAL_Suite_Registry::POST_TYPE,
-				'post_status'    => array( 'publish', 'private', 'draft', 'pending', 'future' ),
-				'posts_per_page' => $limit,
-				'paged'          => max( 1, absint( $page ) ),
-				'orderby'        => 'date',
-				'order'          => 'DESC',
-				'no_found_rows'  => false,
-			)
+	private static function get_suites( $page, $limit = 12, $hidden = false ) {
+		$args = array(
+			'post_type' => MTAL_Suite_Registry::POST_TYPE,
+			'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future' ),
+			'posts_per_page' => $limit, 'paged' => max( 1, absint( $page ) ),
+			'orderby' => 'date', 'order' => 'DESC', 'no_found_rows' => false,
 		);
+		$args['meta_query'] = $hidden
+			? array( array( 'key' => MTAL_Suite_Registry::META_HIDDEN, 'value' => '1' ) )
+			: array( 'relation' => 'OR', array( 'key' => MTAL_Suite_Registry::META_HIDDEN, 'compare' => 'NOT EXISTS' ), array( 'key' => MTAL_Suite_Registry::META_HIDDEN, 'value' => '1', 'compare' => '!=' ) );
+		return new WP_Query( $args );
 	}
 
 	private static function get_suite_calendar_url( $suite_id ) {
@@ -125,6 +124,8 @@ final class MTAL_My_Account_Suites {
 
 		$page = isset( $_GET['mtal_suites_page'] ) ? max( 1, absint( $_GET['mtal_suites_page'] ) ) : 1;
 		$query = self::get_suites( $page );
+		$hidden_query = self::get_suites( 1, 50, true );
+		$account_url = wc_get_account_endpoint_url( self::ENDPOINT );
 
 		echo '<section class="mtal-account-suites" dir="rtl">';
 		echo '<header class="mtal-account-suites__header"><div><h2>مدیریت سوئیت‌ها</h2><p>مشاهده سوئیت‌های مستقل و دسترسی به تنظیمات آن‌ها</p></div>';
@@ -163,6 +164,11 @@ final class MTAL_My_Account_Suites {
 				echo '</div>';
 				echo '<div class="mtal-account-suites__source"><span>نوشته منبع</span><strong>' . ( $source ? esc_html( get_the_title( $source ) ) . ' (#' . absint( $source->ID ) . ')' : 'بدون اتصال' ) . '</strong></div>';
 				echo '<div class="mtal-account-suites__actions"><a href="' . esc_url( self::get_suite_edit_url( $suite->ID ) ) . '">ویرایش سوئیت</a><a href="' . esc_url( self::get_suite_calendar_url( $suite->ID ) ) . '">مدیریت تقویم</a></div>';
+				if ( ! $source ) {
+					echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="mtal-account-suites__hide-form">';
+					wp_nonce_field( 'mtal_suite_hidden_' . $suite->ID . '_hide' );
+					echo '<input type="hidden" name="action" value="mtal_toggle_suite_hidden"><input type="hidden" name="suite_id" value="' . absint( $suite->ID ) . '"><input type="hidden" name="hidden_mode" value="hide"><input type="hidden" name="redirect_to" value="' . esc_attr( $account_url ) . '"><button type="submit">پنهان‌کردن سوئیت</button></form>';
+				}
 				echo '</article>';
 			}
 			echo '</div>';
@@ -179,6 +185,17 @@ final class MTAL_My_Account_Suites {
 				}
 			}
 			echo '</nav>';
+		}
+
+		if ( $hidden_query->have_posts() ) {
+			echo '<section class="mtal-account-suites__hidden"><h3>سوئیت‌های پنهان</h3><p>این سوئیت‌ها در مسیر رزرو جدید نمایش داده نمی‌شوند. اطلاعات و سوابق آن‌ها محفوظ است.</p><div class="mtal-account-suites__grid">';
+			foreach ( $hidden_query->posts as $hidden_suite ) {
+				$hidden_display = MTAL_Suite_Registry::get_display_data( $hidden_suite->ID );
+				echo '<article class="mtal-account-suites__card"><h4>' . esc_html( $hidden_display ? $hidden_display['title'] : get_the_title( $hidden_suite ) ) . '</h4><span>شناسه MTAL: #' . absint( $hidden_suite->ID ) . '</span><div class="mtal-account-suites__actions"><a href="' . esc_url( self::get_suite_edit_url( $hidden_suite->ID ) ) . '">ویرایش</a><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+				wp_nonce_field( 'mtal_suite_hidden_' . $hidden_suite->ID . '_restore' );
+				echo '<input type="hidden" name="action" value="mtal_toggle_suite_hidden"><input type="hidden" name="suite_id" value="' . absint( $hidden_suite->ID ) . '"><input type="hidden" name="hidden_mode" value="restore"><input type="hidden" name="redirect_to" value="' . esc_attr( $account_url ) . '"><button type="submit">بازگردانی به پنل‌ها</button></form></div></article>';
+			}
+			echo '</div></section>';
 		}
 		echo '</section>';
 		wp_reset_postdata();
