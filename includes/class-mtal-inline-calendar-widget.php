@@ -171,6 +171,7 @@ class MTAL_Inline_Calendar_Widget extends Widget_Base {
 			data-mtal-weekend-price="<?php echo esc_attr( $suite_data['weekendPrice'] ); ?>"
 			data-mtal-base-capacity="<?php echo esc_attr( $suite_data['baseCapacity'] ); ?>"
 			data-mtal-extra-guest-price="<?php echo esc_attr( $suite_data['extraGuestPrice'] ); ?>"
+			data-mtal-max-guests="<?php echo esc_attr( $suite_data['maxCapacity'] ); ?>"
 		>
 			<div class="mtal-cal-inline-mount"></div>
 		</div>
