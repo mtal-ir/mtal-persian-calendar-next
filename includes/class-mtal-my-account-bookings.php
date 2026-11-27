@@ -1,6 +1,6 @@
 <?php
 /**
- * Privileged MTAL booking list inside the WooCommerce My Account area.
+ * Privileged MTAL booking management inside the WooCommerce My Account area.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -83,21 +83,28 @@ final class MTAL_My_Account_Bookings {
 		wp_enqueue_style( 'mtal-my-account-bookings' );
 		wp_add_inline_style(
 			'mtal-my-account-bookings',
-			'.mtal-account-bookings{display:grid;gap:14px}.mtal-account-booking{border:1px solid #e5e7eb;border-radius:12px;padding:16px;background:#fff}.mtal-account-booking__head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}.mtal-account-booking__title{font-weight:700}.mtal-account-booking__status{display:inline-block;border-radius:20px;padding:4px 10px;background:#f3f4f6;font-size:12px}.mtal-account-booking__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px}.mtal-account-booking__field{min-width:0}.mtal-account-booking__label{display:block;color:#6b7280;font-size:12px;margin-bottom:3px}.mtal-account-booking__value{overflow-wrap:anywhere}.mtal-account-booking__notice{margin-top:12px;color:#92400e;font-size:13px}@media(max-width:600px){.mtal-account-booking__grid{grid-template-columns:1fr}.mtal-account-booking{padding:13px}}'
+			'.mtal-account-bookings{display:grid;gap:14px}.mtal-account-booking{border:1px solid #e5e7eb;border-radius:12px;padding:16px;background:#fff}.mtal-account-booking__head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}.mtal-account-booking__title{font-weight:700}.mtal-account-booking__status{display:inline-block;border-radius:20px;padding:4px 10px;background:#f3f4f6;font-size:12px}.mtal-account-booking__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px}.mtal-account-booking__field{min-width:0}.mtal-account-booking__label{display:block;color:#6b7280;font-size:12px;margin-bottom:3px}.mtal-account-booking__value{overflow-wrap:anywhere}.mtal-account-booking__notice{margin-top:12px;color:#92400e;font-size:13px}.mtal-account-booking__details{margin-top:14px}.mtal-account-booking-modal[hidden]{display:none}.mtal-account-booking-modal{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,.62)}.mtal-account-booking-modal__panel{position:relative;width:min(680px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:14px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.mtal-account-booking-modal__head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.mtal-account-booking-modal__close{border:0;background:#f3f4f6;border-radius:8px;padding:8px 12px;cursor:pointer}.mtal-account-booking-modal__actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;padding-top:16px;border-top:1px solid #e5e7eb}.mtal-account-booking-modal__actions form{margin:0}.mtal-account-booking-modal__actions button{border:0;border-radius:8px;padding:10px 16px;cursor:pointer}.mtal-account-booking-modal__approve{background:#166534;color:#fff}.mtal-account-booking-modal__reject{background:#991b1b;color:#fff}.mtal-account-booking__details-button{border:1px solid #d1d5db;background:#fff;border-radius:8px;padding:8px 14px;cursor:pointer}.mtal-account-bookings-notice{padding:10px 14px;border-radius:8px;background:#f3f4f6;margin:12px 0}@media(max-width:600px){.mtal-account-booking__grid{grid-template-columns:1fr}.mtal-account-booking{padding:13px}.mtal-account-booking-modal{padding:8px;align-items:flex-end}.mtal-account-booking-modal__panel{max-height:88vh;padding:16px;border-radius:14px 14px 8px 8px}}'
+		);
+
+		wp_register_script( 'mtal-my-account-bookings', false, array(), MTAL_PC_VERSION, true );
+		wp_enqueue_script( 'mtal-my-account-bookings' );
+		wp_add_inline_script(
+			'mtal-my-account-bookings',
+			'(function(){var modal=document.getElementById("mtal-booking-modal");if(!modal){return;}var body=modal.querySelector("[data-mtal-modal-body]");var lastFocus=null;function closeModal(){modal.hidden=true;body.innerHTML="";document.body.style.overflow="";if(lastFocus){lastFocus.focus();}}document.addEventListener("click",function(event){var opener=event.target.closest("[data-mtal-modal-open]");if(opener){var template=document.getElementById(opener.getAttribute("data-mtal-modal-open"));if(!template){return;}lastFocus=opener;body.innerHTML="";body.appendChild(template.content.cloneNode(true));modal.hidden=false;document.body.style.overflow="hidden";var close=modal.querySelector("[data-mtal-modal-close]");if(close){close.focus();}return;}if(event.target.closest("[data-mtal-modal-close]")||event.target===modal){closeModal();}});document.addEventListener("keydown",function(event){if(!modal.hidden&&"Escape"===event.key){closeModal();}});})();'
 		);
 	}
 
 	private static function get_status_options() {
 		return array(
-			'all'         => 'همه وضعیت‌ها',
-			'mtal-pending'=> 'در انتظار تأیید مدیر',
-			'pending'     => 'در انتظار پرداخت',
-			'processing'  => 'در حال انجام',
-			'completed'   => 'تکمیل‌شده',
-			'on-hold'     => 'در انتظار بررسی',
-			'cancelled'   => 'لغوشده',
-			'failed'      => 'ناموفق',
-			'refunded'    => 'مستردشده',
+			'all'          => 'همه وضعیت‌ها',
+			'mtal-pending' => 'در انتظار تأیید مدیر',
+			'pending'      => 'در انتظار پرداخت',
+			'processing'   => 'در حال انجام',
+			'completed'    => 'تکمیل‌شده',
+			'on-hold'      => 'در انتظار بررسی',
+			'cancelled'    => 'لغوشده',
+			'failed'       => 'ناموفق',
+			'refunded'     => 'مستردشده',
 		);
 	}
 
@@ -125,6 +132,30 @@ final class MTAL_My_Account_Bookings {
 
 	private static function render_field( $label, $value ) {
 		echo '<div class="mtal-account-booking__field"><span class="mtal-account-booking__label">' . esc_html( $label ) . '</span><span class="mtal-account-booking__value">' . wp_kses_post( $value ) . '</span></div>';
+	}
+
+	private static function get_suite_name( $suite_id ) {
+		if ( class_exists( 'MTAL_Suite_Registry' ) ) {
+			$display = MTAL_Suite_Registry::get_display_data( $suite_id );
+			if ( is_array( $display ) && ! empty( $display['title'] ) ) {
+				return $display['title'];
+			}
+		}
+		$title = get_the_title( $suite_id );
+		return $title ? $title : 'سوئیت #' . absint( $suite_id );
+	}
+
+	private static function render_decision_form( $order_id, $decision, $label, $class_name ) {
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<input type="hidden" name="action" value="mtal_my_account_booking_decision">';
+		echo '<input type="hidden" name="order_id" value="' . esc_attr( absint( $order_id ) ) . '">';
+		echo '<input type="hidden" name="decision" value="' . esc_attr( $decision ) . '">';
+		echo '<input type="hidden" name="_wpnonce" value="' . esc_attr( wp_create_nonce( 'mtal_my_account_booking_decision_' . absint( $order_id ) ) ) . '">';
+		echo '<button type="submit" class="' . esc_attr( $class_name ) . '"';
+		if ( 'reject' === $decision ) {
+			echo ' onclick="return confirm(\'درخواست رد و تاریخ‌ها آزاد شوند؟\')"';
+		}
+		echo '>' . esc_html( $label ) . '</button></form>';
 	}
 
 	public static function render_endpoint() {
@@ -162,9 +193,19 @@ final class MTAL_My_Account_Bookings {
 		echo '<p>درخواست‌های ثبت‌شده از طریق تقویم MTAL</p>';
 		echo '<p><strong>در انتظار تأیید مدیر: ' . esc_html( number_format_i18n( $pending_count ) ) . '</strong></p>';
 
+		$notice = isset( $_GET['mtal_booking_notice'] ) ? sanitize_key( wp_unslash( $_GET['mtal_booking_notice'] ) ) : '';
+		$notice_messages = array(
+			'decision_saved'        => 'تصمیم مدیر ثبت شد.',
+			'mtal_booking_expired'  => 'مهلت درخواست به پایان رسیده و تاریخ‌ها آزاد شدند.',
+			'mtal_booking_not_pending' => 'این درخواست دیگر در انتظار تصمیم مدیر نیست.',
+		);
+		if ( isset( $notice_messages[ $notice ] ) ) {
+			echo '<p class="mtal-account-bookings-notice" role="status">' . esc_html( $notice_messages[ $notice ] ) . '</p>';
+		}
+
 		echo '<form method="get" class="mtal-account-bookings-filter">';
 		foreach ( $_GET as $key => $value ) {
-			if ( in_array( $key, array( 'mtal_booking_status', 'mtal_booking_page' ), true ) || ! is_scalar( $value ) ) {
+			if ( in_array( $key, array( 'mtal_booking_status', 'mtal_booking_page', 'mtal_booking_notice' ), true ) || ! is_scalar( $value ) ) {
 				continue;
 			}
 			echo '<input type="hidden" name="' . esc_attr( sanitize_key( $key ) ) . '" value="' . esc_attr( wp_unslash( $value ) ) . '">';
@@ -188,17 +229,21 @@ final class MTAL_My_Account_Bookings {
 				if ( ! $order instanceof WC_Order || ! $order->get_meta( '_mtal_booking_suite_id' ) ) {
 					continue;
 				}
+
+				$order_id = $order->get_id();
 				$suite_id = absint( $order->get_meta( '_mtal_booking_suite_id' ) );
-				$suite_name = get_the_title( $suite_id );
-				$suite_name = $suite_name ? $suite_name : 'سوئیت #' . $suite_id;
+				$suite_name = self::get_suite_name( $suite_id );
 				$name = trim( $order->get_formatted_billing_full_name() );
 				$name = $name ? $name : 'مهمان';
 				$phone = $order->get_billing_phone();
+				$email = $order->get_billing_email();
 				$check_in = (string) $order->get_meta( '_mtal_booking_check_in' );
 				$check_out = (string) $order->get_meta( '_mtal_booking_check_out' );
 				$guests = absint( $order->get_meta( '_mtal_booking_guests' ) );
 				$status_label = wc_get_order_status_name( $order->get_status() );
 				$expires = absint( $order->get_meta( '_mtal_booking_expires_at' ) );
+				$is_actionable = 'mtal-pending' === $order->get_status() && $expires > time();
+				$template_id = 'mtal-booking-details-' . absint( $order_id );
 
 				echo '<article class="mtal-account-booking">';
 				echo '<div class="mtal-account-booking__head"><span class="mtal-account-booking__title">رزرو #' . esc_html( $order->get_order_number() ) . '</span><span class="mtal-account-booking__status">' . esc_html( $status_label ) . '</span></div>';
@@ -215,6 +260,36 @@ final class MTAL_My_Account_Bookings {
 					$remaining = $expires > time() ? 'مهلت باقی‌مانده: ' . human_time_diff( time(), $expires ) : 'مهلت درخواست پایان یافته است';
 					echo '<p class="mtal-account-booking__notice">' . esc_html( $remaining ) . '</p>';
 				}
+				echo '<div class="mtal-account-booking__details"><button type="button" class="mtal-account-booking__details-button" data-mtal-modal-open="' . esc_attr( $template_id ) . '">مشاهده جزئیات</button></div>';
+
+				echo '<template id="' . esc_attr( $template_id ) . '">';
+				echo '<div class="mtal-account-booking-modal__head"><h3>جزئیات رزرو #' . esc_html( $order->get_order_number() ) . '</h3><button type="button" class="mtal-account-booking-modal__close" data-mtal-modal-close aria-label="بستن">بستن ✕</button></div>';
+				echo '<div class="mtal-account-booking__grid">';
+				self::render_field( 'نام مشتری', esc_html( $name ) );
+				self::render_field( 'شماره تماس', $phone ? esc_html( $phone ) : '—' );
+				self::render_field( 'ایمیل', $email ? esc_html( $email ) : '—' );
+				self::render_field( 'سوئیت', esc_html( $suite_name ) );
+				self::render_field( 'شناسه سفارش', esc_html( $order_id ) );
+				self::render_field( 'تاریخ ورود', esc_html( $check_in ? $check_in : '—' ) );
+				self::render_field( 'تاریخ خروج', esc_html( $check_out ? $check_out : '—' ) );
+				self::render_field( 'تعداد مسافران', $guests ? esc_html( $guests . ' نفر' ) : '—' );
+				self::render_field( 'مبلغ سفارش', wc_price( $order->get_total(), array( 'currency' => $order->get_currency() ) ) );
+				self::render_field( 'وضعیت سفارش', esc_html( $status_label ) );
+				self::render_field( 'تاریخ ثبت', $order->get_date_created() ? esc_html( wc_format_datetime( $order->get_date_created() ) ) : '—' );
+				self::render_field( 'مهلت درخواست', $expires ? esc_html( wp_date( 'Y-m-d H:i:s', $expires ) ) : '—' );
+				if ( $order->get_customer_note() ) {
+					self::render_field( 'یادداشت مشتری', esc_html( $order->get_customer_note() ) );
+				}
+				echo '</div>';
+				if ( $is_actionable ) {
+					echo '<div class="mtal-account-booking-modal__actions">';
+					self::render_decision_form( $order_id, 'approve', 'تأیید و ارسال لینک پرداخت', 'mtal-account-booking-modal__approve' );
+					self::render_decision_form( $order_id, 'reject', 'رد درخواست و آزادسازی تاریخ‌ها', 'mtal-account-booking-modal__reject' );
+					echo '</div>';
+				} elseif ( 'mtal-pending' === $order->get_status() ) {
+					echo '<p class="mtal-account-booking__notice">مهلت این درخواست به پایان رسیده است و امکان تصمیم‌گیری ندارد.</p>';
+				}
+				echo '</template>';
 				echo '</article>';
 			}
 			echo '</div>';
@@ -232,6 +307,8 @@ final class MTAL_My_Account_Bookings {
 			}
 			echo '</nav>';
 		}
+
+		echo '<div id="mtal-booking-modal" class="mtal-account-booking-modal" hidden role="dialog" aria-modal="true" aria-label="جزئیات رزرو"><div class="mtal-account-booking-modal__panel" data-mtal-modal-body></div></div>';
 		echo '</div>';
 	}
 }
