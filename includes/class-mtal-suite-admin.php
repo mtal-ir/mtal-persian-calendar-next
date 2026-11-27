@@ -73,7 +73,14 @@ final class MTAL_Suite_Admin {
 		wp_add_inline_script(
 			'jquery',
 			<<<'JS'
-(function($){$(function(){var frame;$('#mtal-suite-select-image').on('click',function(e){e.preventDefault();if(frame){frame.open();return;}frame=wp.media({title:'انتخاب تصویر سوئیت',button:{text:'استفاده از تصویر'},multiple:false,library:{type:'image'}});frame.on('select',function(){var item=frame.state().get('selection').first().toJSON();$('#mtal-suite-image-id').val(item.id);$('#mtal-suite-image-preview').empty().append($('<img>',{src:item.url,alt:'',css:{maxWidth:'180px',height:'auto'}}));$('#mtal-suite-remove-image').prop('hidden',false);});frame.open();});$('#mtal-suite-remove-image').on('click',function(e){e.preventDefault();$('#mtal-suite-image-id').val('0');$('#mtal-suite-image-preview').empty();$(this).prop('hidden',true);});});})(jQuery);
+(function($){$(function(){
+var frame;
+$('#mtal-suite-select-image').on('click',function(e){e.preventDefault();if(frame){frame.open();return;}frame=wp.media({title:'انتخاب تصویر سوئیت',button:{text:'استفاده از تصویر'},multiple:false,library:{type:'image'}});frame.on('select',function(){var item=frame.state().get('selection').first().toJSON();$('#mtal-suite-image-id').val(item.id);$('#mtal-suite-image-preview').empty().append($('<img>',{src:item.url,alt:'',css:{maxWidth:'180px',height:'auto'}}));$('#mtal-suite-remove-image').prop('hidden',false);});frame.open();});
+$('#mtal-suite-remove-image').on('click',function(e){e.preventDefault();$('#mtal-suite-image-id').val('0');$('#mtal-suite-image-preview').empty();$(this).prop('hidden',true);});
+function formatPrice(value){var digits=String(value).replace(/[^0-9]/g,'');return digits.replace(/\\B(?=(\\d{3})+(?!\\d))/g,',');}
+$('.mtal-price-input').each(function(){this.value=formatPrice(this.value);}).on('input',function(){var start=this.selectionStart;var before=this.value;var digitsBefore=before.slice(0,start).replace(/[^0-9]/g,'').length;this.value=formatPrice(before);var pos=0,count=0;while(pos<this.value.length&&count<digitsBefore){if(/[0-9]/.test(this.value.charAt(pos)))count++;pos++;}this.setSelectionRange(pos,pos);});
+$('form').on('submit',function(){$('.mtal-price-input').each(function(){this.value=this.value.replace(/,/g,'');});});
+});})(jQuery);
 JS
 		);
 	}
@@ -99,6 +106,11 @@ JS
 		$source_post_id = isset( $_POST['source_post_id'] ) ? absint( $_POST['source_post_id'] ) : 0;
 		$max_capacity = isset( $_POST['suite_max_capacity'] ) ? absint( $_POST['suite_max_capacity'] ) : 5;
 		$max_capacity = max( 1, min( 50, $max_capacity ) );
+		$base_capacity = isset( $_POST['suite_base_capacity'] ) ? absint( $_POST['suite_base_capacity'] ) : 2;
+		$base_capacity = max( 1, min( $max_capacity, $base_capacity ) );
+		$regular_price = isset( $_POST['suite_regular_price'] ) ? absint( str_replace( ',', '', wp_unslash( $_POST['suite_regular_price'] ) ) ) : 0;
+		$weekend_price = isset( $_POST['suite_weekend_price'] ) ? absint( str_replace( ',', '', wp_unslash( $_POST['suite_weekend_price'] ) ) ) : 0;
+		$extra_guest_price = isset( $_POST['suite_extra_guest_price'] ) ? absint( str_replace( ',', '', wp_unslash( $_POST['suite_extra_guest_price'] ) ) ) : 0;
 
 		if ( '' === $title ) {
 			wp_die( esc_html__( 'عنوان سوئیت الزامی است.', 'mtal-persian-calendar' ), '', array( 'response' => 400 ) );
@@ -150,6 +162,10 @@ JS
 
 		update_post_meta( $suite_id, MTAL_Suite_Registry::META_TITLE_OVERRIDE, $title );
 		update_post_meta( $suite_id, '_mtal_suite_max_capacity', $max_capacity );
+		update_post_meta( $suite_id, '_mtal_base_capacity', $base_capacity );
+		update_post_meta( $suite_id, '_mtal_regular_price', $regular_price );
+		update_post_meta( $suite_id, '_mtal_weekend_price', $weekend_price );
+		update_post_meta( $suite_id, '_mtal_extra_guest_price', $extra_guest_price );
 		if ( $image_id ) {
 			update_post_meta( $suite_id, MTAL_Suite_Registry::META_IMAGE_OVERRIDE, $image_id );
 		} else {
@@ -190,6 +206,11 @@ JS
 		$status = $suite_id ? $suite->post_status : 'draft';
 		$max_capacity = $suite_id ? absint( get_post_meta( $suite_id, '_mtal_suite_max_capacity', true ) ) : 5;
 		$max_capacity = $max_capacity > 0 ? min( 50, $max_capacity ) : 5;
+		$base_capacity = $suite_id ? absint( get_post_meta( $suite_id, '_mtal_base_capacity', true ) ) : 2;
+		$base_capacity = $base_capacity > 0 ? min( $max_capacity, $base_capacity ) : min( 2, $max_capacity );
+		$regular_price = $suite_id ? absint( get_post_meta( $suite_id, '_mtal_regular_price', true ) ) : 0;
+		$weekend_price = $suite_id ? absint( get_post_meta( $suite_id, '_mtal_weekend_price', true ) ) : 0;
+		$extra_guest_price = $suite_id ? absint( get_post_meta( $suite_id, '_mtal_extra_guest_price', true ) ) : 0;
 		$source_posts = get_posts(
 			array(
 				'post_type'      => 'suites',
@@ -224,7 +245,12 @@ JS
 		wp_nonce_field( 'mtal_save_suite', 'mtal_suite_nonce' );
 		echo '<table class="form-table"><tbody>';
 		echo '<tr><th><label for="mtal-suite-title">عنوان سوئیت</label></th><td><input class="regular-text" required type="text" id="mtal-suite-title" name="suite_title" value="' . esc_attr( $title ) . '"></td></tr>';
-		echo '<tr><th><label for="mtal-suite-max-capacity">حداکثر گنجایش (نفر)</label></th><td><input type="number" id="mtal-suite-max-capacity" name="suite_max_capacity" min="1" max="50" step="1" required value="' . absint( $max_capacity ) . '"><p class="description">بیشترین تعداد مسافر مجاز برای این سوئیت؛ مستقل از ظرفیت پایه و قیمت نفر اضافه.</p></td></tr>';
+		echo '<tr><th colspan="2"><h2>ظرفیت و قیمت‌گذاری</h2></th></tr>';
+		echo '<tr><th><label for="mtal-suite-base-capacity">ظرفیت پایه (نفر)</label></th><td><input type="number" id="mtal-suite-base-capacity" name="suite_base_capacity" min="1" max="' . absint( $max_capacity ) . '" step="1" required value="' . absint( $base_capacity ) . '"><p class="description">تعداد نفراتی که قیمت عادی و آخر هفته برای آن‌ها محاسبه می‌شود.</p></td></tr>';
+		echo '<tr><th><label for="mtal-suite-max-capacity">حداکثر گنجایش (نفر)</label></th><td><input type="number" id="mtal-suite-max-capacity" name="suite_max_capacity" min="1" max="50" step="1" required value="' . absint( $max_capacity ) . '"><p class="description">بیشترین تعداد مسافر مجاز برای این سوئیت؛ ظرفیت پایه نباید از این مقدار بیشتر باشد.</p></td></tr>';
+		echo '<tr><th><label for="mtal-suite-regular-price">قیمت عادی هر شب</label></th><td><input class="regular-text mtal-price-input" inputmode="numeric" type="text" id="mtal-suite-regular-price" name="suite_regular_price" value="' . esc_attr( number_format( $regular_price, 0, '', ',' ) ) . '"><p class="description">مبلغ به واحد پولی فعلی افزونه.</p></td></tr>';
+		echo '<tr><th><label for="mtal-suite-weekend-price">قیمت آخر هفته هر شب</label></th><td><input class="regular-text mtal-price-input" inputmode="numeric" type="text" id="mtal-suite-weekend-price" name="suite_weekend_price" value="' . esc_attr( number_format( $weekend_price, 0, '', ',' ) ) . '"><p class="description">در صورت صفر بودن، قیمت عادی اعمال می‌شود.</p></td></tr>';
+		echo '<tr><th><label for="mtal-suite-extra-guest-price">هزینه هر نفر اضافه در هر شب</label></th><td><input class="regular-text mtal-price-input" inputmode="numeric" type="text" id="mtal-suite-extra-guest-price" name="suite_extra_guest_price" value="' . esc_attr( number_format( $extra_guest_price, 0, '', ',' ) ) . '"></td></tr>';
 		echo '<tr><th>تصویر سوئیت</th><td><input type="hidden" id="mtal-suite-image-id" name="suite_image_id" value="' . absint( $image_id ) . '"><div id="mtal-suite-image-preview">';
 		if ( $image_id && wp_attachment_is_image( $image_id ) ) {
 			echo wp_kses_post( wp_get_attachment_image( $image_id, 'medium', false, array( 'style' => 'max-width:180px;height:auto;' ) ) );
