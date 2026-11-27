@@ -75,19 +75,16 @@ final class MTAL_My_Account_Bookings {
 	}
 
 	public static function enqueue_assets() {
-		$endpoint_function_exists = function_exists( 'is_wc_endpoint_url' );
-		$is_bookings_endpoint     = $endpoint_function_exists && is_wc_endpoint_url( self::ENDPOINT );
-		$can_manage                = self::can_manage_bookings();
+		global $wp;
 
-		if ( ! headers_sent() ) {
-			header(
-				'X-MTAL-Bookings-Diagnostic: endpoint_function=' . ( $endpoint_function_exists ? '1' : '0' )
-				. '; endpoint=' . ( $is_bookings_endpoint ? '1' : '0' )
-				. '; capability=' . ( $can_manage ? '1' : '0' )
-			);
-		}
+		$is_account_page       = function_exists( 'is_account_page' ) && is_account_page();
+		$is_bookings_endpoint  = $is_account_page
+			&& isset( $wp->query_vars )
+			&& is_array( $wp->query_vars )
+			&& array_key_exists( self::ENDPOINT, $wp->query_vars );
+		$can_manage = self::can_manage_bookings();
 
-		if ( ! $endpoint_function_exists || ! $is_bookings_endpoint || ! $can_manage ) {
+		if ( ! $is_bookings_endpoint || ! $can_manage ) {
 			return;
 		}
 
