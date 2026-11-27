@@ -60,11 +60,13 @@ final class MTAL_Suite_Admin {
 	 * Load the WordPress media picker only on the suite management screen.
 	 */
 	public static function enqueue_suite_form_assets( $hook_suffix ) {
-		if ( ! isset( $_GET['page'] ) || self::PAGE_SLUG !== sanitize_key( wp_unslash( $_GET['page'] ) ) ) {
+		$is_admin_form = isset( $_GET['page'] ) && self::PAGE_SLUG === sanitize_key( wp_unslash( $_GET['page'] ) );
+		$is_account_form = isset( $_GET['mtal_suite_action'] ) && 'edit' === sanitize_key( wp_unslash( $_GET['mtal_suite_action'] ) );
+		if ( ! $is_admin_form && ! $is_account_form ) {
 			return;
 		}
 
-		$action = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : '';
+		$action = $is_account_form ? 'edit' : ( isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : '' );
 		if ( ! in_array( $action, array( 'add', 'edit' ), true ) ) {
 			return;
 		}
