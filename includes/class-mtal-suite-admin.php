@@ -131,6 +131,7 @@ final class MTAL_Suite_Admin {
 		echo '<div class="wrap" dir="rtl">';
 		echo '<h1>عیب‌یابی MTAL</h1>';
 		echo '<p>این صفحه فقط وضعیت داده‌ها و مهاجرت را نمایش می‌دهد؛ هیچ تنظیم یا داده‌ای را تغییر نمی‌دهد و مقادیر متا یا اطلاعات شخصی مشتریان را نشان نمی‌دهد.</p>';
+		self::render_migration_diagnostics();
 		echo '</div>';
 	}
 
