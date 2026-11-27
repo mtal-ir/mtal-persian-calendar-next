@@ -499,7 +499,7 @@ JS
 		$screen_action = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : '';
 		if ( in_array( $screen_action, array( 'add', 'edit' ), true ) ) {
 			$suite_id = isset( $_GET['suite_id'] ) ? absint( $_GET['suite_id'] ) : 0;
-			if ( 'add' === $screen_action && ! $suite_id ) {
+			if ( ! $suite_id && in_array( $screen_action, array( 'add', 'edit' ), true ) ) {
 				$existing_unlinked_id = MTAL_Suite_Registry::get_unlinked_suite_id();
 				if ( $existing_unlinked_id ) {
 					self::render_unlinked_suite_notice( $existing_unlinked_id );
