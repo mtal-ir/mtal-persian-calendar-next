@@ -77,7 +77,7 @@ final class MTAL_Suite_Admin {
 var frame;
 $('#mtal-suite-select-image').on('click',function(e){e.preventDefault();if(frame){frame.open();return;}frame=wp.media({title:'انتخاب تصویر سوئیت',button:{text:'استفاده از تصویر'},multiple:false,library:{type:'image'}});frame.on('select',function(){var item=frame.state().get('selection').first().toJSON();$('#mtal-suite-image-id').val(item.id);$('#mtal-suite-image-preview').empty().append($('<img>',{src:item.url,alt:'',css:{maxWidth:'180px',height:'auto'}}));$('#mtal-suite-remove-image').prop('hidden',false);});frame.open();});
 $('#mtal-suite-remove-image').on('click',function(e){e.preventDefault();$('#mtal-suite-image-id').val('0');$('#mtal-suite-image-preview').empty();$(this).prop('hidden',true);});
-function formatPrice(value){var digits=String(value).replace(/[^0-9]/g,'');return digits.replace(/\\B(?=(\\d{3})+(?!\\d))/g,',');}
+function formatPrice(value){var digits=String(value).replace(/[^0-9]/g,'');return digits.replace(/\B(?=(\d{3})+(?!\d))/g,',');}
 $('.mtal-price-input').each(function(){this.value=formatPrice(this.value);}).on('input',function(){var start=this.selectionStart;var before=this.value;var digitsBefore=before.slice(0,start).replace(/[^0-9]/g,'').length;this.value=formatPrice(before);var pos=0,count=0;while(pos<this.value.length&&count<digitsBefore){if(/[0-9]/.test(this.value.charAt(pos)))count++;pos++;}this.setSelectionRange(pos,pos);});
 $('form').on('submit',function(){$('.mtal-price-input').each(function(){this.value=this.value.replace(/,/g,'');});});
 });})(jQuery);
