@@ -18,6 +18,14 @@ final class MTAL_Suite_Admin {
 	}
 
 	public static function register_menu() {
+		add_management_page(
+			'عیب‌یابی MTAL',
+			'عیب‌یابی MTAL',
+			'manage_options',
+			'mtal-diagnostics',
+			array( __CLASS__, 'render_diagnostics_page' )
+		);
+
 		if (
 			! class_exists( 'MTAL_Booking_Admin' ) ||
 			! MTAL_Booking_Admin::current_user_can_manage_bookings()
@@ -109,6 +117,24 @@ final class MTAL_Suite_Admin {
 	}
 
 	/**
+	 * Render the dedicated, read-only MTAL diagnostics screen.
+	 */
+	public static function render_diagnostics_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'شما اجازه دسترسی به این صفحه را ندارید.', 'mtal-persian-calendar' ), '', array( 'response' => 403 ) );
+		}
+
+		if ( ! class_exists( 'MTAL_Suite_Registry' ) ) {
+			wp_die( esc_html__( 'مدل سوئیت‌های MTAL در دسترس نیست.', 'mtal-persian-calendar' ) );
+		}
+
+		echo '<div class="wrap" dir="rtl">';
+		echo '<h1>عیب‌یابی MTAL</h1>';
+		echo '<p>این صفحه فقط وضعیت داده‌ها و مهاجرت را نمایش می‌دهد؛ هیچ تنظیم یا داده‌ای را تغییر نمی‌دهد و مقادیر متا یا اطلاعات شخصی مشتریان را نشان نمی‌دهد.</p>';
+		echo '</div>';
+	}
+
+	/**
 	 * Show read-only migration diagnostics to site administrators.
 	 */
 	private static function render_migration_diagnostics() {
@@ -130,64 +156,72 @@ final class MTAL_Suite_Admin {
 			'_mtal_extra_guest_price',
 		);
 
-		$all_sources_count = new WP_Query(
-			array(
-				'post_type'      => 'suites',
-				'post_status'    => $statuses,
-				'posts_per_page' => 1,
-				'fields'         => 'ids',
-				'no_found_rows'  => false,
-			)
-		);
+		$source_status_counts = wp_count_posts( 'suites' );
+		$all_sources_count = 0;
+		foreach ( $statuses as $status ) {
+			if ( isset( $source_status_counts->$status ) ) {
+				$all_sources_count += (int) $source_status_counts->$status;
+			}
+		}
+
+		$calendar_sources_count = 0;
+		if ( post_type_exists( 'suites' ) ) {
+			$calendar_sources_query = new WP_Query(
+				array(
+					'post_type'              => 'suites',
+					'post_status'            => $statuses,
+					'posts_per_page'         => 1,
+					'fields'                 => 'ids',
+					'no_found_rows'          => false,
+					'update_post_meta_cache' => false,
+					'update_post_term_cache' => false,
+					'meta_query'             => array_merge(
+						array( 'relation' => 'OR' ),
+						array_map(
+							static function ( $meta_key ) {
+								return array(
+									'key'     => $meta_key,
+								'compare' => 'EXISTS',
+								);
+							},
+							$meta_keys
+						)
+					)
+				)
+			);
+			$calendar_sources_count = (int) $calendar_sources_query->found_posts;
+		}
+
+		$mtal_status_counts = wp_count_posts( MTAL_Suite_Registry::POST_TYPE );
+		$mtal_count = 0;
+		foreach ( $statuses as $status ) {
+			if ( isset( $mtal_status_counts->$status ) ) {
+				$mtal_count += (int) $mtal_status_counts->$status;
+			}
+		}
+
 		$source_samples = new WP_Query(
-			array(
-				'post_type'      => 'suites',
-				'post_status'    => $statuses,
-				'posts_per_page' => 10,
-				'orderby'        => 'ID',
-				'order'          => 'ASC',
-				'fields'         => 'ids',
-				'no_found_rows'  => true,
-			)
-		);
-		$calendar_source_ids = new WP_Query(
 			array(
 				'post_type'              => 'suites',
 				'post_status'            => $statuses,
-				'posts_per_page'         => -1,
+				'posts_per_page'         => 10,
+				'orderby'                => 'ID',
+				'order'                  => 'ASC',
 				'fields'                 => 'ids',
 				'no_found_rows'          => true,
 				'update_post_meta_cache' => false,
 				'update_post_term_cache' => false,
 			)
 		);
-		$calendar_sources_count = 0;
-		foreach ( $calendar_source_ids->posts as $source_post_id ) {
-			foreach ( $meta_keys as $meta_key ) {
-				if ( metadata_exists( 'post', $source_post_id, $meta_key ) ) {
-					$calendar_sources_count++;
-					break;
-				}
-			}
-		}
-		$mtal_count = new WP_Query(
-			array(
-				'post_type'      => MTAL_Suite_Registry::POST_TYPE,
-				'post_status'    => $statuses,
-				'posts_per_page' => 1,
-				'fields'         => 'ids',
-				'no_found_rows'  => false,
-			)
-		);
 
 		echo '<div class="notice notice-info" style="padding:12px 16px;margin:16px 0;">';
-		echo '<h2 style="margin-top:0;">گزارش عیب‌یابی مهاجرت (فقط خواندنی)</h2>';
-		echo '<p>این گزارش فقط برای مدیرکل نمایش داده می‌شود و هیچ داده یا تنظیمی را تغییر نمی‌دهد. از مقادیر متاهای ذخیره‌شده هیچ‌کدام نمایش داده نمی‌شود.</p>';
+		echo '<h2 style="margin-top:0;">گزارش وضعیت مهاجرت (فقط خواندنی)</h2>';
+		echo '<p>این گزارش فقط برای مدیرکل نمایش داده می‌شود. از مقادیر متاهای ذخیره‌شده هیچ‌کدام نمایش داده نمی‌شود.</p>';
 		echo '<ul style="list-style:disc;padding-right:20px;">';
 		echo '<li>وضعیت ثبت نوع نوشته <code>suites</code>: <strong>' . ( post_type_exists( 'suites' ) ? 'ثبت شده' : 'ثبت نشده' ) . '</strong></li>';
-		echo '<li>تعداد کل نوشته‌های <code>suites</code> در وضعیت‌های بررسی‌شده: <strong>' . absint( $all_sources_count->found_posts ) . '</strong></li>';
+		echo '<li>تعداد کل نوشته‌های <code>suites</code> در وضعیت‌های بررسی‌شده: <strong>' . absint( $all_sources_count ) . '</strong></li>';
 		echo '<li>تعداد نوشته‌های <code>suites</code> دارای حداقل یکی از ۷ کلید تقویم: <strong>' . absint( $calendar_sources_count ) . '</strong></li>';
-		echo '<li>تعداد رکوردهای مستقل <code>' . esc_html( MTAL_Suite_Registry::POST_TYPE ) . '</code>: <strong>' . absint( $mtal_count->found_posts ) . '</strong></li>';
+		echo '<li>تعداد رکوردهای مستقل <code>' . esc_html( MTAL_Suite_Registry::POST_TYPE ) . '</code>: <strong>' . absint( $mtal_count ) . '</strong></li>';
 		echo '<li>وضعیت مهاجرت v1: <code>' . esc_html( wp_json_encode( $state_v1 ) ) . '</code></li>';
 		echo '<li>وضعیت مهاجرت v2: <code>' . esc_html( wp_json_encode( $state_v2 ) ) . '</code></li>';
 		echo '<li>وضعیت مهاجرت v3: <code>' . esc_html( wp_json_encode( $state_v3 ) ) . '</code></li>';
