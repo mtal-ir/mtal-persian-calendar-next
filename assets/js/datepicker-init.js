@@ -112,40 +112,14 @@
 	}
 
 	function resolveSuiteMaxCapacity(host, fallbackMax) {
-		const attrMax = parsePositiveInt(host.getAttribute('data-mtal-max-guests') || cfg.maxGuests, 0);
-		if (attrMax > 0) return attrMax;
+		// The calendar host carries the suite-specific value from the independent
+		// MTAL suite record. Never replace it with page-wide or title-based guesses.
+		const hostMax = parsePositiveInt(host.getAttribute('data-mtal-max-guests'), 0);
+		if (hostMax > 0) return hostMax;
 
-		const card =
-			host.closest('.jet-listing-grid__item, .elementor-grid-item, .elementor-element, .post-item') ||
-			host.closest('form');
-		const searchContext = card || document.body;
-		const suiteLink = searchContext.querySelector('a.mtal-suite-link, a[href*="suite"], .elementor-post__title a, a');
-		const cardText = searchContext.innerText || '';
-		const urlString = suiteLink ? suiteLink.href : window.location.href;
-
-		if (
-			urlString.includes('suite-one') ||
-			urlString.includes('suite-two') ||
-			cardText.includes('سوئیت ۱') ||
-			cardText.includes('سوئیت ۲')
-		) {
-			return 3;
-		}
-		if (
-			urlString.includes('suite-three') ||
-			urlString.includes('suite-four') ||
-			cardText.includes('سوئیت ۳') ||
-			cardText.includes('سوئیت ۴')
-		) {
-			return 4;
-		}
-		if (urlString.includes('suite-five') || cardText.includes('سوئیت ۵')) {
-			return 5;
-		}
-
+		// Older embeds may not have the host attribute; retain a safe global default.
 		return Math.max(1, parsePositiveInt(fallbackMax, 5));
 	}
-
 	function setElementValue(el, outVal) {
 		if (!el) return;
 		let strVal = outVal !== undefined && outVal !== null ? String(outVal) : '';
@@ -1170,13 +1144,12 @@
 		const helperCal = new window.MTALPersianCalendar({
 			mode: 'inline',
 			mountEl: document.createElement('div'),
-			maxMonths: 3,
 		});
 
 		adminHosts.forEach((host) => {
 			host.setAttribute('data-mtal-admin-init', '1');
 			const mount = host.querySelector('.mtal-admin-cal-mount') || host;
-			const postId = parsePositiveInt(host.getAttribute('data-mtal-post-id') || cfg.postId, 0);
+			const postId = parsePositiveInt(host.getAttribute('data-mtal-suite-id') || host.getAttribute('data-mtal-post-id') || cfg.postId, 0);
 
 			let blockedList = Array.isArray(parseJsonAttr(host.getAttribute('data-mtal-blocked-dates'), []))
 				? [...parseJsonAttr(host.getAttribute('data-mtal-blocked-dates'), [])]
@@ -1185,12 +1158,8 @@
 				? [...parseJsonAttr(host.getAttribute('data-mtal-holiday-dates'), [])]
 				: [];
 			let manualPricesObj = Object.assign({}, parseJsonAttr(host.getAttribute('data-mtal-manual-prices'), {}));
-			let regularPrice = parsePositiveInt(host.getAttribute('data-mtal-regular-price'), 0);
-			let weekendPrice = parsePositiveInt(host.getAttribute('data-mtal-weekend-price'), 0);
-			let baseCapacity = Math.max(1, parsePositiveInt(host.getAttribute('data-mtal-base-capacity'), 2));
-			let extraGuestPrice = Math.max(0, parsePositiveInt(host.getAttribute('data-mtal-extra-guest-price'), 0));
-
-			let actionMode = 'toggle_block';
+			let actionMode = 'free';
+			let selectedManualDate = '';
 			let viewYear = helperCal.today.jy;
 			let viewMonth = helperCal.today.jm;
 
@@ -1226,10 +1195,6 @@
 					blockedDates: [...blockedList],
 					holidayDates: [...holidayList],
 					manualPrices: Object.assign({}, manualPricesObj),
-					regularPrice,
-					weekendPrice,
-					baseCapacity,
-					extraGuestPrice,
 				};
 			}
 
@@ -1242,8 +1207,9 @@
 				const modeBar = document.createElement('div');
 				modeBar.className = 'mtal-admin-modes';
 				modeBar.innerHTML = `
+					<button type="button" class="mtal-admin-mode-btn ${actionMode === 'free' ? 'is-active' : ''}" data-mode="free">تقویم آزاد</button>
 					<button type="button" class="mtal-admin-mode-btn ${actionMode === 'toggle_block' ? 'is-active' : ''}" data-mode="toggle_block">بستن / باز کردن روز</button>
-					<button type="button" class="mtal-admin-mode-btn ${actionMode === 'toggle_holiday' ? 'is-active' : ''}" data-mode="toggle_holiday">تعطیلات رسمی (قرمز)</button>
+					<button type="button" class="mtal-admin-mode-btn ${actionMode === 'toggle_holiday' ? 'is-active' : ''}" data-mode="toggle_holiday">تعطیلات رسمی</button>
 					<button type="button" class="mtal-admin-mode-btn ${actionMode === 'set_manual_price' ? 'is-active' : ''}" data-mode="set_manual_price">قیمت دستی روز</button>
 				`;
 
@@ -1255,21 +1221,29 @@
 				});
 				box.appendChild(modeBar);
 
+				const modeHint = document.createElement('div');
+				modeHint.className = 'mtal-admin-mode-hint';
+				modeHint.textContent = actionMode === 'free'
+					? 'تقویم در حالت آزاد است؛ انتخاب روزها هیچ تغییری ایجاد نمی‌کند.'
+					: actionMode === 'toggle_block'
+						? 'برای بستن یا آزاد کردن روز، روی تاریخ موردنظر کلیک کنید.'
+						: actionMode === 'toggle_holiday'
+							? 'برای علامت‌گذاری یا برداشتن تعطیلی، روی تاریخ موردنظر کلیک کنید.'
+							: 'برای ثبت یا ویرایش قیمت دستی، روز موردنظر را انتخاب کنید.';
+				box.appendChild(modeHint);
+
 				const nav = document.createElement('div');
 				nav.className = 'mtal-cal-header';
 				const nextBtn = document.createElement('button');
 				nextBtn.type = 'button';
 				nextBtn.className = 'mtal-cal-nav';
 				nextBtn.setAttribute('aria-label', 'ماه بعد');
-				nextBtn.textContent = '‹';
+				nextBtn.textContent = '›';
 				nextBtn.addEventListener('click', () => {
 					const total = viewYear * 12 + (viewMonth - 1) + 1;
-					const maxIdx = helperCal.today.jy * 12 + (helperCal.today.jm - 1) + 2;
-					if (total <= maxIdx) {
-						viewYear = Math.floor(total / 12);
-						viewMonth = (total % 12) + 1;
-						renderAdminUI();
-					}
+					viewYear = Math.floor(total / 12);
+					viewMonth = (total % 12) + 1;
+					renderAdminUI();
 				});
 
 				const title = document.createElement('div');
@@ -1284,7 +1258,7 @@
 				prevBtn.type = 'button';
 				prevBtn.className = 'mtal-cal-nav';
 				prevBtn.setAttribute('aria-label', 'ماه قبل');
-				prevBtn.textContent = '›';
+				prevBtn.textContent = '‹';
 				prevBtn.addEventListener('click', () => {
 					const total = viewYear * 12 + (viewMonth - 1) - 1;
 					const minIdx = helperCal.today.jy * 12 + (helperCal.today.jm - 1);
@@ -1295,10 +1269,19 @@
 					}
 				});
 
-				nav.appendChild(nextBtn);
-				nav.appendChild(title);
 				nav.appendChild(prevBtn);
+				nav.appendChild(title);
+				nav.appendChild(nextBtn);
 				box.appendChild(nav);
+
+				const weekdayRow = document.createElement('div');
+				weekdayRow.className = 'mtal-admin-weekdays';
+				['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'].forEach((label) => {
+					const dayLabel = document.createElement('div');
+					dayLabel.textContent = label;
+					weekdayRow.appendChild(dayLabel);
+				});
+				box.appendChild(weekdayRow);
 
 				const grid = document.createElement('div');
 				grid.className = 'mtal-cal-days';
@@ -1354,24 +1337,13 @@
 					if (manualPricesObj[s]) btn.classList.add('has-manual-price');
 
 					btn.addEventListener('click', () => {
+						if (actionMode === 'free') return;
 						if (actionMode === 'toggle_block') {
 							toggleItem(blockedList, s);
 						} else if (actionMode === 'toggle_holiday') {
 							toggleItem(holidayList, s);
 						} else if (actionMode === 'set_manual_price') {
-							const currentVal = manualPricesObj[s] || '';
-							const input = window.prompt(
-								`قیمت دستی برای تاریخ ${s} (تومان؛ خالی یا ۰ برای حذف):`,
-								currentVal
-							);
-							if (input !== null) {
-								const num = parsePositiveInt(input, 0);
-								if (num > 0) {
-									manualPricesObj[s] = num;
-								} else {
-									delete manualPricesObj[s];
-								}
-							}
+							selectedManualDate = s;
 						}
 						renderAdminUI();
 					});
@@ -1381,45 +1353,56 @@
 
 				box.appendChild(grid);
 
-				const priceWrap = document.createElement('div');
-				priceWrap.className = 'mtal-admin-prices';
-				priceWrap.innerHTML = `
-					<label>قیمت معمولی (تومان): <input type="number" class="mtal-reg-price-input" value="${regularPrice}" min="0" /></label>
-					<label>قیمت آخر هفته چهارشنبه/پنجشنبه (تومان): <input type="number" class="mtal-wk-price-input" value="${weekendPrice}" min="0" /></label>
-					<label>ظرفیت پایه (نفر): <input type="number" class="mtal-base-cap-input" value="${baseCapacity}" min="1" /></label>
-					<label>قیمت نفر اضافه هر شب (تومان): <input type="number" class="mtal-extra-guest-input" value="${extraGuestPrice}" min="0" /></label>
-				`;
-
-				const regInput = priceWrap.querySelector('.mtal-reg-price-input');
-				const wkInput = priceWrap.querySelector('.mtal-wk-price-input');
-				const capInput = priceWrap.querySelector('.mtal-base-cap-input');
-				const extraInput = priceWrap.querySelector('.mtal-extra-guest-input');
-
-				const syncInputsToState = () => {
-					regularPrice = Math.max(0, parsePositiveInt(regInput.value, 0));
-					weekendPrice = Math.max(0, parsePositiveInt(wkInput.value, 0));
-					baseCapacity = Math.max(1, parsePositiveInt(capInput.value, 2));
-					extraGuestPrice = Math.max(0, parsePositiveInt(extraInput.value, 0));
-				};
-
-				[regInput, wkInput, capInput, extraInput].forEach((inp) => {
-					inp.addEventListener('input', syncInputsToState);
-					inp.addEventListener('change', syncInputsToState);
-				});
-				box.appendChild(priceWrap);
+				if (actionMode === 'set_manual_price' && selectedManualDate) {
+					const editor = document.createElement('div');
+					editor.className = 'mtal-admin-manual-editor';
+					const currentPrice = manualPricesObj[selectedManualDate] || '';
+					editor.innerHTML = `
+						<div class="mtal-admin-manual-title">قیمت دستی تاریخ ${selectedManualDate}</div>
+						<label>قیمت این روز (تومان)
+							<input type="text" inputmode="numeric" class="mtal-manual-price-input" value="${currentPrice ? Number(currentPrice).toLocaleString('en-US') : ''}" placeholder="مثلاً ۱٬۵۰۰٬۰۰۰">
+						</label>
+						<div class="mtal-admin-manual-actions">
+							<button type="button" class="mtal-admin-manual-save">ثبت قیمت</button>
+							<button type="button" class="mtal-admin-manual-remove">حذف قیمت دستی</button>
+							<button type="button" class="mtal-admin-manual-cancel">انصراف</button>
+						</div>
+					`;
+					const priceInput = editor.querySelector('.mtal-manual-price-input');
+					priceInput.addEventListener('input', () => {
+						const digits = priceInput.value.replace(/[^0-9۰-۹٠-٩]/g, '').replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+						priceInput.value = digits ? Number(digits).toLocaleString('en-US') : '';
+					});
+					editor.querySelector('.mtal-admin-manual-save').addEventListener('click', () => {
+						const amount = parsePositiveInt(priceInput.value, 0);
+						if (amount > 0) manualPricesObj[selectedManualDate] = amount;
+						else delete manualPricesObj[selectedManualDate];
+						selectedManualDate = '';
+						renderAdminUI();
+					});
+					editor.querySelector('.mtal-admin-manual-remove').addEventListener('click', () => {
+						delete manualPricesObj[selectedManualDate];
+						selectedManualDate = '';
+						renderAdminUI();
+					});
+					editor.querySelector('.mtal-admin-manual-cancel').addEventListener('click', () => {
+						selectedManualDate = '';
+						renderAdminUI();
+					});
+					box.appendChild(editor);
+				}
 
 				const saveRow = document.createElement('div');
 				saveRow.className = 'mtal-admin-save-row';
 				const saveBtn = document.createElement('button');
 				saveBtn.type = 'button';
 				saveBtn.className = 'mtal-cal-confirm-btn';
-				saveBtn.textContent = 'ذخیره تنظیمات تقویم و قیمت';
+				saveBtn.textContent = 'ذخیره تغییرات تقویم';
 
 				const statusMsg = document.createElement('div');
 				statusMsg.className = 'mtal-admin-status';
 
 				saveBtn.addEventListener('click', () => {
-					syncInputsToState();
 					const payload = getCurrentRulesPayload();
 					applyRulesToSuiteCalendars(postId, payload);
 					host.dispatchEvent(new CustomEvent('mtal:rulesUpdated', { detail: payload, bubbles: true }));
@@ -1436,10 +1419,6 @@
 					fd.append('blocked_dates', JSON.stringify(blockedList));
 					fd.append('holiday_dates', JSON.stringify(holidayList));
 					fd.append('manual_prices', JSON.stringify(manualPricesObj));
-					fd.append('regular_price', String(regularPrice));
-					fd.append('weekend_price', String(weekendPrice));
-					fd.append('base_capacity', String(baseCapacity));
-					fd.append('extra_guest_price', String(extraGuestPrice));
 
 					saveBtn.disabled = true;
 					fetch(cfg.ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' })

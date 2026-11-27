@@ -20,6 +20,7 @@ final class MTAL_Booking_Workflow {
 		add_action( 'elementor_pro/forms/new_record', array( __CLASS__, 'handle_elementor_submission' ), 20, 2 );
 		add_action( 'add_meta_boxes', array( __CLASS__, 'add_order_metabox' ) );
 		add_action( 'admin_post_mtal_booking_decision', array( __CLASS__, 'handle_admin_decision' ) );
+		add_action( 'admin_post_mtal_my_account_booking_decision', array( __CLASS__, 'handle_my_account_booking_decision' ) );
 		add_action( 'wp_ajax_mtal_booking_status', array( __CLASS__, 'ajax_booking_status' ) );
 		add_action( 'wp_ajax_nopriv_mtal_booking_status', array( __CLASS__, 'ajax_booking_status' ) );
 		add_action( 'wp_ajax_mtal_booking_cancel', array( __CLASS__, 'ajax_cancel_booking' ) );
@@ -221,19 +222,29 @@ final class MTAL_Booking_Workflow {
 			return;
 		}
 		$fields = self::extract_fields( $record );
-		$suite_id = isset( $fields['mtal_post_id'] ) ? absint( $fields['mtal_post_id'] ) : 0;
+		$suite_reference_id = isset( $fields['mtal_post_id'] ) ? absint( $fields['mtal_post_id'] ) : 0;
+		$suite_id = $suite_reference_id ? MTAL_Persian_Calendar::resolve_suite_id( $suite_reference_id ) : 0;
 		$range = self::find_date_range( $fields );
 		$guests = isset( $fields['mtal_qty'] ) ? absint( $fields['mtal_qty'] ) : 0;
 		if ( ! $suite_id || ! $range || $guests < 1 ) {
 			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
 				$missing = array();
-				if ( ! $suite_id ) $missing[] = 'شناسه سوئیت';
+				if ( ! $suite_id ) $missing[] = 'شناسه سوئیت معتبر';
 				if ( ! $range ) $missing[] = 'بازه تاریخ ورود و خروج';
 				if ( $guests < 1 ) $missing[] = 'تعداد مسافران';
 				$handler->add_error_message( 'اطلاعات رزرو به سرور نرسید یا ناقص است: ' . implode( '، ', $missing ) . '. فرم را بررسی کنید و دوباره ارسال نکنید؛ با پشتیبانی تماس بگیرید.' );
 			}
 			return;
 		}
+		$source_post = class_exists( 'MTAL_Suite_Registry' ) ? MTAL_Suite_Registry::get_source_post( $suite_id ) : null;
+		if ( ! $source_post || 'publish' !== $source_post->post_status ) {
+			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
+				$handler->add_error_message( 'سوئیت انتخاب‌شده معتبر یا منتشرشده نیست؛ لطفاً صفحه سوئیت را دوباره بارگذاری کنید.' );
+			}
+			return;
+		}
+		// The canonical MTAL suite ID is now used for pricing, locking, holds
+		// and the WooCommerce order metadata below.
 		$price = MTAL_Persian_Calendar::calculate_stay_price( $suite_id, $range[0], $range[1], $guests );
 		if ( is_wp_error( $price ) ) {
 			if ( is_object( $handler ) && method_exists( $handler, 'add_error_message' ) ) {
@@ -312,7 +323,7 @@ final class MTAL_Booking_Workflow {
 		$item->set_tax_status( 'none' );
 		$order->add_item( $item );
 
-		$name = self::find_field_value( $fields, '/(name|fullname|full_name|first_name)/i' );
+		$name = isset( $fields['fullname'] ) ? $fields['fullname'] : '';
 		$phone = self::find_field_value( $fields, '/(phone|mobile|tel|cell)/i' );
 		$email = self::find_field_value( $fields, '/email/i' );
 		if ( $name ) {
@@ -509,28 +520,24 @@ final class MTAL_Booking_Workflow {
 		return $needs_payment;
 	}
 
-	public static function handle_admin_decision() {
-		$order_id = isset( $_GET['order_id'] ) ? absint( $_GET['order_id'] ) : 0;
-		$decision = isset( $_GET['decision'] ) ? sanitize_key( wp_unslash( $_GET['decision'] ) ) : '';
-		if ( ! current_user_can( 'manage_woocommerce' ) || ! $order_id || ! in_array( $decision, array( 'approve', 'reject' ), true ) ) {
-			wp_die( 'دسترسی غیرمجاز است.' );
+	/**
+	 * Apply an approval or rejection to a pending MTAL booking.
+	 *
+	 * @return true|WP_Error
+	 */
+	private static function apply_booking_decision( $order_id, $decision ) {
+		$order = wc_get_order( absint( $order_id ) );
+		if ( ! $order || ! $order->get_meta( '_mtal_booking_suite_id' ) || 'mtal-pending' !== $order->get_status() ) {
+			return new WP_Error( 'mtal_booking_not_pending', 'این درخواست دیگر در انتظار تصمیم مدیر نیست.' );
 		}
-		check_admin_referer( 'mtal_booking_decision_' . $order_id );
-		$order = wc_get_order( $order_id );
-		if ( ! $order || 'mtal-pending' !== $order->get_status() ) {
-			wp_die( 'این درخواست دیگر در انتظار تصمیم مدیر نیست.' );
-		}
+
 		$expires = (int) $order->get_meta( '_mtal_booking_expires_at' );
-		if ( $expires <= time() ) {
-			$order->update_status( 'cancelled', 'مهلت ۳۰ دقیقه‌ای درخواست به پایان رسید.' );
+		if ( ! $expires || $expires <= time() ) {
+			$order->update_status( 'cancelled', 'مهلت ۳۰ دقیقه‌ای درخواست به پایان رسید؛ تاریخ‌ها آزاد شدند.' );
 			self::release_order_holds( $order_id );
-			$redirect = wp_get_referer();
-			if ( ! $redirect ) {
-				$redirect = admin_url( 'post.php?post=' . $order_id . '&action=edit&mtal_booking_expired=1' );
-			}
-			wp_safe_redirect( $redirect );
-			exit;
+			return new WP_Error( 'mtal_booking_expired', 'مهلت این درخواست به پایان رسیده و تاریخ‌ها آزاد شدند.' );
 		}
+
 		if ( 'reject' === $decision ) {
 			$order->update_status( 'cancelled', 'درخواست رزرو توسط مدیر رد شد؛ تاریخ‌ها آزاد شدند.' );
 			self::release_order_holds( $order_id );
@@ -540,9 +547,60 @@ final class MTAL_Booking_Workflow {
 			$order->add_order_note( 'لینک پرداخت: ' . $order->get_checkout_payment_url() );
 			self::email_booking_decision( $order, true );
 		}
+		return true;
+	}
+
+	/**
+	 * Handle decisions submitted from the privileged My Account endpoint.
+	 * This front-end action deliberately uses POST and a per-order nonce.
+	 */
+	public static function handle_my_account_booking_decision() {
+		$order_id = isset( $_POST['order_id'] ) ? absint( $_POST['order_id'] ) : 0;
+		$decision = isset( $_POST['decision'] ) ? sanitize_key( wp_unslash( $_POST['decision'] ) ) : '';
+		$can_manage = class_exists( 'MTAL_Booking_Admin' )
+			? MTAL_Booking_Admin::current_user_can_manage_bookings()
+			: ( current_user_can( 'manage_options' ) || current_user_can( 'manage_woocommerce' ) );
+
+		if ( ! $can_manage || ! $order_id || ! in_array( $decision, array( 'approve', 'reject' ), true ) ) {
+			wp_die( 'دسترسی غیرمجاز است.', '', array( 'response' => 403 ) );
+		}
+		check_admin_referer( 'mtal_my_account_booking_decision_' . $order_id );
+
+		$result = self::apply_booking_decision( $order_id, $decision );
+		$redirect = wp_get_referer();
+		if ( ! $redirect && function_exists( 'wc_get_account_endpoint_url' ) ) {
+			$redirect = wc_get_account_endpoint_url( 'mtal-bookings' );
+		}
+		if ( ! $redirect ) {
+			$redirect = home_url( '/' );
+		}
+		if ( is_wp_error( $result ) ) {
+			$redirect = add_query_arg( 'mtal_booking_notice', $result->get_error_code(), $redirect );
+		} else {
+			$redirect = add_query_arg( 'mtal_booking_notice', 'decision_saved', $redirect );
+		}
+		wp_safe_redirect( $redirect );
+		exit;
+	}
+
+	public static function handle_admin_decision() {
+		$order_id = isset( $_GET['order_id'] ) ? absint( $_GET['order_id'] ) : 0;
+		$decision = isset( $_GET['decision'] ) ? sanitize_key( wp_unslash( $_GET['decision'] ) ) : '';
+		$can_manage = class_exists( 'MTAL_Booking_Admin' )
+			? MTAL_Booking_Admin::current_user_can_manage_bookings()
+			: ( current_user_can( 'manage_options' ) || current_user_can( 'manage_woocommerce' ) );
+		if ( ! $can_manage || ! $order_id || ! in_array( $decision, array( 'approve', 'reject' ), true ) ) {
+			wp_die( 'دسترسی غیرمجاز است.' );
+		}
+		check_admin_referer( 'mtal_booking_decision_' . $order_id );
+
+		$result = self::apply_booking_decision( $order_id, $decision );
 		$redirect = wp_get_referer();
 		if ( ! $redirect ) {
 			$redirect = admin_url( 'post.php?post=' . $order_id . '&action=edit' );
+		}
+		if ( is_wp_error( $result ) && 'mtal_booking_expired' !== $result->get_error_code() ) {
+			wp_die( esc_html( $result->get_error_message() ) );
 		}
 		wp_safe_redirect( $redirect );
 		exit;

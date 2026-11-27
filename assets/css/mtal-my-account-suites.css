@@ -1,0 +1,31 @@
+.mtal-account-suites{width:100%;direction:rtl;color:inherit}
+.mtal-account-suites__header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 22px}
+.mtal-account-suites__header h2{margin:0 0 6px;font-size:1.45em}
+.mtal-account-suites__header p{margin:0;color:#6b7280;font-size:.92em}
+.mtal-account-suites__add,.mtal-account-suites__actions a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 16px;border-radius:9px;text-decoration:none;font-weight:600;transition:background .18s ease,border-color .18s ease}
+.mtal-account-suites__add{background:#1f6f5c;color:#fff!important;border:1px solid #1f6f5c}
+.mtal-account-suites__add:hover{background:#185746}
+.mtal-account-suites__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.mtal-account-suites__card{min-width:0;padding:18px;border:1px solid #e5e7eb;border-radius:14px;background:#fff;box-shadow:0 2px 8px rgba(15,23,42,.035)}
+.mtal-account-suites__identity{display:flex;align-items:center;gap:13px;min-width:0}
+.mtal-account-suites__image,.mtal-account-suites__image-placeholder{display:block;flex:0 0 76px;width:76px;height:76px;object-fit:cover;border-radius:11px;background:#f3f4f6}
+.mtal-account-suites__image-placeholder{display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:28px}
+.mtal-account-suites__identity-text{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
+.mtal-account-suites__identity-text h3{margin:0;font-size:1.08em;overflow-wrap:anywhere}
+.mtal-account-suites__identity-text span{font-size:.82em;color:#6b7280}
+.mtal-account-suites__identity-text .mtal-account-suites__status{padding:3px 9px;border-radius:20px;background:#f3f4f6;color:#374151}
+.mtal-account-suites__details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0;padding:15px 0;border-top:1px solid #edf0f2;border-bottom:1px solid #edf0f2}
+.mtal-account-suites__details div,.mtal-account-suites__source{display:flex;flex-direction:column;gap:5px;min-width:0}
+.mtal-account-suites__details span,.mtal-account-suites__source span{font-size:.8em;color:#6b7280}
+.mtal-account-suites__details strong,.mtal-account-suites__source strong{font-size:.94em;overflow-wrap:anywhere}
+.mtal-account-suites__source{margin-bottom:16px}
+.mtal-account-suites__actions{display:flex;flex-wrap:wrap;gap:9px}
+.mtal-account-suites__actions a{flex:1 1 130px;border:1px solid #d1d5db;color:#374151!important;background:#fff}
+.mtal-account-suites__actions a:hover{background:#f9fafb;border-color:#9ca3af}
+.mtal-account-suites__empty{padding:28px 20px;text-align:center;border:1px dashed #d1d5db;border-radius:14px}
+.mtal-account-suites__empty p{color:#6b7280}
+.mtal-account-suites__pagination{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:22px}
+.mtal-account-suites__pagination a,.mtal-account-suites__pagination span{display:inline-flex;min-width:38px;min-height:38px;align-items:center;justify-content:center;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;text-decoration:none}
+.mtal-account-suites__pagination [aria-current=page]{background:#1f6f5c;color:#fff;border-color:#1f6f5c}
+@media(max-width:900px){.mtal-account-suites__grid{grid-template-columns:1fr}}
+@media(max-width:600px){.mtal-account-suites__header{align-items:stretch;flex-direction:column}.mtal-account-suites__add{width:100%;box-sizing:border-box}.mtal-account-suites__card{padding:14px}.mtal-account-suites__details{gap:10px}.mtal-account-suites__actions{flex-direction:column}.mtal-account-suites__actions a{width:100%;box-sizing:border-box}}

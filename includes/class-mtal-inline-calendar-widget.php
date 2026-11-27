@@ -151,6 +151,7 @@ class MTAL_Inline_Calendar_Widget extends Widget_Base {
 		$storage_scope        = 'suite_' . $post_id;
 		$host_class           = 'modal_3months' === $mode ? 'mtal-cal-modal-host' : 'mtal-cal-inline-host';
 		$suite_data           = \MTAL_Persian_Calendar::get_suite_calendar_data( $post_id );
+		$visible_blocked_dates = $suite_data['blockedDates'];
 		?>
 		<div
 			id="<?php echo $widget_id; ?>"
@@ -170,6 +171,7 @@ class MTAL_Inline_Calendar_Widget extends Widget_Base {
 			data-mtal-weekend-price="<?php echo esc_attr( $suite_data['weekendPrice'] ); ?>"
 			data-mtal-base-capacity="<?php echo esc_attr( $suite_data['baseCapacity'] ); ?>"
 			data-mtal-extra-guest-price="<?php echo esc_attr( $suite_data['extraGuestPrice'] ); ?>"
+			data-mtal-max-guests="<?php echo esc_attr( $suite_data['maxCapacity'] ); ?>"
 		>
 			<div class="mtal-cal-inline-mount"></div>
 		</div>
