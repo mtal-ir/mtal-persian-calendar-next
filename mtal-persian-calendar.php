@@ -684,6 +684,14 @@ final class MTAL_Persian_Calendar {
 			}
 		}
 
+		$reviews_widget_file = MTAL_PC_PATH . 'includes/class-mtal-suite-reviews-widget.php';
+		if ( file_exists( $reviews_widget_file ) ) {
+			require_once $reviews_widget_file;
+			if ( class_exists( '\\MTAL_Suite_Reviews_Widget' ) ) {
+				$widgets_manager->register( new \\MTAL_Suite_Reviews_Widget() );
+			}
+		}
+
 		$search_widget_file = MTAL_PC_PATH . 'includes/class-mtal-availability-search-widget.php';
 		if ( file_exists( $search_widget_file ) ) {
 			require_once $search_widget_file;
