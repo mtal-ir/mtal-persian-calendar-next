@@ -70,7 +70,7 @@
 		const clearButton = host.querySelector('.mtal-cal-display-clear');
 		const bookButton = host.querySelector('.mtal-cal-display-book');
 		const message = host.querySelector('.mtal-cal-display-message');
-		const targetSelector = host.getAttribute('data-mtal-target-widget') || '.mtal-cal-inline-host';
+		const targetSelector = host.getAttribute('data-mtal-target-widget') || '.mtal-cal-inline-host, .mtal-cal-modal-host';
 		let selectedReference = 0;
 		let calendar = null;
 		let latestRules = null;
