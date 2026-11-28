@@ -25,3 +25,4 @@ jobs:
           node --check assets/js/datepicker-init.js
           node --check assets/js/persian-calendar-standalone.js
           node --check assets/js/calendar-display-widget.js
+          node --check assets/js/availability-search-widget.js
