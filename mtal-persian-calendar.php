@@ -2,7 +2,7 @@
 /**
  * Plugin Name: MTAL Booking
  * Description: افزونه مستقل تقویم جلالی برای انتخاب بازه دو‌تاریخی، مدیریت روزهای بسته و تعطیلات و قیمت‌گذاری؛ با ابزارک‌های المنتور و یکپارچگی با ووکامرس.
- * Version: 0.6.8
+ * Version: 0.6.9
  * Author: MTAL.IR
  * Author URI: https://mtal.ir
  * Text Domain: mtal-persian-calendar
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MTAL_PC_VERSION', '0.6.8' );
+define( 'MTAL_PC_VERSION', '0.6.9' );
 define( 'MTAL_PC_PATH', plugin_dir_path( __FILE__ ) );
 define( 'MTAL_PC_URL', plugin_dir_url( __FILE__ ) );
 
