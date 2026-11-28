@@ -1206,7 +1206,7 @@
 			let target = null;
 			if (options.targetSelector) {
 				try {
-					target = candidates.find((entry) => entry.host.matches(options.targetSelector)) || null;
+					target = candidates.find((entry) => entry.host.matches(options.targetSelector) || entry.host.closest(options.targetSelector)) || null;
 				} catch (error) {
 					return false;
 				}
