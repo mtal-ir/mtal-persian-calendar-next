@@ -196,6 +196,10 @@ JS
 			wp_die( esc_html__( 'ذخیره سوئیت انجام نشد.', 'mtal-persian-calendar' ), '', array( 'response' => 500 ) );
 		}
 		$suite_id = absint( $result );
+		if ( self::can_assign_suite_managers() && isset( $_POST['suite_manager_ids_present'] ) ) {
+			$raw_manager_ids = isset( $_POST['suite_manager_ids'] ) ? wp_unslash( $_POST['suite_manager_ids'] ) : array();
+			MTAL_Suite_Registry::set_manager_ids( $suite_id, is_array( $raw_manager_ids ) ? $raw_manager_ids : array() );
+		}
 
 		update_post_meta( $suite_id, MTAL_Suite_Registry::META_TITLE_OVERRIDE, $title );
 		update_post_meta( $suite_id, '_mtal_suite_max_capacity', $max_capacity );
@@ -253,6 +257,14 @@ JS
 	}
 
 	/**
+	 * Manager assignment is deliberately restricted to the WordPress admin
+	 * screens and users with site-administration capability.
+	 */
+	private static function can_assign_suite_managers() {
+		return is_admin() && current_user_can( 'manage_options' );
+	}
+
+	/**
 	 * Render the add/edit form for an independent MTAL suite.
 	 */
 	private static function render_suite_form( $suite_id = 0, $return_url = '' ) {
@@ -279,6 +291,8 @@ JS
 		$regular_price = $suite_id ? absint( get_post_meta( $suite_id, '_mtal_regular_price', true ) ) : 0;
 		$weekend_price = $suite_id ? absint( get_post_meta( $suite_id, '_mtal_weekend_price', true ) ) : 0;
 		$extra_guest_price = $suite_id ? absint( get_post_meta( $suite_id, '_mtal_extra_guest_price', true ) ) : 0;
+		$manager_ids = $suite_id ? MTAL_Suite_Registry::get_manager_ids( $suite_id ) : array();
+		$manager_users = self::can_assign_suite_managers() ? get_users( array( 'role' => 'mtal_accommodation_manager', 'orderby' => 'display_name', 'order' => 'ASC', 'fields' => array( 'ID', 'display_name', 'user_email' ) ) ) : array();
 		$source_posts = get_posts(
 			array(
 				'post_type'      => 'suites',
@@ -314,6 +328,20 @@ JS
 		wp_nonce_field( 'mtal_save_suite', 'mtal_suite_nonce' );
 		echo '<table class="form-table"><tbody>';
 		echo '<tr><th><label for="mtal-suite-title">عنوان سوئیت</label></th><td><input class="regular-text" required type="text" id="mtal-suite-title" name="suite_title" value="' . esc_attr( $title ) . '"></td></tr>';
+		if ( self::can_assign_suite_managers() ) {
+			echo '<tr><th><label for="mtal-suite-manager-ids">مدیران اقامتگاه</label></th><td>';
+			echo '<input type="hidden" name="suite_manager_ids_present" value="1">';
+			if ( ! empty( $manager_users ) ) {
+				echo '<select id="mtal-suite-manager-ids" name="suite_manager_ids[]" multiple="multiple" size="6" style="min-width:320px;max-width:100%;">';
+				foreach ( $manager_users as $manager_user ) {
+					echo '<option value="' . absint( $manager_user->ID ) . '"' . selected( in_array( absint( $manager_user->ID ), $manager_ids, true ), true, false ) . '>' . esc_html( $manager_user->display_name . ' — ' . $manager_user->user_email ) . '</option>';
+				}
+				echo '</select><p class="description">برای انتخاب چند مدیر، هنگام کلیک کلید Ctrl یا Command را نگه دارید. فقط کاربران دارای نقش «مدیر اقامتگاه» قابل انتخاب هستند.</p>';
+			} else {
+				echo '<p class="description">هنوز کاربری با نقش «مدیر اقامتگاه» ایجاد نشده است.</p>';
+			}
+			echo '</td></tr>';
+		}
 		echo '<tr><th colspan="2"><h2>ظرفیت و قیمت‌گذاری</h2></th></tr>';
 		echo '<tr><th><label for="mtal-suite-base-capacity">ظرفیت پایه (نفر)</label></th><td><input type="number" id="mtal-suite-base-capacity" name="suite_base_capacity" min="1" max="' . absint( $max_capacity ) . '" step="1" required value="' . absint( $base_capacity ) . '"><p class="description">تعداد نفراتی که قیمت عادی و آخر هفته برای آن‌ها محاسبه می‌شود.</p></td></tr>';
 		echo '<tr><th><label for="mtal-suite-max-capacity">حداکثر گنجایش (نفر)</label></th><td><input type="number" id="mtal-suite-max-capacity" name="suite_max_capacity" min="1" max="50" step="1" required value="' . absint( $max_capacity ) . '"><p class="description">بیشترین تعداد مسافر مجاز برای این سوئیت؛ ظرفیت پایه نباید از این مقدار بیشتر باشد.</p></td></tr>';
