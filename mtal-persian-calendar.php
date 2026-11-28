@@ -679,7 +679,7 @@ final class MTAL_Persian_Calendar {
 		$display_widget_file = MTAL_PC_PATH . 'includes/class-mtal-calendar-display-widget.php';
 		if ( file_exists( $display_widget_file ) ) {
 			require_once $display_widget_file;
-			if ( class_exists( '\\MTAL_Calendar_Display_Widget' ) ) {
+			if ( class_exists( '\MTAL_Calendar_Display_Widget' ) ) {
 				$widgets_manager->register( new \MTAL_Calendar_Display_Widget() );
 			}
 		}
@@ -687,7 +687,7 @@ final class MTAL_Persian_Calendar {
 		$reviews_widget_file = MTAL_PC_PATH . 'includes/class-mtal-suite-reviews-widget.php';
 		if ( file_exists( $reviews_widget_file ) ) {
 			require_once $reviews_widget_file;
-			if ( class_exists( '\\MTAL_Suite_Reviews_Widget' ) ) {
+			if ( class_exists( '\MTAL_Suite_Reviews_Widget' ) ) {
 				$widgets_manager->register( new \MTAL_Suite_Reviews_Widget() );
 			}
 		}
@@ -695,7 +695,7 @@ final class MTAL_Persian_Calendar {
 		$search_widget_file = MTAL_PC_PATH . 'includes/class-mtal-availability-search-widget.php';
 		if ( file_exists( $search_widget_file ) ) {
 			require_once $search_widget_file;
-			if ( class_exists( '\\MTAL_Availability_Search_Widget' ) ) {
+			if ( class_exists( '\MTAL_Availability_Search_Widget' ) ) {
 				$widgets_manager->register( new \MTAL_Availability_Search_Widget() );
 			}
 		}
