@@ -589,7 +589,7 @@ final class MTAL_Persian_Calendar {
 		if ( file_exists( $display_widget_file ) ) {
 			require_once $display_widget_file;
 			if ( class_exists( '\\MTAL_Calendar_Display_Widget' ) ) {
-				$widgets_manager->register( new \\MTAL_Calendar_Display_Widget() );
+				$widgets_manager->register( new \MTAL_Calendar_Display_Widget() );
 			}
 		}
 
