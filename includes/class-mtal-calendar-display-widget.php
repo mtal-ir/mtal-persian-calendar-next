@@ -125,24 +125,11 @@ class MTAL_Calendar_Display_Widget extends Widget_Base {
 					break;
 				}
 			}
-			if ( ! $selected_suite ) {
-				$display = MTAL_Suite_Registry::get_display_data( $locked_suite_id );
-				if ( $display ) {
-					$source = MTAL_Suite_Registry::get_source_post( $locked_suite_id );
-					if ( $source && 'publish' === $source->post_status ) {
-						$selected_suite = array(
-							'referenceId' => absint( $source->ID ),
-							'suiteId'     => absint( $locked_suite_id ),
-							'title'       => $display['title'],
-						);
-						$suites[] = $selected_suite;
-					}
-				}
-			}
 		}
 
 		$widget_id = 'mtal-calendar-display-' . esc_attr( $this->get_id() );
-		$locked    = ! empty( $selected_suite );
+		$locked    = (bool) $locked_suite_id;
+		$display_suites = $locked ? ( $selected_suite ? array( $selected_suite ) : array() ) : $suites;
 		?>
 		<div
 			id="<?php echo esc_attr( $widget_id ); ?>"
@@ -158,14 +145,17 @@ class MTAL_Calendar_Display_Widget extends Widget_Base {
 					<?php if ( ! $locked ) : ?>
 						<option value="">ابتدا سوئیت موردنظر را انتخاب کنید</option>
 					<?php endif; ?>
-					<?php foreach ( $suites as $suite ) : ?>
+					<?php if ( $locked && ! $selected_suite ) : ?>
+						<option value="">این سوئیت در حال حاضر قابل رزرو نیست</option>
+					<?php endif; ?>
+					<?php foreach ( $display_suites as $suite ) : ?>
 						<option value="<?php echo esc_attr( $suite['referenceId'] ); ?>" <?php selected( $locked ? $selected_suite['referenceId'] : 0, $suite['referenceId'] ); ?>>
 							<?php echo esc_html( $suite['title'] ); ?>
 						</option>
 					<?php endforeach; ?>
 				</select>
 			</div>
-			<?php if ( empty( $suites ) ) : ?>
+			<?php if ( empty( $display_suites ) ) : ?>
 				<p class="mtal-cal-display-message" role="status">در حال حاضر سوئیت قابل رزروی برای نمایش وجود ندارد.</p>
 			<?php endif; ?>
 			<div class="mtal-cal-display-calendar" hidden>
