@@ -717,6 +717,7 @@ require_once MTAL_PC_PATH . 'includes/class-mtal-customer-account-bookings.php';
 require_once MTAL_PC_PATH . 'includes/class-mtal-my-account-suites.php';
 require_once MTAL_PC_PATH . 'includes/class-mtal-suite-admin.php';
 require_once MTAL_PC_PATH . 'includes/class-mtal-accommodation-manager-role.php';
+require_once MTAL_PC_PATH . 'includes/class-mtal-suite-review-management.php';
 require_once MTAL_PC_PATH . 'includes/class-mtal-github-updater.php';
 register_activation_hook( __FILE__, array( 'MTAL_My_Account_Bookings', 'activate' ) );
 register_activation_hook( __FILE__, array( 'MTAL_Customer_Account_Bookings', 'activate' ) );
