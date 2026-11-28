@@ -35,10 +35,36 @@ class MTAL_Availability_Search_Widget extends Widget_Base {
 		return array( 'mtal-availability-search' );
 	}
 
+	protected function register_controls() {
+		$this->start_controls_section(
+			'mtal_availability_search_settings',
+			array(
+				'label' => esc_html__( 'تنظیمات جستجو', 'mtal-persian-calendar' ),
+				'tab'   => \\Elementor\\Controls_Manager::TAB_CONTENT,
+			)
+		);
+
+		$this->add_control(
+			'show_search_button',
+			array(
+				'label'        => esc_html__( 'نمایش دکمه جستجو', 'mtal-persian-calendar' ),
+				'type'         => \\Elementor\\Controls_Manager::SWITCHER,
+				'label_on'     => esc_html__( 'نمایش', 'mtal-persian-calendar' ),
+				'label_off'    => esc_html__( 'مخفی', 'mtal-persian-calendar' ),
+				'return_value' => 'yes',
+				'default'      => 'yes',
+			)
+		);
+
+		$this->end_controls_section();
+	}
+
 	protected function render() {
+		$settings = $this->get_settings_for_display();
+		$show_search_button = ! isset( $settings['show_search_button'] ) || 'yes' === $settings['show_search_button'];
 		$widget_id = 'mtal-availability-search-' . esc_attr( $this->get_id() );
 		?>
-		<div id="<?php echo esc_attr( $widget_id ); ?>" class="mtal-availability-search" dir="rtl">
+		<div id="<?php echo esc_attr( $widget_id ); ?>" class="mtal-availability-search" data-show-search-button="<?php echo $show_search_button ? '1' : '0'; ?>" dir="rtl">
 			<div class="mtal-availability-search-fields">
 				<button type="button" class="mtal-availability-date-field" data-date-field="check-in" aria-label="انتخاب تاریخ ورود">
 					<span class="mtal-availability-date-label">تاریخ ورود</span>
