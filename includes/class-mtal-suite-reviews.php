@@ -110,7 +110,8 @@ final class MTAL_Suite_Reviews {
 			}
 			$suite = class_exists( 'MTAL_Suite_Registry' ) ? MTAL_Suite_Registry::get_display_data( $suite_id ) : false;
 			$suite_title = is_array( $suite ) && ! empty( $suite['title'] ) ? $suite['title'] : 'سوئیت #' . $suite_id;
-			$status = '1' === (string) $review->comment_approved ? 'منتشرشده' : 'در انتظار بررسی';
+			$rejected = '1' === (string) get_comment_meta( $review->comment_ID, '_mtal_review_rejected', true );
+			$status = $rejected ? 'رد شده؛ می‌توانید ویرایش و دوباره ارسال کنید' : ( '1' === (string) $review->comment_approved ? 'منتشرشده' : 'در انتظار بررسی' );
 			$ratings = get_comment_meta( $review->comment_ID, self::META_RATINGS, true );
 			$title = (string) get_comment_meta( $review->comment_ID, '_mtal_review_title', true );
 			echo '<article class="mtal-customer-reviews__item">';
@@ -375,6 +376,7 @@ final class MTAL_Suite_Reviews {
 		update_comment_meta( $comment_id, '_mtal_review_history', $history );
 		update_comment_meta( $comment_id, self::META_RATINGS, $ratings );
 		update_comment_meta( $comment_id, self::META_AVERAGE, round( array_sum( $ratings ) / count( $ratings ), 2 ) );
+		delete_comment_meta( $comment_id, '_mtal_review_rejected' );
 		if ( '' === $title ) {
 			delete_comment_meta( $comment_id, '_mtal_review_title' );
 		} else {
