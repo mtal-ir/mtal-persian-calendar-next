@@ -480,9 +480,17 @@ final class MTAL_Suite_Reviews {
 
 		$comments = get_comments(
 			array(
-				'post_id' => $suite_id,
-				'type'    => self::COMMENT_TYPE,
-				'status'  => 'approve',
+				'post_id'   => $suite_id,
+				'type'      => self::COMMENT_TYPE,
+				'status'    => 'approve',
+				'meta_query' => array(
+					array(
+						'key'     => self::META_SUITE_ID,
+					'value'   => $suite_id,
+					'compare' => '=',
+					'type'    => 'NUMERIC',
+				),
+				),
 				'number'  => $limit,
 				'orderby' => 'comment_date_gmt',
 				'order'   => 'DESC',
@@ -522,9 +530,17 @@ final class MTAL_Suite_Reviews {
 
 		$comments = get_comments(
 			array(
-				'post_id' => $suite_id,
-				'type'    => self::COMMENT_TYPE,
-				'status'  => 'approve',
+				'post_id'   => $suite_id,
+				'type'      => self::COMMENT_TYPE,
+				'status'    => 'approve',
+				'meta_query' => array(
+					array(
+						'key'     => self::META_SUITE_ID,
+					'value'   => $suite_id,
+					'compare' => '=',
+					'type'    => 'NUMERIC',
+				),
+				),
 				'number'  => 0,
 				'fields'  => 'ids',
 			)
