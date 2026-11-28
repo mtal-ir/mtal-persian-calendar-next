@@ -526,6 +526,8 @@
 				checkOutSlash: hasValidRange ? formatSlash(end) : '',
 				checkInShort: start ? formatShortPersian(start) : '',
 				checkOutShort: hasValidRange ? formatShortPersian(end) : '',
+				checkInDisplay: start ? formatFullPersian(start).replace(/\\s+\\d{4}$/, '') : '',
+				checkOutDisplay: hasValidRange ? formatFullPersian(end).replace(/\\s+\\d{4}$/, '') : '',
 				nights: pricing.nights,
 				guestsCount: this.guestsCount,
 				extraGuests: pricing.extraGuests,
