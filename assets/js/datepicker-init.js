@@ -606,6 +606,7 @@
 		minusBtn.setAttribute('aria-label', 'کاهش تعداد مسافران');
 		minusBtn.textContent = '−';
 
+		const getCurrentMaxGuests = () => resolveSuiteMaxCapacity(host, maxGuests);
 		function refreshCounterUI() {
 			valSpan.textContent = toPersianDigits(cal.guestsCount);
 			const lbl = box.querySelector('.mtal-guests-count-label');
@@ -613,11 +614,11 @@
 				lbl.textContent = `${toPersianDigits(cal.guestsCount)} نفر`;
 			}
 			minusBtn.disabled = cal.guestsCount <= 1;
-			plusBtn.disabled = cal.guestsCount >= maxGuests;
+			plusBtn.disabled = cal.guestsCount >= getCurrentMaxGuests();
 		}
 
 		plusBtn.addEventListener('click', () => {
-			if (cal.guestsCount < maxGuests) {
+			if (cal.guestsCount < getCurrentMaxGuests()) {
 				cal.setGuestsCount(cal.guestsCount + 1, { notify: true });
 				refreshCounterUI();
 			}
@@ -1201,10 +1202,12 @@
 				try {
 					target = candidates.find((entry) => entry.host.matches(options.targetSelector)) || null;
 				} catch (error) {
-					target = null;
+					return false;
 				}
+				if (!target) return false;
+			} else {
+				target = candidates[0] || null;
 			}
-			if (!target) target = candidates[0] || null;
 			if (!target || !target.host._mtalBookingForm) return false;
 			if (target.host._mtalBookingForm._mtalBookingSubmitted) return false;
 			if (!target.switchSuite(referenceId, options.rules)) return false;
