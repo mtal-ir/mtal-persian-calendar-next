@@ -710,6 +710,7 @@ require_once MTAL_PC_PATH . 'includes/class-mtal-suite-registry.php';
 MTAL_Suite_Registry::init();
 
 require_once MTAL_PC_PATH . 'includes/class-mtal-booking-workflow.php';
+require_once MTAL_PC_PATH . 'includes/class-mtal-suite-reviews.php';
 require_once MTAL_PC_PATH . 'includes/class-mtal-booking-admin.php';
 require_once MTAL_PC_PATH . 'includes/class-mtal-my-account-bookings.php';
 require_once MTAL_PC_PATH . 'includes/class-mtal-customer-account-bookings.php';
