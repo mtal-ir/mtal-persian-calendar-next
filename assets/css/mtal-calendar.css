@@ -1494,3 +1494,58 @@ html.mtal-modal-open {
 		padding-inline: 10px;
 	}
 }
+
+
+/* Stabilize the display widget width when the price preview appears. */
+.mtal-cal-display-host,
+.mtal-cal-display-calendar,
+.mtal-cal-display-mount,
+.mtal-cal-display-pricing {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	box-sizing: border-box;
+}
+.mtal-cal-display-host {
+	overflow-x: clip;
+}
+.mtal-cal-display-host *,
+.mtal-cal-display-host *::before,
+.mtal-cal-display-host *::after {
+	box-sizing: border-box;
+}
+.mtal-cal-display-calendar .mtal-cal-panel,
+.mtal-cal-display-calendar .mtal-cal-months-grid,
+.mtal-cal-display-calendar .mtal-cal-month-block,
+.mtal-cal-display-pricing .mtal-pricing-breakdown {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+}
+.mtal-cal-display-pricing {
+	overflow-wrap: anywhere;
+}
+.mtal-cal-display-actions .mtal-cal-display-book {
+	background: #2563eb !important;
+	background-color: #2563eb !important;
+	color: #ffffff !important;
+	border: 1px solid #2563eb !important;
+	border-radius: 10px !important;
+	font-weight: 700 !important;
+	box-shadow: 0 2px 6px rgba(37, 99, 235, .2);
+	opacity: 1;
+}
+.mtal-cal-display-actions .mtal-cal-display-book:disabled {
+	background: #94a3b8 !important;
+	background-color: #94a3b8 !important;
+	color: #ffffff !important;
+	border-color: #94a3b8 !important;
+	opacity: .75;
+}
+.mtal-cal-display-actions .mtal-cal-display-clear {
+	background: #ffffff !important;
+	color: #334155 !important;
+	border: 1px solid #cbd5e1 !important;
+	border-radius: 10px !important;
+	font-weight: 700 !important;
+}
