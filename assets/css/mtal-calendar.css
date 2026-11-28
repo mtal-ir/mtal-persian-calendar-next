@@ -1393,3 +1393,104 @@ html.mtal-modal-open {
 		border-radius: 16px;
 	}
 }
+
+
+/* Customer-facing calendar display widget. */
+.mtal-cal-display-host {
+	width: 100%;
+	min-width: 0;
+	direction: rtl;
+}
+.mtal-cal-display-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 14px;
+}
+.mtal-cal-display-room-label {
+	flex: 0 0 auto;
+	font-weight: 700;
+	color: #374151;
+}
+.mtal-cal-display-room {
+	flex: 1 1 auto;
+	width: 100%;
+	min-width: 0;
+	min-height: 44px;
+	padding: 8px 12px;
+	border: 1px solid #d1d5db;
+	border-radius: 10px;
+	background: #fff;
+	color: #111827;
+}
+.mtal-cal-display-calendar[hidden],
+.mtal-cal-display-pricing[hidden] {
+	display: none !important;
+}
+.mtal-cal-display-calendar .mtal-cal-panel {
+	box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+.mtal-cal-mode-inline_responsive .mtal-cal-months-grid.is-responsive {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 18px;
+}
+.mtal-cal-display-actions {
+	display: flex;
+	align-items: stretch;
+	gap: 10px;
+	margin-top: 14px;
+}
+.mtal-cal-display-actions > button {
+	flex: 1 1 0;
+	min-height: 46px;
+}
+.mtal-cal-display-book:disabled {
+	opacity: .5;
+	cursor: not-allowed;
+}
+.mtal-cal-display-message {
+	margin: 10px 0 0;
+	color: #64748b;
+	font-size: 13px;
+	line-height: 1.8;
+}
+.mtal-cal-display-message:empty {
+	display: none;
+}
+.mtal-cal-display-pricing {
+	margin-top: 14px;
+}
+.mtal-cal-display-pricing .mtal-pricing-breakdown {
+	margin-top: 0;
+}
+@media (min-width: 1025px) {
+	.mtal-cal-mode-inline_responsive .mtal-cal-months-grid.is-responsive {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 24px;
+		align-items: start;
+	}
+	.mtal-cal-mode-inline_responsive .mtal-cal-months-grid.is-responsive .mtal-cal-month-block + .mtal-cal-month-block {
+		padding-inline-start: 20px;
+		border-inline-start: 1px dashed #e2e8f0;
+	}
+}
+@media (max-width: 1024px) {
+	.mtal-cal-mode-inline_responsive .mtal-cal-months-grid.is-responsive .mtal-cal-month-block:nth-child(2) {
+		display: none;
+	}
+	.mtal-cal-display-toolbar {
+		align-items: stretch;
+		flex-direction: column;
+		gap: 6px;
+	}
+}
+@media (max-width: 480px) {
+	.mtal-cal-display-actions {
+		gap: 8px;
+	}
+	.mtal-cal-display-actions > button {
+		min-height: 44px;
+		padding-inline: 10px;
+	}
+}
