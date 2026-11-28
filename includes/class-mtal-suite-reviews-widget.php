@@ -69,7 +69,12 @@ final class MTAL_Suite_Reviews_Widget extends Widget_Base {
 			return 0;
 		}
 
-		$post_type = get_post_type( $post_id );
+		$post = get_post( $post_id );
+		if ( ! $post || 'publish' !== $post->post_status ) {
+			return 0;
+		}
+
+		$post_type = $post->post_type;
 		if ( MTAL_Suite_Registry::POST_TYPE === $post_type ) {
 			return $post_id;
 		}
@@ -98,6 +103,8 @@ final class MTAL_Suite_Reviews_Widget extends Widget_Base {
 		$reviews  = MTAL_Suite_Reviews::get_public_reviews( $suite_id, $limit );
 		$average  = isset( $summary['average'] ) ? (float) $summary['average'] : 0;
 		$count    = isset( $summary['count'] ) ? absint( $summary['count'] ) : 0;
+		$filled_stars = max( 0, min( 5, (int) round( $average ) ) );
+		$empty_stars  = 5 - $filled_stars;
 		?>
 		<section class="mtal-suite-reviews" dir="rtl" aria-label="<?php echo esc_attr( '' !== $heading ? $heading : 'نقد و بررسی سوئیت' ); ?>">
 			<style>
@@ -120,7 +127,7 @@ final class MTAL_Suite_Reviews_Widget extends Widget_Base {
 
 			<div class="mtal-suite-reviews__summary" aria-label="<?php echo esc_attr( sprintf( 'میانگین امتیاز %s از ۵ بر اساس %d نقد', number_format_i18n( $average, 2 ), $count ) ); ?>">
 				<strong class="mtal-suite-reviews__score"><?php echo esc_html( number_format_i18n( $average, 2 ) ); ?><small> / ۵</small></strong>
-				<span class="mtal-suite-reviews__stars" aria-hidden="true">★★★★★</span>
+				<span class="mtal-suite-reviews__stars" aria-hidden="true"><?php echo esc_html( str_repeat( '★', $filled_stars ) . str_repeat( '☆', $empty_stars ) ); ?></span>
 				<span class="mtal-suite-reviews__count"><?php echo esc_html( number_format_i18n( $count ) ); ?> نقد تأییدشده</span>
 			</div>
 
