@@ -1964,3 +1964,25 @@ html.mtal-modal-open {
 		gap: 12px;
 	}
 }
+
+
+/* Availability results: centered desktop layout with a soft glass surface. */
+@media (min-width: 768px) {
+	.mtal-availability-search-results:not(.is-empty) {
+		display: flex;
+		justify-content: center;
+		padding: 14px 18px 8px;
+		border: 1px solid rgba(255, 255, 255, .72);
+		border-radius: 16px;
+		background: rgba(255, 255, 255, .78);
+		-webkit-backdrop-filter: blur(12px) saturate(115%);
+		backdrop-filter: blur(12px) saturate(115%);
+		box-shadow: 0 8px 26px rgba(24, 55, 35, .08);
+	}
+	.mtal-availability-search-results:not(.is-empty) .mtal-availability-suite-list {
+		justify-content: center;
+		width: auto;
+		max-width: 100%;
+		overflow-x: auto;
+	}
+}
