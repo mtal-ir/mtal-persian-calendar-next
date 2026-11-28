@@ -1,0 +1,63 @@
+name: Build stable MTAL release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag points to current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          TAG_SHA="$(git rev-parse "\${GITHUB_SHA}^{commit}")"
+          MAIN_SHA="$(git rev-parse "origin/main^{commit}")"
+          if [ "$TAG_SHA" != "$MAIN_SHA" ]; then
+            echo "Release rejected: tag must point to the current main commit."
+            echo "Tag:  $TAG_SHA"
+            echo "Main: $MAIN_SHA"
+            exit 1
+          fi
+
+      - name: Verify plugin version matches tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG_VERSION="\${GITHUB_REF_NAME#v}"
+          PLUGIN_VERSION="$(sed -n 's/^ \* Version: //p' mtal-persian-calendar.php | head -n 1 | tr -d '\r')"
+          if [ "$TAG_VERSION" != "$PLUGIN_VERSION" ]; then
+            echo "Release rejected: tag $TAG_VERSION does not match plugin version $PLUGIN_VERSION."
+            exit 1
+          fi
+
+      - name: Build WordPress plugin ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p package/mtal-persian-calendar-next
+          git archive --format=tar "$GITHUB_SHA" | tar -xf - -C package/mtal-persian-calendar-next
+          rm -rf package/mtal-persian-calendar-next/.github
+          rm -f package/mtal-persian-calendar-next/README.md
+          cd package
+          zip -qr ../mtal-persian-calendar-next.zip mtal-persian-calendar-next
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: \${{ github.ref_name }}
+          name: MTAL Booking \${{ github.ref_name }}
+          files: mtal-persian-calendar-next.zip
+          generate_release_notes: true
+          make_latest: true
