@@ -108,9 +108,8 @@ final class MTAL_Suite_Review_Management {
 	private static function get_review_query( $page, $count = false ) {
 		$args = array(
 			'type'   => MTAL_Suite_Reviews::COMMENT_TYPE,
-			'status' => 'all',
-			'number' => $count ? 0 : 20,
-			'offset' => $count ? 0 : ( max( 1, absint( $page ) ) - 1 ) * 20,
+			'number' => 0,
+			'fields' => 'all',
 			'orderby'=> 'comment_date',
 			'order'  => 'DESC',
 		);
@@ -128,10 +127,25 @@ final class MTAL_Suite_Review_Management {
 				),
 			);
 		}
+
+		// Pending/held and approved reviews are actionable; spam and trash are not.
+		$reviews = array_merge(
+			get_comments( array_merge( $args, array( 'status' => 'approve' ) ) ),
+			get_comments( array_merge( $args, array( 'status' => 'hold' ) ) )
+		);
+		usort(
+			$reviews,
+			static function ( $a, $b ) {
+				return strcmp( $b->comment_date_gmt, $a->comment_date_gmt );
+			}
+		);
+
 		if ( $count ) {
-			$args['count'] = true;
+			return count( $reviews );
 		}
-		return get_comments( $args );
+
+		$offset = ( max( 1, absint( $page ) ) - 1 ) * 20;
+		return array_slice( $reviews, $offset, 20 );
 	}
 
 	private static function render_review_list( $admin_screen ) {
@@ -279,7 +293,7 @@ final class MTAL_Suite_Review_Management {
 		}
 
 		$lock_key = 'mtal_suite_review_moderation_lock_' . $comment_id;
-		if ( ! add_option( $lock_key, time(), '', false ) ) {
+		if ( ! MTAL_Suite_Reviews::acquire_lock( $lock_key ) ) {
 			wp_die( esc_html__( 'درخواست دیگری برای این نظر در حال انجام است. کمی بعد دوباره تلاش کنید.', 'mtal-persian-calendar' ), '', array( 'response' => 409 ) );
 		}
 
@@ -294,7 +308,7 @@ final class MTAL_Suite_Review_Management {
 				update_comment_meta( $comment_id, self::REJECTED_META, '1' );
 			}
 		}
-		delete_option( $lock_key );
+		MTAL_Suite_Reviews::release_lock( $lock_key );
 		if ( ! $updated ) {
 			wp_die( esc_html__( 'تغییر وضعیت نظر انجام نشد. لطفاً دوباره تلاش کنید.', 'mtal-persian-calendar' ), '', array( 'response' => 500 ) );
 		}
