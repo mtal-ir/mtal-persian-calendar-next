@@ -162,6 +162,65 @@ final class MTAL_Customer_Account_Bookings {
 		return esc_html( wc_get_order_status_name( $order->get_status() ) );
 	}
 
+	/**
+	 * Render the verified guest-review form only for the owner of an eligible stay.
+	 * All eligibility checks are repeated by the submission handler.
+	 */
+	private static function render_review_form( $order ) {
+		if ( ! class_exists( 'MTAL_Suite_Reviews' ) || ! self::is_customer_booking( $order ) ) {
+			return;
+		}
+
+		$review_id = MTAL_Suite_Reviews::get_review_id_for_order( $order->get_id() );
+		if ( $review_id ) {
+			$review = get_comment( $review_id );
+			$status = $review && '1' === (string) $review->comment_approved
+				? 'نظر شما برای این اقامت منتشر شده است.'
+				: 'نظر شما برای این اقامت ثبت شده و در انتظار بررسی مدیر است.';
+			echo '<div class="woocommerce-info mtal-suite-review-notice">' . esc_html( $status ) . '</div>';
+			return;
+		}
+
+		$eligible_order = MTAL_Suite_Reviews::get_eligible_order( $order->get_id() );
+		if ( ! $eligible_order ) {
+			echo '<div class="woocommerce-info mtal-suite-review-notice">پس از پایان تاریخ خروج و در صورت پرداخت موفق رزرو، امکان ثبت نقد و بررسی فعال می‌شود.</div>';
+			return;
+		}
+
+		$criteria = MTAL_Suite_Reviews::rating_criteria();
+		$action_url = admin_url( 'admin-post.php' );
+		echo '<section class="mtal-suite-review-form" aria-labelledby="mtal-suite-review-heading">';
+		echo '<h4 id="mtal-suite-review-heading">ثبت نقد و بررسی این اقامت</h4>';
+		echo '<p>تجربه اقامت خود را ارزیابی کنید. نظر شما پس از بررسی مدیر منتشر خواهد شد.</p>';
+		echo '<style>
+			.mtal-suite-review-form{margin:24px 0;padding:20px;border:1px solid #e5e7eb;border-radius:12px}
+			.mtal-suite-review-form__criterion{margin:0 0 16px;padding:0 0 14px;border:0;border-bottom:1px solid #eee}
+			.mtal-suite-review-form__criterion legend{font-weight:600;margin-bottom:8px}
+			.mtal-suite-review-form__choices{display:flex;flex-wrap:wrap;gap:12px}
+			.mtal-suite-review-form__choices label{display:inline-flex;align-items:center;gap:5px}
+			.mtal-suite-review-form input[type=text],.mtal-suite-review-form textarea{width:100%;max-width:100%;box-sizing:border-box}
+			.mtal-suite-review-form textarea{min-height:130px}
+		</style>';
+		echo '<form method="post" action="' . esc_url( $action_url ) . '">';
+		echo '<input type="hidden" name="action" value="mtal_submit_suite_review" />';
+		echo '<input type="hidden" name="order_id" value="' . esc_attr( $order->get_id() ) . '" />';
+		wp_nonce_field( 'mtal_submit_suite_review', 'mtal_review_nonce' );
+
+		foreach ( $criteria as $key => $label ) {
+			echo '<fieldset class="mtal-suite-review-form__criterion"><legend>' . esc_html( $label ) . ' <span aria-hidden="true">*</span></legend>';
+			echo '<div class="mtal-suite-review-form__choices">';
+			for ( $rating = 1; $rating <= 5; $rating++ ) {
+				echo '<label><input type="radio" name="ratings[' . esc_attr( $key ) . ']" value="' . esc_attr( $rating ) . '" required /> ' . esc_html( $rating ) . '</label>';
+			}
+			echo '</div></fieldset>';
+		}
+
+		echo '<p><label for="mtal-suite-review-title">عنوان نظر (اختیاری)</label><input id="mtal-suite-review-title" type="text" name="review_title" maxlength="120" /></p>';
+		echo '<p><label for="mtal-suite-review-content">متن نقد و بررسی <span aria-hidden="true">*</span></label><textarea id="mtal-suite-review-content" name="review_content" minlength="10" maxlength="5000" required></textarea></p>';
+		echo '<p><button type="submit" class="woocommerce-button button">ارسال نقد و بررسی</button></p>';
+		echo '</form></section>';
+	}
+
 	private static function render_booking_details( $order ) {
 		if ( ! self::is_customer_booking( $order ) ) {
 			echo '<div class="woocommerce-error" role="alert">رزرو موردنظر پیدا نشد یا اجازه مشاهده آن را ندارید.</div>';
@@ -228,7 +287,9 @@ final class MTAL_Customer_Account_Bookings {
 		if ( $suite['extraGuestPrice'] ) {
 			self::render_row( 'هزینه هر نفر اضافه در هر شب', wc_price( $suite['extraGuestPrice'] ) );
 		}
-		echo '</tbody></table></div>';
+		echo '</tbody></table>';
+		self::render_review_form( $order );
+		echo '</div>';
 	}
 
 	private static function render_booking_list() {
@@ -321,6 +382,10 @@ final class MTAL_Customer_Account_Bookings {
 		if ( ! function_exists( 'wc_get_orders' ) ) {
 			echo '<div class="woocommerce-info">برای مشاهده رزروها، ووکامرس باید فعال باشد.</div>';
 			return;
+		}
+
+		if ( isset( $_GET['mtal_review_submitted'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['mtal_review_submitted'] ) ) ) {
+			echo '<div class="woocommerce-message" role="alert">نظر شما برای بررسی ارسال شد.</div>';
 		}
 
 		$requested_order_id = absint( get_query_var( self::ENDPOINT, 0 ) );
