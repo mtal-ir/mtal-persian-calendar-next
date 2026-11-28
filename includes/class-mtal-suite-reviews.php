@@ -414,6 +414,55 @@ final class MTAL_Suite_Reviews {
 	}
 
 	/**
+	 * Return safe public fields for approved reviews only.
+	 *
+	 * Rating criteria, order identifiers and review history are intentionally
+	 * excluded from this public response.
+	 *
+	 * @param int $suite_id Suite ID.
+	 * @param int $limit Maximum number of reviews.
+	 * @return array
+	 */
+	public static function get_public_reviews( $suite_id, $limit = 5 ) {
+		$suite_id = absint( $suite_id );
+		$limit    = max( 1, min( 20, absint( $limit ) ) );
+		if ( ! $suite_id || ! class_exists( 'MTAL_Suite_Registry' ) || ! MTAL_Suite_Registry::is_suite( $suite_id ) ) {
+			return array();
+		}
+
+		$comments = get_comments(
+			array(
+				'post_id' => $suite_id,
+				'type'    => self::COMMENT_TYPE,
+				'status'  => 'approve',
+				'number'  => $limit,
+				'orderby' => 'comment_date_gmt',
+				'order'   => 'DESC',
+			)
+		);
+
+		$public_reviews = array();
+		foreach ( $comments as $comment ) {
+			$author = $comment->comment_author;
+			if ( $comment->user_id ) {
+				$user = get_userdata( absint( $comment->user_id ) );
+				if ( $user && '' !== trim( $user->display_name ) ) {
+					$author = $user->display_name;
+				}
+			}
+
+			$public_reviews[] = array(
+				'author'  => (string) $author,
+				'date'    => get_comment_date( get_option( 'date_format' ), $comment ),
+				'title'   => (string) get_comment_meta( $comment->comment_ID, '_mtal_review_title', true ),
+				'content' => (string) $comment->comment_content,
+			);
+		}
+
+		return $public_reviews;
+	}
+
+	/**
 	 * Public aggregate: only approved reviews contribute to the average.
 	 * Private criterion scores are deliberately not returned.
 	 */
