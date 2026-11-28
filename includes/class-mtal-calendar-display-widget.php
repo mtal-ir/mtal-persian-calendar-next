@@ -49,7 +49,7 @@ class MTAL_Calendar_Display_Widget extends Widget_Base {
 			array(
 				'label'       => esc_html__( 'سلکتور ویجت اصلی انتخاب مشتری', 'mtal-persian-calendar' ),
 				'type'        => Controls_Manager::TEXT,
-				'default'     => '.mtal-cal-inline-host',
+				'default'     => '.mtal-cal-inline-host, .mtal-cal-modal-host',
 				'description' => esc_html__( 'در صورت وجود چند ویجت انتخاب مشتری، کلاس یا شناسه ویجت مقصد را وارد کنید. ویجت مقصد باید در همین صفحه باشد.', 'mtal-persian-calendar' ),
 			)
 		);
@@ -109,7 +109,7 @@ class MTAL_Calendar_Display_Widget extends Widget_Base {
 
 	protected function render() {
 		$settings          = $this->get_settings_for_display();
-		$target_selector   = ! empty( $settings['target_widget_selector'] ) ? $settings['target_widget_selector'] : '.mtal-cal-inline-host';
+		$target_selector   = ! empty( $settings['target_widget_selector'] ) ? $settings['target_widget_selector'] : '.mtal-cal-inline-host, .mtal-cal-modal-host';
 		$current_post_id   = absint( get_queried_object_id() );
 		$current_post_type = $current_post_id ? get_post_type( $current_post_id ) : '';
 		$locked_suite_id   = $current_post_id && class_exists( 'MTAL_Suite_Registry' )
