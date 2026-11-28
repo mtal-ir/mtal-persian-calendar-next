@@ -148,8 +148,8 @@ class MTAL_Calendar_Display_Widget extends Widget_Base {
 			data-mtal-suites="<?php echo esc_attr( wp_json_encode( $suites ) ); ?>"
 		>
 			<div class="mtal-cal-display-toolbar" dir="rtl">
-				<label class="mtal-cal-display-room-label" for="<?php echo esc_attr( $widget_id . '-room' ); ?>">انتخاب سوئیت</label>
-				<select class="mtal-cal-display-room" id="<?php echo esc_attr( $widget_id . '-room' ); ?>" <?php disabled( $locked || empty( $suites ) ); ?>>
+				<label class="mtal-cal-display-room-label" id="<?php echo esc_attr( $widget_id . '-room-label' ); ?>">انتخاب سوئیت</label>
+				<select class="mtal-cal-display-room" id="<?php echo esc_attr( $widget_id . '-room' ); ?>" aria-hidden="true" tabindex="-1" <?php disabled( $locked || empty( $suites ) ); ?>>
 					<?php if ( ! $locked ) : ?>
 						<option value="">ابتدا سوئیت موردنظر را انتخاب کنید</option>
 					<?php endif; ?>
@@ -162,11 +162,21 @@ class MTAL_Calendar_Display_Widget extends Widget_Base {
 						</option>
 						<?php endforeach; ?>
 				</select>
+				<div class="mtal-cal-display-suite-list" role="group" aria-labelledby="<?php echo esc_attr( $widget_id . '-room-label' ); ?>">
+					<?php foreach ( $display_suites as $suite ) : ?>
+						<button type="button" class="mtal-cal-display-suite-option<?php echo $locked ? ' is-active' : ''; ?>" data-suite-reference="<?php echo esc_attr( $suite['referenceId'] ); ?>" <?php disabled( $locked ); ?> aria-pressed="<?php echo $locked ? 'true' : 'false'; ?>"><?php echo esc_html( $suite['title'] ); ?></button>
+					<?php endforeach; ?>
+				</div>
 			</div>
 			<?php if ( ! $locked ) : ?>
 				<div class="mtal-cal-display-guests" dir="rtl" hidden>
 					<label for="<?php echo esc_attr( $widget_id . '-guests' ); ?>">تعداد نفرات</label>
-					<select class="mtal-cal-display-guest-count" id="<?php echo esc_attr( $widget_id . '-guests' ); ?>" aria-label="تعداد نفرات برای برآورد قیمت"></select>
+					<div class="mtal-cal-display-guest-stepper">
+						<button type="button" class="mtal-cal-display-guest-minus" aria-label="کاهش تعداد نفرات">−</button>
+						<output class="mtal-cal-display-guest-value" aria-live="polite">۱ نفر</output>
+						<button type="button" class="mtal-cal-display-guest-plus" aria-label="افزایش تعداد نفرات">+</button>
+					</div>
+					<select class="mtal-cal-display-guest-count" id="<?php echo esc_attr( $widget_id . '-guests' ); ?>" aria-label="تعداد نفرات برای برآورد قیمت" tabindex="-1"></select>
 				</div>
 				<p class="mtal-cal-display-message mtal-cal-display-guide" role="note">این تقویم برای مشاهده روزهای باز و بسته و برآورد قیمت اقامت است. برای ثبت رزرو، پس از انتخاب سوئیت وارد صفحه اختصاصی آن شوید و تاریخ ورود و خروج را مجدداً در تقویم همان صفحه انتخاب کنید.</p>
 			<?php endif; ?>
