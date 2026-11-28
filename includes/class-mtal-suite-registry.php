@@ -155,6 +155,46 @@ final class MTAL_Suite_Registry {
 	}
 
 	/**
+	 * Return all suites assigned to one accommodation manager.
+	 *
+	 * @param int $user_id User ID. Defaults to the current user.
+	 * @return int[]
+	 */
+	public static function get_assigned_suite_ids( $user_id = 0 ) {
+		$user_id = $user_id ? absint( $user_id ) : get_current_user_id();
+		if ( ! $user_id ) {
+			return array();
+		}
+
+		$query = new WP_Query(
+			array(
+				'post_type'              => self::POST_TYPE,
+				'post_status'            => array( 'publish', 'private', 'draft', 'pending', 'future' ),
+				'posts_per_page'         => -1,
+				'fields'                 => 'ids',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+				'meta_query'             => array(
+					array(
+						'key'     => self::META_MANAGER_IDS,
+						'value'   => 'i:' . $user_id . ';',
+					'compare' => 'LIKE',
+					),
+				),
+			)
+		);
+
+		$assigned_ids = array();
+		foreach ( $query->posts as $suite_id ) {
+			if ( in_array( $user_id, self::get_manager_ids( $suite_id ), true ) ) {
+				$assigned_ids[] = absint( $suite_id );
+			}
+		}
+		return $assigned_ids;
+	}
+
+	/**
 	 * Save a suite's manager assignments after validating every selected user.
 	 *
 	 * @param int   $suite_id Suite ID.
