@@ -80,6 +80,7 @@ final class MTAL_GitHub_Updater {
 
 	public static function inject_update( $transient ) {
 		if ( ! is_object( $transient ) || empty( $transient->checked ) ) { return $transient; }
+		if ( ! isset( $transient->response ) || ! is_array( $transient->response ) ) { $transient->response = array(); }
 		$plugin = self::plugin_file();
 		if ( empty( $transient->checked[ $plugin ] ) ) { return $transient; }
 		$release = self::get_release();
@@ -96,7 +97,7 @@ final class MTAL_GitHub_Updater {
 	}
 
 	public static function plugin_information( $result, $action, $args ) {
-		if ( 'plugin_information' !== $action || empty( $args->slug ) || self::plugin_slug() !== $args->slug ) { return $result; }
+		if ( 'plugin_information' !== $action || ! is_object( $args ) || empty( $args->slug ) || self::plugin_slug() !== $args->slug ) { return $result; }
 		$release = self::get_release();
 		if ( ! $release ) { return $result; }
 
