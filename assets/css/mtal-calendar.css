@@ -1526,21 +1526,49 @@ html.mtal-modal-open {
 	overflow-wrap: anywhere;
 }
 .mtal-cal-display-actions .mtal-cal-display-book {
-	background: #2563eb !important;
-	background-color: #2563eb !important;
-	color: #ffffff !important;
-	border: 1px solid #2563eb !important;
+	background: #b7e4c7 !important;
+	background-color: #b7e4c7 !important;
+	color: #174b2b !important;
+	border: 1px solid #95d5a8 !important;
 	border-radius: 10px !important;
 	font-weight: 700 !important;
-	box-shadow: 0 2px 6px rgba(37, 99, 235, .2);
+	box-shadow: 0 2px 6px rgba(22, 101, 52, .12);
 	opacity: 1;
 }
+.mtal-cal-display-actions .mtal-cal-display-book:hover:not(:disabled) {
+	background: #a3d9b5 !important;
+	background-color: #a3d9b5 !important;
+	border-color: #7fc995 !important;
+}
 .mtal-cal-display-actions .mtal-cal-display-book:disabled {
-	background: #94a3b8 !important;
-	background-color: #94a3b8 !important;
-	color: #ffffff !important;
-	border-color: #94a3b8 !important;
-	opacity: .75;
+	background: #d1d5db !important;
+	background-color: #d1d5db !important;
+	color: #4b5563 !important;
+	border-color: #cbd5e1 !important;
+	opacity: .8;
+}
+
+/* Keep the Elementor widget itself constrained on desktop, not just its inner calendar.
+   The price preview must not increase the widget's intrinsic/flex width after selection. */
+@media (min-width: 768px) {
+	.elementor-widget-mtal_calendar_display,
+	.elementor-widget-mtal_calendar_display > .elementor-widget-container,
+	.mtal-cal-display-host,
+	.mtal-cal-display-calendar,
+	.mtal-cal-display-mount,
+	.mtal-cal-display-pricing {
+		width: 100% !important;
+		max-width: 100% !important;
+		min-width: 0 !important;
+		box-sizing: border-box;
+	}
+	.elementor-widget-mtal_calendar_display {
+		flex: 1 1 100%;
+		align-self: stretch;
+	}
+	.elementor-widget-mtal_calendar_display > .elementor-widget-container {
+		overflow-x: clip;
+	}
 }
 .mtal-cal-display-actions .mtal-cal-display-clear {
 	background: #ffffff !important;
