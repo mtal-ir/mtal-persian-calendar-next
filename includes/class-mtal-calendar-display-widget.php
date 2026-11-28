@@ -135,7 +135,7 @@ class MTAL_Calendar_Display_Widget extends Widget_Base {
 			id="<?php echo esc_attr( $widget_id ); ?>"
 			class="mtal-cal-display-host"
 			data-mtal-display-locked="<?php echo $locked ? '1' : '0'; ?>"
-			data-mtal-display-suite="<?php echo $locked ? esc_attr( $selected_suite['referenceId'] ) : '0'; ?>"
+			data-mtal-display-suite="<?php echo $selected_suite ? esc_attr( $selected_suite['referenceId'] ) : '0'; ?>"
 			data-mtal-target-widget="<?php echo esc_attr( $target_selector ); ?>"
 			data-mtal-suites="<?php echo esc_attr( wp_json_encode( $suites ) ); ?>"
 		>
