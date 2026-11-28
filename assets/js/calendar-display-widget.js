@@ -51,9 +51,14 @@
 			pricing.appendChild(row);
 		});
 
+		const guestsRow = document.createElement('div');
+		guestsRow.className = 'mtal-breakdown-row';
+		guestsRow.innerHTML = '<span>تعداد نفرات</span><strong>' + toPersian(data.guests || 1) + ' نفر</strong>';
+		pricing.appendChild(guestsRow);
+
 		const totalRow = document.createElement('div');
 		totalRow.className = 'mtal-breakdown-row is-total';
-		totalRow.innerHTML = '<span>مبلغ کل (ظرفیت پایه)</span><strong>' +
+		totalRow.innerHTML = '<span>مبلغ کل</span><strong>' +
 			formatPrice(data.totalPrice) + ' تومان</strong>';
 		pricing.appendChild(totalRow);
 		return pricing;
