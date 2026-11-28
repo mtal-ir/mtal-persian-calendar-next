@@ -18,6 +18,7 @@
 			const searchButton = host.querySelector('.mtal-availability-search-button');
 			const status = host.querySelector('.mtal-availability-search-status');
 			const results = host.querySelector('.mtal-availability-search-results');
+			const showSearchButton = host.dataset.showSearchButton !== '0';
 			const fieldValues = {
 				checkIn: fields.find((field) => field.dataset.dateField === 'check-in'),
 				checkOut: fields.find((field) => field.dataset.dateField === 'check-out')
@@ -52,14 +53,15 @@
 					range = {
 						checkIn: nextIn,
 						checkOut: nextOut,
-						checkInShort: payload && payload.checkInShort ? payload.checkInShort : '',
-						checkOutShort: payload && payload.checkOutShort ? payload.checkOutShort : ''
+							checkInShort: payload && payload.checkInDisplay ? payload.checkInDisplay : (payload && payload.checkInShort ? payload.checkInShort : ''),
+						checkOutShort: payload && payload.checkOutDisplay ? payload.checkOutDisplay : (payload && payload.checkOutShort ? payload.checkOutShort : '')
 					};
 					setField(fieldValues.checkIn, range.checkInShort);
 					setField(fieldValues.checkOut, range.checkOutShort);
-					searchButton.hidden = !(range.checkIn && range.checkOut);
+					searchButton.hidden = !showSearchButton || !(range.checkIn && range.checkOut);
 					searchButton.disabled = !(range.checkIn && range.checkOut);
 					if (changed) clearSearchState();
+					if (!showSearchButton && changed && range.checkIn && range.checkOut) searchButton.click();
 				}
 			});
 
