@@ -484,6 +484,9 @@
 						syncAllHiddenFormFields(item.host, item.cal, payload);
 						syncHostCounterDisplay(item.host, item.cal.guestsCount);
 					}
+					if (typeof item.onSync === 'function') {
+						item.onSync(item.cal.buildPayload(item.cal.startDate, item.cal.endDate));
+					}
 				}
 			});
 		} finally {
@@ -1196,6 +1199,66 @@
 	}
 
 	window.MTALBookingBridge = {
+		connectDisplayCalendar(options = {}) {
+			const referenceId = parsePositiveInt(options.postId, 0);
+			const displayCal = options.calendar;
+			if (!referenceId || !displayCal || !options.rules) return false;
+
+			const candidates = calendarEntries.filter((entry) => entry.host && entry.host.isConnected);
+			let target = null;
+			if (options.targetSelector) {
+				try {
+					target = candidates.find((entry) =>
+						(entry.host.matches(options.targetSelector) || entry.host.closest(options.targetSelector)) &&
+						(entry.postId === referenceId || Number(entry.host.getAttribute('data-mtal-post-id')) === referenceId)
+					) || null;
+				} catch (error) {
+					return false;
+				}
+			} else {
+				target = candidates.find((entry) =>
+					entry.postId === referenceId || Number(entry.host.getAttribute('data-mtal-post-id')) === referenceId
+				) || null;
+			}
+			if (!target || !target.host._mtalBookingForm || target.host._mtalBookingForm._mtalBookingSubmitted) return false;
+
+			const oldKey = displayCal._mtalBookingSyncGroupKey;
+			if (oldKey && oldKey !== target.groupKey) {
+				const oldGroup = instancesByKey.get(oldKey) || [];
+				const oldIndex = oldGroup.findIndex((item) => item.cal === displayCal);
+				if (oldIndex >= 0) oldGroup.splice(oldIndex, 1);
+				if (!oldGroup.length) instancesByKey.delete(oldKey);
+			}
+			const group = instancesByKey.get(target.groupKey) || [];
+			let displayItem = group.find((item) => item.cal === displayCal);
+			if (!displayItem) {
+				displayItem = {
+					cal: displayCal,
+					targetSelector: target.syncItem.targetSelector,
+					storageKey: target.syncItem.storageKey,
+					guestsStorageKey: target.syncItem.guestsStorageKey,
+					host: null,
+					onSync: options.onSync
+				};
+				group.push(displayItem);
+				instancesByKey.set(target.groupKey, group);
+			}
+			displayItem.onSync = options.onSync;
+			displayCal._mtalBookingSyncGroupKey = target.groupKey;
+			return { target, displayItem };
+		},
+		syncDisplayRange(options = {}) {
+			const connected = this.connectDisplayCalendar(options);
+			if (!connected) return false;
+			const target = connected.target;
+			const payload = options.payload;
+			if (payload && payload.checkIn) {
+				target.cal.setRange(payload.checkIn, payload.checkOut, { notify: true, syncDraft: true });
+			} else {
+				target.cal.clear({ notify: true });
+			}
+			return true;
+		},
 		startFromDisplay(options = {}) {
 			const referenceId = parsePositiveInt(options.postId, 0);
 			const checkIn = options.checkIn;
