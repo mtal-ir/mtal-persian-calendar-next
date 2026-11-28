@@ -69,8 +69,14 @@
 		host.setAttribute('data-mtal-display-initialized', '1');
 
 		const select = host.querySelector('.mtal-cal-display-room');
+		const suiteButtons = Array.from(host.querySelectorAll('.mtal-cal-display-suite-option'));
 		const guestWrap = host.querySelector('.mtal-cal-display-guests');
 		const guestSelect = host.querySelector('.mtal-cal-display-guest-count');
+		const guestValue = host.querySelector('.mtal-cal-display-guest-value');
+		const guestMinus = host.querySelector('.mtal-cal-display-guest-minus');
+		const guestPlus = host.querySelector('.mtal-cal-display-guest-plus');
+		let guestMinimum = 1;
+		let guestMaximum = 1;
 		const calendarWrap = host.querySelector('.mtal-cal-display-calendar');
 		const mount = host.querySelector('.mtal-cal-display-mount');
 		const pricingWrap = host.querySelector('.mtal-cal-display-pricing');
@@ -89,6 +95,23 @@
 
 		function setMessage(text) {
 			if (message) message.textContent = text || '';
+		}
+
+		function updateSuiteButtons() {
+			suiteButtons.forEach((button) => {
+				const active = Number(button.getAttribute('data-suite-reference')) === Number(select.value);
+				button.classList.toggle('is-active', active);
+				button.setAttribute('aria-pressed', active ? 'true' : 'false');
+			});
+		}
+
+		function updateGuestStepper() {
+			if (!guestSelect) return;
+			const count = Math.min(guestMaximum, Math.max(guestMinimum, Number(guestSelect.value) || guestMinimum));
+			guestSelect.value = String(count);
+			if (guestValue) guestValue.textContent = toPersian(count) + ' نفر';
+			if (guestMinus) guestMinus.disabled = count <= guestMinimum;
+			if (guestPlus) guestPlus.disabled = count >= guestMaximum;
 		}
 
 		function clearPrice() {
@@ -192,8 +215,10 @@
 			if (guestSelect && guestWrap) {
 				const base = Math.max(1, Number(rules.baseCapacity) || 1);
 				const maximum = Math.max(base, Number(rules.maxCapacity) || base);
+				guestMinimum = 1;
+				guestMaximum = maximum;
 				guestSelect.innerHTML = '';
-				for (let count = 1; count <= maximum; count += 1) {
+				for (let count = guestMinimum; count <= maximum; count += 1) {
 					const option = document.createElement('option');
 					option.value = String(count);
 					option.textContent = toPersian(count) + ' نفر';
@@ -201,6 +226,7 @@
 					guestSelect.appendChild(option);
 				}
 				guestWrap.hidden = false;
+				updateGuestStepper();
 			}
 			host.setAttribute('data-mtal-post-id', String(selectedReference));
 			const options = {
@@ -272,7 +298,33 @@
 			});
 		}
 
-		select.addEventListener('change', () => loadSuite(select.value));
+		suiteButtons.forEach((button) => {
+			button.addEventListener('click', () => {
+				if (button.disabled) return;
+				select.value = button.getAttribute('data-suite-reference') || '';
+				updateSuiteButtons();
+				select.dispatchEvent(new Event('change', { bubbles: true }));
+			});
+		});
+		select.addEventListener('change', () => {
+			updateSuiteButtons();
+			loadSuite(select.value);
+		});
+		updateSuiteButtons();
+		if (guestMinus) {
+			guestMinus.addEventListener('click', () => {
+				guestSelect.value = String(Math.max(guestMinimum, Number(guestSelect.value || guestMinimum) - 1));
+				updateGuestStepper();
+				guestSelect.dispatchEvent(new Event('change', { bubbles: true }));
+			});
+		}
+		if (guestPlus) {
+			guestPlus.addEventListener('click', () => {
+				guestSelect.value = String(Math.min(guestMaximum, Number(guestSelect.value || guestMinimum) + 1));
+				updateGuestStepper();
+				guestSelect.dispatchEvent(new Event('change', { bubbles: true }));
+			});
+		}
 		if (guestSelect) {
 			guestSelect.addEventListener('change', () => {
 				if (calendar && calendar.startDate && calendar.endDate) {
