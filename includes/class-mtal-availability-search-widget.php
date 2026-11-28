@@ -40,7 +40,7 @@ class MTAL_Availability_Search_Widget extends Widget_Base {
 			'mtal_availability_search_settings',
 			array(
 				'label' => esc_html__( 'تنظیمات جستجو', 'mtal-persian-calendar' ),
-				'tab'   => \\Elementor\\Controls_Manager::TAB_CONTENT,
+				'tab'   => \Elementor\Controls_Manager::TAB_CONTENT,
 			)
 		);
 
@@ -48,7 +48,7 @@ class MTAL_Availability_Search_Widget extends Widget_Base {
 			'show_search_button',
 			array(
 				'label'        => esc_html__( 'نمایش دکمه جستجو', 'mtal-persian-calendar' ),
-				'type'         => \\Elementor\\Controls_Manager::SWITCHER,
+				'type'         => \Elementor\Controls_Manager::SWITCHER,
 				'label_on'     => esc_html__( 'نمایش', 'mtal-persian-calendar' ),
 				'label_off'    => esc_html__( 'مخفی', 'mtal-persian-calendar' ),
 				'return_value' => 'yes',
