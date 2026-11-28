@@ -1577,3 +1577,56 @@ html.mtal-modal-open {
 	border-radius: 10px !important;
 	font-weight: 700 !important;
 }
+
+
+/* Public availability estimate guest selector and explanatory notes. */
+.mtal-cal-display-guests {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0 0 12px;
+}
+.mtal-cal-display-guests[hidden] {
+	display: none !important;
+}
+.mtal-cal-display-guests label {
+	flex: 0 0 auto;
+	font-weight: 700;
+	color: #374151;
+}
+.mtal-cal-display-guest-count {
+	min-width: 110px;
+	min-height: 42px;
+	padding: 7px 12px;
+	border: 1px solid #d1d5db;
+	border-radius: 10px;
+	background: #fff;
+	color: #111827;
+}
+.mtal-cal-display-guide {
+	margin: 0 0 14px;
+	padding: 10px 12px;
+	border: 1px solid #dbeafe;
+	border-radius: 10px;
+	background: #f8fbff;
+	color: #334155;
+}
+.mtal-cal-display-estimate-note {
+	margin: 10px 0 0;
+	padding: 9px 11px;
+	border-radius: 8px;
+	background: #f8fafc;
+	color: #475569;
+	font-size: 13px;
+	line-height: 1.8;
+}
+@media (max-width: 480px) {
+	.mtal-cal-display-guests {
+		align-items: stretch;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.mtal-cal-display-guest-count {
+		width: 100%;
+	}
+}
