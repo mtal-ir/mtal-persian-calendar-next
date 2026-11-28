@@ -99,6 +99,9 @@ final class MTAL_Suite_Reviews {
 			.mtal-customer-reviews__item textarea{min-height:120px}
 		</style>';
 		foreach ( $reviews as $review ) {
+			if ( in_array( $review->comment_approved, array( 'spam', 'trash' ), true ) ) {
+				continue;
+			}
 			$order_id = absint( get_comment_meta( $review->comment_ID, self::META_ORDER_ID, true ) );
 			$suite_id = absint( get_comment_meta( $review->comment_ID, self::META_SUITE_ID, true ) );
 			$order = function_exists( 'wc_get_order' ) ? wc_get_order( $order_id ) : false;
@@ -405,13 +408,10 @@ final class MTAL_Suite_Reviews {
 			return false;
 		}
 
-		if ( current_user_can( 'manage_options' ) ) {
-			return true;
-		}
-
-		return class_exists( 'MTAL_Booking_Admin' )
-			&& MTAL_Booking_Admin::current_user_can_manage_bookings()
-			&& current_user_can( 'edit_post', $suite_id );
+		// The current accommodation-manager role has site-wide suite-editing
+		// capabilities and no per-suite assignment map. Until that relation is
+		// implemented, do not expose private review details to managers broadly.
+		return current_user_can( 'manage_options' );
 	}
 
 	/**
