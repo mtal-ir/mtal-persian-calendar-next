@@ -19,6 +19,7 @@ final class MTAL_Suite_Registry {
 	const META_TITLE_OVERRIDE  = '_mtal_suite_title_override';
 	const META_IMAGE_OVERRIDE  = '_mtal_suite_image_override_id';
 	const META_HIDDEN          = '_mtal_suite_hidden';
+	const META_MANAGER_IDS     = '_mtal_suite_manager_ids';
 
 	/**
 	 * Register the internal suite entity.
@@ -121,6 +122,97 @@ final class MTAL_Suite_Registry {
 		return $suite && self::POST_TYPE === $suite->post_type;
 	}
 
+
+	/**
+	 * Return the accommodation-manager user IDs assigned to one suite.
+	 *
+	 * @return int[]
+	 */
+	public static function get_manager_ids( $suite_id ) {
+		$suite_id = absint( $suite_id );
+		if ( ! self::is_suite( $suite_id ) ) {
+			return array();
+		}
+
+		$raw_ids = get_post_meta( $suite_id, self::META_MANAGER_IDS, true );
+		if ( ! is_array( $raw_ids ) ) {
+			return array();
+		}
+
+		$manager_role = class_exists( 'MTAL_Accommodation_Manager_Role' )
+			? MTAL_Accommodation_Manager_Role::ROLE
+			: 'mtal_accommodation_manager';
+		$manager_ids = array();
+		foreach ( $raw_ids as $raw_id ) {
+			$user_id = absint( $raw_id );
+			$user = $user_id ? get_userdata( $user_id ) : false;
+			if ( $user && in_array( $manager_role, (array) $user->roles, true ) ) {
+				$manager_ids[] = $user_id;
+			}
+		}
+
+		return array_values( array_unique( $manager_ids ) );
+	}
+
+	/**
+	 * Save a suite's manager assignments after validating every selected user.
+	 *
+	 * @param int   $suite_id Suite ID.
+	 * @param array $user_ids Submitted user IDs.
+	 * @return bool
+	 */
+	public static function set_manager_ids( $suite_id, $user_ids ) {
+		$suite_id = absint( $suite_id );
+		if ( ! self::is_suite( $suite_id ) || ! is_array( $user_ids ) ) {
+			return false;
+		}
+
+		$manager_role = class_exists( 'MTAL_Accommodation_Manager_Role' )
+			? MTAL_Accommodation_Manager_Role::ROLE
+			: 'mtal_accommodation_manager';
+		$manager_ids = array();
+		foreach ( $user_ids as $raw_id ) {
+			if ( ! is_scalar( $raw_id ) ) {
+				continue;
+			}
+			$user_id = absint( $raw_id );
+			$user = $user_id ? get_userdata( $user_id ) : false;
+			if ( $user && in_array( $manager_role, (array) $user->roles, true ) ) {
+				$manager_ids[] = $user_id;
+			}
+		}
+
+		$manager_ids = array_values( array_unique( $manager_ids ) );
+		if ( empty( $manager_ids ) ) {
+			delete_post_meta( $suite_id, self::META_MANAGER_IDS );
+		} else {
+			update_post_meta( $suite_id, self::META_MANAGER_IDS, $manager_ids );
+		}
+		return true;
+	}
+
+	/**
+	 * Check whether the current user is an administrator or an assigned
+	 * accommodation manager for this suite.
+	 */
+	public static function current_user_can_manage_suite( $suite_id ) {
+		$suite_id = absint( $suite_id );
+		if ( ! self::is_suite( $suite_id ) ) {
+			return false;
+		}
+		if ( current_user_can( 'manage_options' ) ) {
+			return true;
+		}
+
+		$user_id = get_current_user_id();
+		$user = $user_id ? get_userdata( $user_id ) : false;
+		$manager_role = class_exists( 'MTAL_Accommodation_Manager_Role' )
+			? MTAL_Accommodation_Manager_Role::ROLE
+			: 'mtal_accommodation_manager';
+		return $user
+			&& in_array( $manager_role, (array) $user->roles, true )
+			&& in_array( $user_id, self::get_manager_ids( $suite_id ), true );
+	}
 
 	/**
 	 * Calendar settings stored on legacy display posts before the independent
