@@ -141,6 +141,34 @@ final class MTAL_Suite_Reviews {
 	}
 
 	/**
+	 * Acquire an option-backed lock and recover automatically from abandoned locks.
+	 *
+	 * @param string $lock_key Lock option name.
+	 * @param int    $ttl Lock lifetime in seconds.
+	 * @return bool
+	 */
+	public static function acquire_lock( $lock_key, $ttl = 300 ) {
+		if ( add_option( $lock_key, time(), '', false ) ) {
+			return true;
+		}
+
+		$created_at = absint( get_option( $lock_key, 0 ) );
+		if ( $created_at && ( time() - $created_at ) > max( 60, absint( $ttl ) ) ) {
+			self::release_lock( $lock_key );
+			return add_option( $lock_key, time(), '', false );
+		}
+
+		return false;
+	}
+
+	/**
+	 * Release a review operation lock.
+	 */
+	public static function release_lock( $lock_key ) {
+		delete_option( $lock_key );
+	}
+
+	/**
 	 * Check that an order belongs to the current guest and represents a
 	 * completed, paid stay whose checkout date has passed.
 	 *
@@ -166,13 +194,19 @@ final class MTAL_Suite_Reviews {
 			return false;
 		}
 
+		// Even a partially refunded booking is not eligible for a guest review.
+		if ( method_exists( $order, 'get_total_refunded' ) && (float) $order->get_total_refunded() > 0 ) {
+			return false;
+		}
+
 		$suite_id = absint( $order->get_meta( '_mtal_booking_suite_id' ) );
 		if ( ! $suite_id || ! MTAL_Suite_Registry::is_suite( $suite_id ) ) {
 			return false;
 		}
 
+		$suite_post = get_post( $suite_id );
 		$source_post = MTAL_Suite_Registry::get_source_post( $suite_id );
-		if ( ! $source_post || 'publish' !== $source_post->post_status ) {
+		if ( ! $suite_post || 'publish' !== $suite_post->post_status || ! $source_post || 'publish' !== $source_post->post_status ) {
 			return false;
 		}
 
@@ -254,7 +288,7 @@ final class MTAL_Suite_Reviews {
 
 		$suite_id = absint( $order->get_meta( '_mtal_booking_suite_id' ) );
 		$lock_key = 'mtal_suite_review_lock_' . $order_id;
-		if ( ! add_option( $lock_key, time(), '', false ) ) {
+		if ( ! self::acquire_lock( $lock_key ) ) {
 			wp_die( esc_html__( 'درخواست ثبت نظر دیگری برای این رزرو در حال انجام است. کمی بعد دوباره تلاش کنید.', 'mtal-persian-calendar' ), '', array( 'response' => 409 ) );
 		}
 
@@ -338,7 +372,7 @@ final class MTAL_Suite_Reviews {
 			wp_die( esc_html__( 'مالکیت رزرو یا ارتباط نظر با سوئیت تأیید نشد.', 'mtal-persian-calendar' ), '', array( 'response' => 403 ) );
 		}
 		$lock_key = 'mtal_suite_review_edit_lock_' . $comment_id;
-		if ( ! add_option( $lock_key, time(), '', false ) ) {
+		if ( ! self::acquire_lock( $lock_key ) ) {
 			wp_die( esc_html__( 'ویرایش دیگری برای این نظر در حال انجام است. کمی بعد دوباره تلاش کنید.', 'mtal-persian-calendar' ), '', array( 'response' => 409 ) );
 		}
 		$ratings = self::validate_ratings( isset( $_POST['ratings'] ) ? wp_unslash( $_POST['ratings'] ) : array() );
@@ -414,6 +448,20 @@ final class MTAL_Suite_Reviews {
 	}
 
 	/**
+	 * Confirm that both the internal suite and its connected public page are published.
+	 */
+	private static function is_public_suite( $suite_id ) {
+		$suite_id = absint( $suite_id );
+		if ( ! $suite_id || ! class_exists( 'MTAL_Suite_Registry' ) || ! MTAL_Suite_Registry::is_suite( $suite_id ) ) {
+			return false;
+		}
+
+		$suite_post = get_post( $suite_id );
+		$source_post = MTAL_Suite_Registry::get_source_post( $suite_id );
+		return $suite_post && 'publish' === $suite_post->post_status && $source_post && 'publish' === $source_post->post_status;
+	}
+
+	/**
 	 * Return safe public fields for approved reviews only.
 	 *
 	 * Rating criteria, order identifiers and review history are intentionally
@@ -426,7 +474,7 @@ final class MTAL_Suite_Reviews {
 	public static function get_public_reviews( $suite_id, $limit = 5 ) {
 		$suite_id = absint( $suite_id );
 		$limit    = max( 1, min( 20, absint( $limit ) ) );
-		if ( ! $suite_id || ! class_exists( 'MTAL_Suite_Registry' ) || ! MTAL_Suite_Registry::is_suite( $suite_id ) ) {
+		if ( ! self::is_public_suite( $suite_id ) ) {
 			return array();
 		}
 
@@ -468,7 +516,7 @@ final class MTAL_Suite_Reviews {
 	 */
 	public static function get_public_summary( $suite_id ) {
 		$suite_id = absint( $suite_id );
-		if ( ! $suite_id || ! class_exists( 'MTAL_Suite_Registry' ) || ! MTAL_Suite_Registry::is_suite( $suite_id ) ) {
+		if ( ! self::is_public_suite( $suite_id ) ) {
 			return array( 'average' => 0, 'count' => 0 );
 		}
 
