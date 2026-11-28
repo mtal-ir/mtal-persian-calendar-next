@@ -98,8 +98,8 @@ final class MTAL_Accommodation_Manager_Role {
 			return;
 		}
 
-		$hpos_enabled = class_exists( '\\Automattic\\WooCommerce\\Utilities\\OrderUtil' )
-			&& \\Automattic\\WooCommerce\\Utilities\\OrderUtil::custom_orders_table_usage_is_enabled();
+		$hpos_enabled = class_exists( 'Automattic\WooCommerce\Utilities\OrderUtil' )
+			&& \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
 		$orders_url = $hpos_enabled
 			? admin_url( 'admin.php?page=wc-orders' )
 			: admin_url( 'edit.php?post_type=shop_order' );
