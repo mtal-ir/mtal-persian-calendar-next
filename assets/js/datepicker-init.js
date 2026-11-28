@@ -1127,6 +1127,12 @@
 					host.setAttribute('data-mtal-blocked-dates', JSON.stringify(rules.blockedDates || []));
 					host.setAttribute('data-mtal-holiday-dates', JSON.stringify(rules.holidayDates || []));
 					host.setAttribute('data-mtal-manual-prices', JSON.stringify(rules.manualPrices || {}));
+					if (host._mtalBookingForm) {
+						host._mtalBookingForm.querySelectorAll('#form-field-mtal_qty, input[name*="mtal_qty"]').forEach((input) => {
+							input.setAttribute('min', '1');
+							input.setAttribute('max', String(maxGuests));
+						});
+					}
 
 					cal.clear({ notify: false });
 					cal.updateRules(rules);
