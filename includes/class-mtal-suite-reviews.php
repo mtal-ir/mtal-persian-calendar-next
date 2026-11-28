@@ -81,7 +81,7 @@ final class MTAL_Suite_Reviews {
 		$today_text = preg_replace( '/\s.*$/u', '', $today_text );
 		$today = MTAL_Persian_Calendar::normalize_booking_date( $today_text );
 
-		if ( ! $checkout || ! $today || $checkout['jdn'] > $today['jdn'] ) {
+		if ( ! $checkout || ! $today || $checkout['jdn'] >= $today['jdn'] ) {
 			return false;
 		}
 
@@ -164,9 +164,10 @@ final class MTAL_Suite_Reviews {
 		$raw_ratings = isset( $_POST['ratings'] ) ? wp_unslash( $_POST['ratings'] ) : array();
 		$ratings = self::validate_ratings( $raw_ratings );
 		$body = isset( $_POST['review_content'] ) ? sanitize_textarea_field( wp_unslash( $_POST['review_content'] ) ) : '';
+		$body_length = function_exists( 'mb_strlen' ) ? mb_strlen( $body ) : strlen( $body );
 		$title = isset( $_POST['review_title'] ) ? sanitize_text_field( wp_unslash( $_POST['review_title'] ) ) : '';
 
-		if ( is_wp_error( $ratings ) || mb_strlen( $body ) < 10 || mb_strlen( $body ) > 5000 ) {
+		if ( is_wp_error( $ratings ) || $body_length < 10 || $body_length > 20000 ) {
 			delete_option( $lock_key );
 			$message = is_wp_error( $ratings ) ? $ratings->get_error_message() : 'متن نقد و بررسی باید بین ۱۰ تا ۵۰۰۰ نویسه باشد.';
 			wp_die( esc_html( $message ), '', array( 'response' => 400 ) );
