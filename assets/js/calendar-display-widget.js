@@ -200,7 +200,7 @@
 				return;
 			}
 
-			calendarWrap.hidden = false;
+			calendarWrap.hidden = true;
 			setMessage('در حال دریافت تقویم و قیمت‌های سوئیت...');
 			fetchSuiteRules(id).then((rules) => {
 				if (Number(select.value) !== id) return;
@@ -227,10 +227,15 @@
 			}
 
 			bookButton.disabled = true;
+			const bookingReference = selectedReference;
 			setMessage('در حال انتقال تاریخ‌ها به فرم رزرو...');
-			fetchSuiteRules(selectedReference).then((rules) => {
+			fetchSuiteRules(bookingReference).then((rules) => {
+				if (selectedReference !== bookingReference) {
+					throw new Error('سوئیت انتخابی تغییر کرده است؛ دوباره تلاش کنید.');
+				}
+				calendar.updateRules(rules);
 				if (!calendar.isRangeAllowed(calendar.startDate, calendar.endDate)) {
-					applySuiteRules(selectedReference, rules);
+					clearPrice();
 					throw new Error('وضعیت تقویم تغییر کرده است؛ لطفاً تاریخ‌ها را دوباره انتخاب کنید.');
 				}
 				latestRules = rules;
@@ -250,7 +255,7 @@
 				}
 				setMessage('تاریخ‌ها منتقل شدند؛ انتخاب تعداد مسافران را در بخش رزرو ادامه دهید.');
 			}).catch((error) => {
-				bookButton.disabled = false;
+				bookButton.disabled = !priceReady;
 				setMessage(error.message || 'انتقال تاریخ‌ها انجام نشد.');
 			});
 		});
