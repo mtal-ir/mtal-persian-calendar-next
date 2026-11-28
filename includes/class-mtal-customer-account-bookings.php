@@ -112,6 +112,11 @@ final class MTAL_Customer_Account_Bookings {
 			: null;
 
 		$display['description'] = '';
+		$display['permalink'] = '';
+		if ( $source_post && is_post_publicly_viewable( $source_post ) ) {
+			$display['permalink'] = get_permalink( $source_post );
+		}
+
 		if ( $source_post && ! in_array( $source_post->post_status, array( 'trash', 'auto-draft' ), true ) ) {
 			$description = trim( (string) $source_post->post_excerpt );
 			if ( '' === $description ) {
@@ -174,10 +179,21 @@ final class MTAL_Customer_Account_Bookings {
 		echo '<p><a href="' . esc_url( wc_get_endpoint_url( self::ENDPOINT, '', wc_get_page_permalink( 'myaccount' ) ) ) . '">بازگشت به فهرست رزروها</a></p>';
 		echo '<h3>جزئیات رزرو شماره ' . esc_html( $order->get_order_number() ) . '</h3>';
 
+		$suite_url = ! empty( $suite['permalink'] ) ? $suite['permalink'] : '';
+
 		if ( ! empty( $suite['imageUrl'] ) ) {
-			echo '<p><img src="' . esc_url( $suite['imageUrl'] ) . '" alt="' . esc_attr( $suite['title'] ) . '" style="max-width:320px;height:auto;" /></p>';
+			$image_html = '<img src="' . esc_url( $suite['imageUrl'] ) . '" alt="' . esc_attr( $suite['title'] ) . '" style="max-width:320px;height:auto;" />';
+			if ( $suite_url ) {
+				$image_html = '<a href="' . esc_url( $suite_url ) . '" aria-label="' . esc_attr( 'مشاهده صفحه ' . $suite['title'] ) . '">' . $image_html . '</a>';
+			}
+			echo '<p>' . $image_html . '</p>';
 		}
-		echo '<h4>' . esc_html( $suite['title'] ) . '</h4>';
+		if ( $suite_url ) {
+			echo '<h4><a href="' . esc_url( $suite_url ) . '">' . esc_html( $suite['title'] ) . '</a></h4>';
+			echo '<p><a class="woocommerce-button button" href="' . esc_url( $suite_url ) . '">مشاهده صفحه سوئیت</a></p>';
+		} else {
+			echo '<h4>' . esc_html( $suite['title'] ) . '</h4>';
+		}
 		if ( ! empty( $suite['description'] ) ) {
 			echo '<div class="mtal-customer-booking-details__description">' . wp_kses_post( $suite['description'] ) . '</div>';
 		}
