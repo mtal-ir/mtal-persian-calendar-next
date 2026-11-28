@@ -94,10 +94,11 @@ final class MTAL_Accommodation_Manager_Role {
 			return;
 		}
 
-		$orders_url = admin_url( 'admin.php?page=wc-orders' );
 		if ( ! class_exists( 'WooCommerce' ) ) {
-			$orders_url = admin_url();
+			return;
 		}
+
+		$orders_url = admin_url( 'admin.php?page=wc-orders' );
 
 		wp_safe_redirect( $orders_url );
 		exit;
