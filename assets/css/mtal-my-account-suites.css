@@ -18,7 +18,7 @@
 .mtal-account-suites__details div,.mtal-account-suites__source{display:flex;flex-direction:column;gap:5px;min-width:0}
 .mtal-account-suites__details span,.mtal-account-suites__source span{font-size:.8em;color:#6b7280}
 .mtal-account-suites__details strong,.mtal-account-suites__source strong{font-size:.94em;overflow-wrap:anywhere}
-.mtal-account-suites__source{margin-bottom:16px}
+.mtal-account-suites__source{margin-bottom:0}
 .mtal-account-suites__actions{display:flex;flex-wrap:wrap;gap:9px}
 .mtal-account-suites__actions a{flex:1 1 130px;border:1px solid #d1d5db;color:#374151!important;background:#fff}
 .mtal-account-suites__actions a:hover{background:#f9fafb;border-color:#9ca3af}
@@ -28,4 +28,4 @@
 .mtal-account-suites__pagination a,.mtal-account-suites__pagination span{display:inline-flex;min-width:38px;min-height:38px;align-items:center;justify-content:center;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;text-decoration:none}
 .mtal-account-suites__pagination [aria-current=page]{background:#1f6f5c;color:#fff;border-color:#1f6f5c}
 @media(max-width:900px){.mtal-account-suites__grid{grid-template-columns:1fr}}
-@media(max-width:600px){.mtal-account-suites__header{align-items:stretch;flex-direction:column}.mtal-account-suites__add{width:100%;box-sizing:border-box}.mtal-account-suites__card{padding:14px}.mtal-account-suites__details{gap:10px}.mtal-account-suites__actions{flex-direction:column}.mtal-account-suites__actions a{width:100%;box-sizing:border-box}}
+@media(max-width:600px){.mtal-account-suites__header{align-items:stretch;flex-direction:column}.mtal-account-suites__add{width:100%;box-sizing:border-box}.mtal-account-suites__card{padding:14px}.mtal-account-suites__details{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px}.mtal-account-suites__details div{min-width:0}.mtal-account-suites__details span{font-size:.72em;line-height:1.45}.mtal-account-suites__details strong{font-size:.82em;line-height:1.45}.mtal-account-suites__actions{flex-direction:row;flex-wrap:nowrap}.mtal-account-suites__actions a{flex:1 1 0;min-width:0;width:auto;box-sizing:border-box;padding:9px 6px}}
