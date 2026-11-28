@@ -950,6 +950,9 @@
 
 				if (!pastOrOut && !blocked) {
 					const dayPriceInfo = this.getDayPrice(dObj);
+					if (dayPriceInfo.source === 'manual') {
+						btn.classList.add('has-manual-price');
+					}
 					if (dayPriceInfo.price > 0) {
 						const priceTag = document.createElement('span');
 						priceTag.className = 'mtal-day-price';

@@ -85,6 +85,7 @@ html.mtal-modal-open {
 }
 
 .mtal-cal-header {
+	direction: ltr;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -251,12 +252,22 @@ html.mtal-modal-open {
 	text-decoration: line-through;
 }
 
+.mtal-cal-day.has-manual-price:not(.is-selected) {
+	background: #fe9d02;
+	color: #ffffff;
+	border-color: #fe9d02;
+}
+
+.mtal-cal-day.has-manual-price:not(.is-selected) .mtal-day-price {
+	color: #ffffff;
+}
+
 .mtal-cal-day.has-manual-price::after {
 	content: '';
 	width: 5px;
 	height: 5px;
 	border-radius: 50%;
-	background: var(--mtal-accent);
+	background: #ffffff;
 	position: absolute;
 	bottom: 2px;
 }
