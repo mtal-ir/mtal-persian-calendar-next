@@ -64,12 +64,14 @@
 		host.setAttribute('data-mtal-display-initialized', '1');
 
 		const select = host.querySelector('.mtal-cal-display-room');
+		const guestWrap = host.querySelector('.mtal-cal-display-guests');
+		const guestSelect = host.querySelector('.mtal-cal-display-guest-count');
 		const calendarWrap = host.querySelector('.mtal-cal-display-calendar');
 		const mount = host.querySelector('.mtal-cal-display-mount');
 		const pricingWrap = host.querySelector('.mtal-cal-display-pricing');
 		const clearButton = host.querySelector('.mtal-cal-display-clear');
 		const bookButton = host.querySelector('.mtal-cal-display-book');
-		const message = host.querySelector('.mtal-cal-display-message');
+		const message = host.querySelector('.mtal-cal-display-calendar > .mtal-cal-display-message');
 		const targetSelector = host.getAttribute('data-mtal-target-widget') || '.mtal-cal-inline-host, .mtal-cal-modal-host';
 		const isLockedSuitePage = host.getAttribute('data-mtal-display-locked') === '1';
 		let selectedReference = 0;
@@ -106,13 +108,16 @@
 			pricingWrap.innerHTML = '<p class="mtal-cal-display-message">در حال محاسبه قیمت از اطلاعات ثبت‌شده در وردپرس...</p>';
 			const requestId = ++priceRequestId;
 			const baseCapacity = Math.max(1, Number(latestRules && latestRules.baseCapacity) || 1);
+			const guestCount = isLockedSuitePage
+				? baseCapacity
+				: Math.min(Math.max(1, Number(latestRules && latestRules.maxCapacity) || baseCapacity), Math.max(1, Number(guestSelect && guestSelect.value) || baseCapacity));
 			postAjax({
 				action: 'mtal_calculate_suite_price',
 				nonce: cfg.nonce || '',
 				post_id: selectedReference,
 				check_in: payload.checkInSlash,
 				check_out: payload.checkOutSlash,
-				guests: baseCapacity,
+				guests: guestCount,
 				max_months: 3
 			}).then((result) => {
 				if (requestId !== priceRequestId) return;
@@ -130,9 +135,14 @@
 				}
 				pricingWrap.innerHTML = '';
 				pricingWrap.appendChild(buildServerPricingBox(calendar, result.data));
+				const estimateNote = document.createElement('p');
+				estimateNote.className = 'mtal-cal-display-estimate-note';
+				estimateNote.textContent = isLockedSuitePage
+					? 'مبلغ نهایی پس از انتخاب تعداد مسافران در فرم رزرو مشخص می‌شود.'
+					: 'این برآورد بر اساس ' + toPersian(guestCount) + ' نفر محاسبه شده است؛ برای ثبت رزرو، تاریخ‌ها را در صفحه اختصاصی سوئیت دوباره انتخاب کنید.';
+				pricingWrap.appendChild(estimateNote);
 				priceReady = Number(result.data.totalPrice) > 0;
 				bookButton.disabled = isLockedSuitePage && !priceReady;
-				setMessage('قیمت بر اساس ظرفیت پایه سوئیت محاسبه شده است؛ مبلغ نهایی پس از انتخاب تعداد مسافران در ویجت رزرو مشخص می‌شود.');
 			}).catch(() => {
 				if (requestId !== priceRequestId) return;
 				pricingWrap.innerHTML = '<p class="mtal-cal-display-message">ارتباط با سرور برای محاسبه قیمت برقرار نشد.</p>';
@@ -174,6 +184,19 @@
 		function applySuiteRules(referenceId, rules) {
 			selectedReference = Number(referenceId);
 			latestRules = rules;
+			if (guestSelect && guestWrap) {
+				const base = Math.max(1, Number(rules.baseCapacity) || 1);
+				const maximum = Math.max(base, Number(rules.maxCapacity) || base);
+				guestSelect.innerHTML = '';
+				for (let count = 1; count <= maximum; count += 1) {
+					const option = document.createElement('option');
+					option.value = String(count);
+					option.textContent = toPersian(count) + ' نفر';
+					option.selected = count === base;
+					guestSelect.appendChild(option);
+				}
+				guestWrap.hidden = false;
+			}
 			host.setAttribute('data-mtal-post-id', String(selectedReference));
 			const options = {
 				mode: 'inline_responsive',
@@ -225,6 +248,7 @@
 			clearPrice();
 			if (!id) {
 				selectedReference = 0;
+				if (guestWrap) guestWrap.hidden = true;
 				calendarWrap.hidden = true;
 				if (calendar) calendar.clear({ notify: false });
 				setMessage('');
@@ -232,6 +256,7 @@
 			}
 
 			calendarWrap.hidden = true;
+			if (guestWrap) guestWrap.hidden = true;
 			setMessage('در حال دریافت تقویم و قیمت‌های سوئیت...');
 			fetchSuiteRules(id).then((rules) => {
 				if (Number(select.value) !== id) return;
@@ -243,6 +268,13 @@
 		}
 
 		select.addEventListener('change', () => loadSuite(select.value));
+		if (guestSelect) {
+			guestSelect.addEventListener('change', () => {
+				if (calendar && calendar.startDate && calendar.endDate) {
+					showClientPricing(calendar.buildPayload(calendar.startDate, calendar.endDate));
+				}
+			});
+		}
 
 		clearButton.addEventListener('click', () => {
 			if (calendar) calendar.clear({ notify: true });
