@@ -112,6 +112,11 @@
 					list.appendChild(link);
 				});
 				results.appendChild(list);
+
+				const summary = document.createElement('p');
+				summary.className = 'mtal-availability-search-summary';
+			summary.textContent = 'تعداد ' + toPersian(suites.length) + ' سوئیت در این تاریخ آماده رزرو است';
+				results.appendChild(summary);
 				results.hidden = false;
 			};
 
