@@ -233,9 +233,9 @@ final class MTAL_My_Account_Suites {
 				echo '<div><span>قیمت عادی هر شب</span><strong>' . esc_html( number_format_i18n( $regular ) ) . '</strong></div>';
 				echo '<div><span>قیمت آخر هفته</span><strong>' . esc_html( number_format_i18n( $weekend ) ) . '</strong></div>';
 				echo '<div><span>هزینه نفر اضافه</span><strong>' . esc_html( number_format_i18n( $extra ) ) . '</strong></div>';
-				echo '</div>';
 				echo '<div class="mtal-account-suites__source"><span>نوشته منبع</span><strong>' . ( $source ? esc_html( get_the_title( $source ) ) . ' (#' . absint( $source->ID ) . ')' : 'بدون اتصال' ) . '</strong></div>';
-				echo '<div class="mtal-account-suites__actions"><a href="' . esc_url( self::get_suite_editor_url( $suite->ID ) ) . '">ویرایش سوئیت</a><a href="' . esc_url( self::get_suite_calendar_url( $suite->ID ) ) . '">مدیریت تقویم</a></div>';
+				echo '</div>';
+				echo '<div class="mtal-account-suites__actions"><a href="' . esc_url( self::get_suite_editor_url( $suite->ID ) ) . '">ویرایش</a><a href="' . esc_url( self::get_suite_calendar_url( $suite->ID ) ) . '">تقویم</a></div>';
 				if ( ! $source ) {
 					echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="mtal-account-suites__hide-form">';
 					wp_nonce_field( 'mtal_suite_hidden_' . $suite->ID . '_hide' );
