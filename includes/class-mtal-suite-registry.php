@@ -163,7 +163,7 @@ final class MTAL_Suite_Registry {
 	 */
 	public static function set_manager_ids( $suite_id, $user_ids ) {
 		$suite_id = absint( $suite_id );
-		if ( ! self::is_suite( $suite_id ) || ! is_array( $user_ids ) ) {
+		if ( ! is_admin() || ! current_user_can( 'manage_options' ) || ! self::is_suite( $suite_id ) || ! is_array( $user_ids ) ) {
 			return false;
 		}
 
