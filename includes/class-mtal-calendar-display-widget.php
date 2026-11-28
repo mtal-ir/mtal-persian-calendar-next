@@ -164,6 +164,10 @@ class MTAL_Calendar_Display_Widget extends Widget_Base {
 				</select>
 			</div>
 			<?php if ( ! $locked ) : ?>
+				<div class="mtal-cal-display-guests" dir="rtl" hidden>
+					<label for="<?php echo esc_attr( $widget_id . '-guests' ); ?>">تعداد نفرات</label>
+					<select class="mtal-cal-display-guest-count" id="<?php echo esc_attr( $widget_id . '-guests' ); ?>" aria-label="تعداد نفرات برای برآورد قیمت"></select>
+				</div>
 				<p class="mtal-cal-display-message mtal-cal-display-guide" role="note">این تقویم برای مشاهده روزهای باز و بسته و برآورد قیمت اقامت است. برای ثبت رزرو، پس از انتخاب سوئیت وارد صفحه اختصاصی آن شوید و تاریخ ورود و خروج را مجدداً در تقویم همان صفحه انتخاب کنید.</p>
 			<?php endif; ?>
 			<?php if ( empty( $display_suites ) ) : ?>
