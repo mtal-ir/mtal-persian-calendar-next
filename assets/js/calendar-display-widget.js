@@ -121,6 +121,10 @@
 						'</p>';
 					priceReady = false;
 					bookButton.disabled = true;
+					fetchSuiteRules(selectedReference).then((rules) => {
+						latestRules = rules;
+						calendar.updateRules(rules);
+					}).catch(() => {});
 					return;
 				}
 				pricingWrap.innerHTML = '';
