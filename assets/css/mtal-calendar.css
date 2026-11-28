@@ -1966,23 +1966,46 @@ html.mtal-modal-open {
 }
 
 
-/* Availability results: centered desktop layout with a soft glass surface. */
-@media (min-width: 768px) {
-	.mtal-availability-search-results:not(.is-empty) {
-		display: flex;
-		justify-content: center;
-		padding: 14px 18px 8px;
-		border: 1px solid rgba(255, 255, 255, .72);
-		border-radius: 16px;
-		background: rgba(255, 255, 255, .78);
-		-webkit-backdrop-filter: blur(12px) saturate(115%);
-		backdrop-filter: blur(12px) saturate(115%);
-		box-shadow: 0 8px 26px rgba(24, 55, 35, .08);
-	}
-	.mtal-availability-search-results:not(.is-empty) .mtal-availability-suite-list {
-		justify-content: center;
-		width: auto;
-		max-width: 100%;
-		overflow-x: auto;
-	}
+/* Availability results: soft glass surface on every screen size. */
+.mtal-availability-search-results:not(.is-empty) {
+	padding: 14px 18px 10px;
+	border: 1px solid rgba(255, 255, 255, .78);
+	border-radius: 16px;
+	background: rgba(255, 255, 255, .78);
+	-webkit-backdrop-filter: blur(12px) saturate(115%);
+	backdrop-filter: blur(12px) saturate(115%);
+	box-shadow: 0 8px 26px rgba(99, 116, 38, .12);
+}
+.mtal-availability-search-results:not(.is-empty) .mtal-availability-suite-list {
+	justify-content: center;
+	width: 100%;
+	max-width: 100%;
+	overflow-x: auto;
+}
+.mtal-availability-search-summary {
+	margin-top: 8px;
+	color: #637426;
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1.6;
+	text-align: center;
+}
+.mtal-availability-suite-image {
+	border-color: rgba(99, 116, 38, .28);
+	background: #f3f5e9;
+	color: #637426;
+}
+.mtal-availability-suite-title {
+	color: #637426;
+}
+.mtal-availability-suite {
+	color: #637426 !important;
+}
+.mtal-availability-search-button {
+	border-color: #637426 !important;
+	background: #637426 !important;
+	color: #fff !important;
+}
+.mtal-availability-search-button:hover:not(:disabled) {
+	background: #53621f !important;
 }
