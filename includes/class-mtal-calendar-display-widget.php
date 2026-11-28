@@ -101,8 +101,16 @@ class MTAL_Calendar_Display_Widget extends Widget_Base {
 				'referenceId' => absint( $source->ID ),
 				'suiteId'     => $suite_id,
 				'title'       => $display['title'],
+				'url'         => get_permalink( $source->ID ),
 			);
 		}
+
+		usort(
+			$suites,
+			static function ( $a, $b ) {
+				return absint( $a['suiteId'] ) <=> absint( $b['suiteId'] );
+			}
+		);
 
 		return $suites;
 	}
@@ -149,7 +157,7 @@ class MTAL_Calendar_Display_Widget extends Widget_Base {
 						<option value="">این سوئیت در حال حاضر قابل رزرو نیست</option>
 					<?php endif; ?>
 					<?php foreach ( $display_suites as $suite ) : ?>
-						<option value="<?php echo esc_attr( $suite['referenceId'] ); ?>" <?php selected( $locked ? $selected_suite['referenceId'] : 0, $suite['referenceId'] ); ?>>
+						<option value="<?php echo esc_attr( $suite['referenceId'] ); ?>" data-suite-url="<?php echo esc_url( $suite['url'] ); ?>" <?php selected( $locked ? $selected_suite['referenceId'] : 0, $suite['referenceId'] ); ?>>
 							<?php echo esc_html( $suite['title'] ); ?>
 						</option>
 					<?php endforeach; ?>
@@ -163,7 +171,7 @@ class MTAL_Calendar_Display_Widget extends Widget_Base {
 				<div class="mtal-cal-display-pricing" hidden aria-live="polite"></div>
 				<div class="mtal-cal-display-actions" dir="rtl">
 					<button type="button" class="mtal-cal-clear-btn mtal-cal-display-clear">پاک کردن</button>
-					<button type="button" class="mtal-cal-confirm-btn mtal-cal-display-book" disabled>رزرو</button>
+					<button type="button" class="mtal-cal-confirm-btn mtal-cal-display-book" disabled><?php echo $locked ? 'رزرو' : 'مشاهده سوئیت و رزرو'; ?></button>
 				</div>
 				<p class="mtal-cal-display-message" role="status" aria-live="polite"></p>
 			</div>
