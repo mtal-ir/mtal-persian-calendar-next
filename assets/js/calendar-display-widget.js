@@ -71,6 +71,7 @@
 		const bookButton = host.querySelector('.mtal-cal-display-book');
 		const message = host.querySelector('.mtal-cal-display-message');
 		const targetSelector = host.getAttribute('data-mtal-target-widget') || '.mtal-cal-inline-host, .mtal-cal-modal-host';
+		const isLockedSuitePage = host.getAttribute('data-mtal-display-locked') === '1';
 		let selectedReference = 0;
 		let calendar = null;
 		let latestRules = null;
@@ -87,7 +88,7 @@
 			priceReady = false;
 			pricingWrap.hidden = true;
 			pricingWrap.innerHTML = '';
-			bookButton.disabled = true;
+			bookButton.disabled = isLockedSuitePage || !selectedReference;
 		}
 
 		function showClientPricing(payload) {
@@ -120,7 +121,7 @@
 						((result && result.data && result.data.message) || 'محاسبه قیمت انجام نشد؛ لطفاً تاریخ دیگری انتخاب کنید.') +
 						'</p>';
 					priceReady = false;
-					bookButton.disabled = true;
+					bookButton.disabled = isLockedSuitePage;
 					fetchSuiteRules(selectedReference).then((rules) => {
 						latestRules = rules;
 						calendar.updateRules(rules);
@@ -130,13 +131,13 @@
 				pricingWrap.innerHTML = '';
 				pricingWrap.appendChild(buildServerPricingBox(calendar, result.data));
 				priceReady = Number(result.data.totalPrice) > 0;
-				bookButton.disabled = !priceReady;
+				bookButton.disabled = isLockedSuitePage && !priceReady;
 				setMessage('قیمت بر اساس ظرفیت پایه سوئیت محاسبه شده است؛ مبلغ نهایی پس از انتخاب تعداد مسافران در ویجت رزرو مشخص می‌شود.');
 			}).catch(() => {
 				if (requestId !== priceRequestId) return;
 				pricingWrap.innerHTML = '<p class="mtal-cal-display-message">ارتباط با سرور برای محاسبه قیمت برقرار نشد.</p>';
 				priceReady = false;
-				bookButton.disabled = true;
+				bookButton.disabled = isLockedSuitePage;
 			});
 		}
 
@@ -154,7 +155,7 @@
 				: false;
 			if (!synced) showClientPricing(payload);
 			if (!payload || !payload.checkIn || !payload.checkOut) {
-				bookButton.disabled = true;
+				bookButton.disabled = isLockedSuitePage;
 			}
 		}
 
@@ -200,6 +201,7 @@
 
 			calendarWrap.hidden = false;
 			clearPrice();
+			bookButton.disabled = false;
 			const bridge = window.MTALBookingBridge;
 			if (bridge && typeof bridge.connectDisplayCalendar === 'function') {
 				const connected = bridge.connectDisplayCalendar({
@@ -249,6 +251,17 @@
 		});
 
 		bookButton.addEventListener('click', () => {
+			if (!isLockedSuitePage) {
+				const selectedOption = select.options[select.selectedIndex];
+				const suiteUrl = selectedOption && selectedOption.getAttribute('data-suite-url');
+				if (suiteUrl) {
+					window.location.assign(suiteUrl);
+				} else {
+					setMessage('صفحه اختصاصی این سوئیت پیدا نشد.');
+				}
+				return;
+			}
+
 			if (!calendar || !priceReady || !calendar.startDate || !calendar.endDate ||
 				!calendar.isRangeAllowed(calendar.startDate, calendar.endDate)) {
 				setMessage('ابتدا یک بازه معتبر انتخاب کنید و منتظر محاسبه قیمت بمانید.');
