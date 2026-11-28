@@ -141,7 +141,18 @@
 		}
 
 		function onCalendarChange(payload) {
-			showClientPricing(payload);
+			const bridge = window.MTALBookingBridge;
+			const synced = bridge && typeof bridge.syncDisplayRange === 'function'
+				? bridge.syncDisplayRange({
+					postId: selectedReference,
+					targetSelector: targetSelector,
+					calendar: calendar,
+					rules: latestRules,
+					payload: payload,
+					onSync: showClientPricing
+				})
+				: false;
+			if (!synced) showClientPricing(payload);
 			if (!payload || !payload.checkIn || !payload.checkOut) {
 				bookButton.disabled = true;
 			}
@@ -189,6 +200,20 @@
 
 			calendarWrap.hidden = false;
 			clearPrice();
+			const bridge = window.MTALBookingBridge;
+			if (bridge && typeof bridge.connectDisplayCalendar === 'function') {
+				const connected = bridge.connectDisplayCalendar({
+					postId: selectedReference,
+					targetSelector: targetSelector,
+					calendar: calendar,
+					rules: rules,
+					onSync: showClientPricing
+				});
+				if (connected) {
+					calendar.setRange(connected.target.cal.startDate, connected.target.cal.endDate, { notify: false, syncDraft: true });
+					showClientPricing(calendar.buildPayload(calendar.startDate, calendar.endDate));
+				}
+			}
 			setMessage('تاریخ ورود و خروج را از تقویم انتخاب کنید.');
 		}
 
