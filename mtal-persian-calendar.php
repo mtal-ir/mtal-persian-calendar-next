@@ -688,7 +688,7 @@ final class MTAL_Persian_Calendar {
 		if ( file_exists( $reviews_widget_file ) ) {
 			require_once $reviews_widget_file;
 			if ( class_exists( '\\MTAL_Suite_Reviews_Widget' ) ) {
-				$widgets_manager->register( new \\MTAL_Suite_Reviews_Widget() );
+				$widgets_manager->register( new \MTAL_Suite_Reviews_Widget() );
 			}
 		}
 
