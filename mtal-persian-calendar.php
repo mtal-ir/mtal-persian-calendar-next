@@ -687,7 +687,7 @@ final class MTAL_Persian_Calendar {
 		if ( file_exists( $search_widget_file ) ) {
 			require_once $search_widget_file;
 			if ( class_exists( '\\MTAL_Availability_Search_Widget' ) ) {
-				$widgets_manager->register( new \\MTAL_Availability_Search_Widget() );
+				$widgets_manager->register( new \MTAL_Availability_Search_Widget() );
 			}
 		}
 
