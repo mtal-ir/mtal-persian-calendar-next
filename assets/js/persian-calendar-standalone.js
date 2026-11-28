@@ -220,8 +220,9 @@
 
 	class MTALPersianCalendar {
 		constructor(options = {}) {
-			const validModes = ['inline', 'inline_2col', 'modal_3months'];
+			const validModes = ['inline', 'inline_2col', 'inline_responsive', 'modal_3months'];
 			this.mode = validModes.includes(options.mode) ? options.mode : 'inline';
+			this.responsiveDesktop = this.mode === 'inline_responsive' && window.matchMedia('(min-width: 1025px)').matches;
 			this.mountEl = options.mountEl || null;
 			this.triggerLabel = options.triggerLabel || 'انتخاب تاریخ سفر';
 			this.maxMonths = Math.max(1, Math.min(3, parseInt(options.maxMonths || 3, 10)));
@@ -266,6 +267,15 @@
 			this.triggerBtnEl = null;
 
 			this.build();
+			if (this.mode === 'inline_responsive') {
+				window.addEventListener('resize', () => {
+					const desktop = window.matchMedia('(min-width: 1025px)').matches;
+					if (desktop !== this.responsiveDesktop) {
+						this.responsiveDesktop = desktop;
+						this.render();
+					}
+				});
+			}
 			this.render();
 		}
 
@@ -816,7 +826,7 @@
 			const minMonthIndex = this.minDate.jy * 12 + (this.minDate.jm - 1);
 			const maxMonthIndex = this.maxDate.jy * 12 + (this.maxDate.jm - 1);
 			const currMonthIndex = this.viewYear * 12 + (this.viewMonth - 1);
-			const visibleSpan = this.mode === 'inline_2col' ? 2 : 1;
+			const visibleSpan = this.mode === 'inline_2col' || (this.mode === 'inline_responsive' && window.matchMedia('(min-width: 1025px)').matches) ? 2 : 1;
 			const lastVisibleMonthIndex = currMonthIndex + (visibleSpan - 1);
 
 			if (showNext) {
@@ -1066,11 +1076,52 @@
 
 			if (this.mode === 'modal_3months') {
 				this.renderModalMode();
+			} else if (this.mode === 'inline_responsive') {
+				this.renderInlineResponsiveMode();
 			} else if (this.mode === 'inline_2col') {
 				this.renderInlineTwoColMode();
 			} else {
 				this.renderInlineMode();
 			}
+		}
+
+		renderInlineResponsiveMode() {
+			this.panelEl.innerHTML = '';
+
+			const monthsContainer = document.createElement('div');
+			monthsContainer.className = 'mtal-cal-months-grid is-responsive';
+			const secondMonth = addMonthsJalali(this.viewYear, this.viewMonth, 1);
+
+			const firstBlock = this.renderMonthBlock(
+				this.viewYear,
+				this.viewMonth,
+				this.startDate,
+				this.endDate,
+				{ showPrev: true, showNext: !this.responsiveDesktop, showBadge: true }
+			);
+			const secondBlock = this.renderMonthBlock(
+				secondMonth.jy,
+				secondMonth.jm,
+				this.startDate,
+				this.endDate,
+				{ showPrev: false, showNext: this.responsiveDesktop, showBadge: false }
+			);
+
+			monthsContainer.appendChild(firstBlock);
+			monthsContainer.appendChild(secondBlock);
+			this.panelEl.appendChild(monthsContainer);
+
+			const footer = document.createElement('div');
+			footer.className = 'mtal-cal-footer mtal-cal-footer-display';
+			footer.appendChild(this.createLegendBar());
+			footer.appendChild(this.createHandoverNoteBox());
+			if (this.warningMessage) {
+				const warning = document.createElement('div');
+				warning.className = 'mtal-cal-warning';
+				warning.textContent = this.warningMessage;
+				footer.appendChild(warning);
+			}
+			this.panelEl.appendChild(footer);
 		}
 
 		renderInlineMode() {
