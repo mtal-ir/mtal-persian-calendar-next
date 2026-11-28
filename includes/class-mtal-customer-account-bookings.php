@@ -201,15 +201,30 @@ final class MTAL_Customer_Account_Bookings {
 		$orders = is_object( $results ) && isset( $results->orders ) ? $results->orders : array();
 		$total_pages = is_object( $results ) && isset( $results->max_num_pages ) ? max( 1, absint( $results->max_num_pages ) ) : 1;
 
+		echo '<div class="mtal-customer-bookings">';
 		echo '<h3>رزروهای من</h3>';
 		if ( empty( $orders ) ) {
-			echo '<p>هنوز رزروی برای حساب کاربری شما ثبت نشده است.</p>';
+			echo '<p>هنوز رزروی برای حساب کاربری شما ثبت نشده است.</p></div>';
 			return;
 		}
 
-		echo '<table class="woocommerce-table woocommerce-table--orders shop_table shop_table_responsive my_account_orders"><thead><tr>';
-		echo '<th>شماره رزرو</th><th>سوئیت</th><th>تاریخ ورود</th><th>تاریخ خروج</th><th>مسافران</th><th>مبلغ</th><th>وضعیت</th><th>جزئیات</th>';
-		echo '</tr></thead><tbody>';
+		echo '<style>
+			.mtal-customer-bookings__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px;margin:18px 0}
+			.mtal-customer-booking-card{display:flex;flex-direction:column;min-width:0;overflow:hidden;border:1px solid #e5e7eb;border-radius:12px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.045)}
+			.mtal-customer-booking-card__top{display:flex;align-items:center;gap:14px;padding:16px;border-bottom:1px solid #f0f0f0}
+			.mtal-customer-booking-card__image{width:104px;height:88px;flex:0 0 104px;object-fit:cover;border-radius:8px;background:#f4f4f4}
+			.mtal-customer-booking-card__title{margin:0 0 7px;font-size:16px;font-weight:700}
+			.mtal-customer-booking-card__number{font-size:13px;color:#777}
+			.mtal-customer-booking-card__status{display:inline-block;margin-top:8px;padding:4px 9px;border-radius:20px;background:#f1f5f9;color:#334155;font-size:12px}
+			.mtal-customer-booking-card__body{display:grid;grid-template-columns:1fr 1fr;gap:13px;padding:16px}
+			.mtal-customer-booking-card__item{min-width:0}
+			.mtal-customer-booking-card__label{display:block;margin-bottom:4px;color:#777;font-size:12px}
+			.mtal-customer-booking-card__value{display:block;font-size:14px;font-weight:600;overflow-wrap:anywhere}
+			.mtal-customer-booking-card__footer{padding:0 16px 16px}
+			.mtal-customer-booking-card__footer .button{display:block;text-align:center;width:100%;box-sizing:border-box}
+			@media(max-width:480px){.mtal-customer-booking-card__top{gap:10px;padding:12px}.mtal-customer-booking-card__image{width:82px;height:76px;flex-basis:82px}.mtal-customer-booking-card__body{padding:12px;gap:11px}.mtal-customer-booking-card__footer{padding:0 12px 12px}}
+		</style>';
+		echo '<div class="mtal-customer-bookings__grid">';
 
 		foreach ( $orders as $order ) {
 			if ( ! self::is_customer_booking( $order ) ) {
@@ -219,20 +234,33 @@ final class MTAL_Customer_Account_Bookings {
 			$suite_id = absint( $order->get_meta( '_mtal_booking_suite_id' ) );
 			$suite = self::get_suite_display( $suite_id );
 			$detail_url = wc_get_endpoint_url( self::ENDPOINT, $order->get_id(), wc_get_page_permalink( 'myaccount' ) );
+			$image_url = ! empty( $suite['imageUrl'] ) ? $suite['imageUrl'] : '';
+			$check_in = (string) $order->get_meta( '_mtal_booking_check_in' );
+			$check_out = (string) $order->get_meta( '_mtal_booking_check_out' );
+			$guests = absint( $order->get_meta( '_mtal_booking_guests' ) );
 
-			echo '<tr>';
-			echo '<td data-title="شماره رزرو">#' . esc_html( $order->get_order_number() ) . '</td>';
-			echo '<td data-title="سوئیت">' . esc_html( $suite['title'] ) . '</td>';
-			echo '<td data-title="ورود">' . esc_html( (string) $order->get_meta( '_mtal_booking_check_in' ) ) . '</td>';
-			echo '<td data-title="خروج">' . esc_html( (string) $order->get_meta( '_mtal_booking_check_out' ) ) . '</td>';
-			echo '<td data-title="مسافران">' . esc_html( number_format_i18n( absint( $order->get_meta( '_mtal_booking_guests' ) ) ) ) . '</td>';
-			echo '<td data-title="مبلغ">' . wp_kses_post( wc_price( $order->get_total(), array( 'currency' => $order->get_currency() ) ) ) . '</td>';
-			echo '<td data-title="وضعیت">' . self::render_status( $order ) . '</td>';
-			echo '<td data-title="جزئیات"><a class="woocommerce-button button" href="' . esc_url( $detail_url ) . '">مشاهده</a></td>';
-			echo '</tr>';
+			echo '<article class="mtal-customer-booking-card">';
+			echo '<div class="mtal-customer-booking-card__top">';
+			if ( $image_url ) {
+				echo '<img class="mtal-customer-booking-card__image" src="' . esc_url( $image_url ) . '" alt="' . esc_attr( $suite['title'] ) . '" loading="lazy" />';
+			}
+			echo '<div><h4 class="mtal-customer-booking-card__title">' . esc_html( $suite['title'] ) . '</h4>';
+			echo '<span class="mtal-customer-booking-card__number">شماره رزرو: #' . esc_html( $order->get_order_number() ) . '</span>';
+			echo '<span class="mtal-customer-booking-card__status">' . self::render_status( $order ) . '</span></div>';
+			echo '</div>';
+
+			echo '<div class="mtal-customer-booking-card__body">';
+			echo '<div class="mtal-customer-booking-card__item"><span class="mtal-customer-booking-card__label">تاریخ ورود</span><span class="mtal-customer-booking-card__value">' . ( $check_in ? esc_html( $check_in ) : '—' ) . '</span></div>';
+			echo '<div class="mtal-customer-booking-card__item"><span class="mtal-customer-booking-card__label">تاریخ خروج</span><span class="mtal-customer-booking-card__value">' . ( $check_out ? esc_html( $check_out ) : '—' ) . '</span></div>';
+			echo '<div class="mtal-customer-booking-card__item"><span class="mtal-customer-booking-card__label">تعداد مسافران</span><span class="mtal-customer-booking-card__value">' . esc_html( number_format_i18n( $guests ) ) . ' نفر</span></div>';
+			echo '<div class="mtal-customer-booking-card__item"><span class="mtal-customer-booking-card__label">مبلغ کل</span><span class="mtal-customer-booking-card__value">' . wp_kses_post( wc_price( $order->get_total(), array( 'currency' => $order->get_currency() ) ) ) . '</span></div>';
+			echo '</div>';
+
+			echo '<div class="mtal-customer-booking-card__footer"><a class="woocommerce-button button" href="' . esc_url( $detail_url ) . '">مشاهده جزئیات رزرو</a></div>';
+			echo '</article>';
 		}
 
-		echo '</tbody></table>';
+		echo '</div>';
 
 		if ( $total_pages > 1 ) {
 			echo '<nav class="woocommerce-pagination" aria-label="صفحه‌بندی رزروها">';
@@ -246,8 +274,8 @@ final class MTAL_Customer_Account_Bookings {
 			}
 			echo '</nav>';
 		}
+		echo '</div>';
 	}
-
 	public static function render_endpoint() {
 		if ( ! is_user_logged_in() ) {
 			echo '<div class="woocommerce-info">برای مشاهده رزروها ابتدا وارد حساب کاربری شوید.</div>';
