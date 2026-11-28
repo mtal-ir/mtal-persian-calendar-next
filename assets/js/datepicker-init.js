@@ -484,6 +484,9 @@
 						syncAllHiddenFormFields(item.host, item.cal, payload);
 						syncHostCounterDisplay(item.host, item.cal.guestsCount);
 					}
+					if (typeof item.onSync === 'function') {
+						item.onSync(item.cal.buildPayload(item.cal.startDate, item.cal.endDate));
+					}
 				}
 			});
 		} finally {
@@ -606,6 +609,7 @@
 		minusBtn.setAttribute('aria-label', 'کاهش تعداد مسافران');
 		minusBtn.textContent = '−';
 
+		const getCurrentMaxGuests = () => resolveSuiteMaxCapacity(host, maxGuests);
 		function refreshCounterUI() {
 			valSpan.textContent = toPersianDigits(cal.guestsCount);
 			const lbl = box.querySelector('.mtal-guests-count-label');
@@ -613,11 +617,11 @@
 				lbl.textContent = `${toPersianDigits(cal.guestsCount)} نفر`;
 			}
 			minusBtn.disabled = cal.guestsCount <= 1;
-			plusBtn.disabled = cal.guestsCount >= maxGuests;
+			plusBtn.disabled = cal.guestsCount >= getCurrentMaxGuests();
 		}
 
 		plusBtn.addEventListener('click', () => {
-			if (cal.guestsCount < maxGuests) {
+			if (cal.guestsCount < getCurrentMaxGuests()) {
 				cal.setGuestsCount(cal.guestsCount + 1, { notify: true });
 				refreshCounterUI();
 			}
@@ -841,7 +845,7 @@
 					if (form) { form._mtalBookingSubmitted = false; form._mtalBookingFinalized = false; }
 					button.classList.remove('is-cancel-action');
 					// Clear the cancelled stay from every synchronized calendar and its persisted state.
-					const synchronizedCalendars = instancesByKey.get(groupKey) || [];
+					const synchronizedCalendars = instancesByKey.get(host._mtalGroupKey || groupKey) || [];
 					synchronizedCalendars.forEach((item) => {
 						item.cal.clear({ notify: true });
 						item.cal.setGuestsCount(item.cal.baseCapacity, { notify: true });
@@ -898,7 +902,7 @@
 					form._mtalBookingFinalized = false;
 					button.classList.remove('is-cancel-action');
 					// Reset every calendar linked to this suite as soon as cancellation is final.
-					const synchronizedCalendars = instancesByKey.get(groupKey) || [];
+					const synchronizedCalendars = instancesByKey.get(host._mtalGroupKey || groupKey) || [];
 					synchronizedCalendars.forEach((item) => {
 						item.cal.clear({ notify: true });
 						item.cal.setGuestsCount(item.cal.baseCapacity, { notify: true });
@@ -953,9 +957,9 @@
 			const triggerLabel = host.getAttribute('data-mtal-trigger-label') || 'انتخاب تاریخ سفر';
 			const attrMax = parsePositiveInt(host.getAttribute('data-mtal-max-months'), NaN);
 			const maxMonths = !Number.isNaN(attrMax) ? Math.max(1, Math.min(3, attrMax)) : globalMaxMonths;
-			const postId = parsePositiveInt(host.getAttribute('data-mtal-post-id') || cfg.postId, 0);
+			let postId = parsePositiveInt(host.getAttribute('data-mtal-post-id') || cfg.postId, 0);
 			// Each suite needs isolated date/guest persistence and sibling synchronization.
-			const scope = `${baseScope}::suite-${postId || 'unknown'}`;
+			let scope = `${baseScope}::suite-${postId || 'unknown'}`;
 
 			const blockedDates = parseJsonAttr(host.getAttribute('data-mtal-blocked-dates'), cfg.blockedDates || []);
 			const holidayDates = parseJsonAttr(host.getAttribute('data-mtal-holiday-dates'), cfg.holidayDates || []);
@@ -969,7 +973,7 @@
 				0
 			);
 
-			const baseCapacity = Math.max(
+			let baseCapacity = Math.max(
 				1,
 				parsePositiveInt(host.getAttribute('data-mtal-base-capacity') || cfg.baseCapacity, 2)
 			);
@@ -982,11 +986,12 @@
 					0
 				)
 			);
-			const maxGuests = resolveSuiteMaxCapacity(host, cfg.maxGuests || 5);
+			let maxGuests = resolveSuiteMaxCapacity(host, cfg.maxGuests || 5);
 
-			const groupKey = `${scope}::${targetSelector}`;
-			const storageKey = getStorageKey(scope, targetSelector);
-			const guestsStorageKey = getGuestsStorageKey(scope, targetSelector);
+			let groupKey = `${scope}::${targetSelector}`;
+			let storageKey = getStorageKey(scope, targetSelector);
+			let guestsStorageKey = getGuestsStorageKey(scope, targetSelector);
+			host._mtalGroupKey = groupKey;
 
 			const savedGuests = parsePositiveInt(readPersistedValue(guestsStorageKey), 0);
 			const initialGuests = Math.min(
@@ -1092,12 +1097,68 @@
 			if (cal.triggerBtnEl) cal.triggerBtnEl.remove();
 			buildCalendarBookingAction(host, cal, groupKey);
 
-			calendarEntries.push({ cal, postId, host });
+			const syncItem = { cal, targetSelector, storageKey, guestsStorageKey, host };
+			const calendarEntry = {
+				cal,
+				postId,
+				host,
+				maxGuests,
+				syncItem,
+				switchSuite(nextPostId, rules) {
+					const nextId = parsePositiveInt(nextPostId, 0);
+					if (!nextId || !rules || typeof rules !== 'object') return false;
+
+					const oldGroup = instancesByKey.get(groupKey) || [];
+					const oldIndex = oldGroup.findIndex((item) => item.cal === cal);
+					if (oldIndex >= 0) oldGroup.splice(oldIndex, 1);
+					if (!oldGroup.length) instancesByKey.delete(groupKey);
+
+					postId = nextId;
+					baseCapacity = Math.max(1, parsePositiveInt(rules.baseCapacity, 2));
+					maxGuests = Math.max(baseCapacity, parsePositiveInt(rules.maxCapacity, baseCapacity));
+					scope = `${baseScope}::suite-${postId}`;
+					groupKey = `${scope}::${targetSelector}`;
+					storageKey = getStorageKey(scope, targetSelector);
+					guestsStorageKey = getGuestsStorageKey(scope, targetSelector);
+					host._mtalGroupKey = groupKey;
+					host.setAttribute('data-mtal-post-id', String(postId));
+					host.setAttribute('data-mtal-max-guests', String(maxGuests));
+					host.setAttribute('data-mtal-base-capacity', String(baseCapacity));
+					host.setAttribute('data-mtal-regular-price', String(parsePositiveInt(rules.regularPrice, 0)));
+					host.setAttribute('data-mtal-weekend-price', String(parsePositiveInt(rules.weekendPrice, 0)));
+				host.setAttribute('data-mtal-extra-guest-price', String(parsePositiveInt(rules.extraGuestPrice, 0)));
+					host.setAttribute('data-mtal-blocked-dates', JSON.stringify(rules.blockedDates || []));
+					host.setAttribute('data-mtal-holiday-dates', JSON.stringify(rules.holidayDates || []));
+					host.setAttribute('data-mtal-manual-prices', JSON.stringify(rules.manualPrices || {}));
+					if (host._mtalBookingForm) {
+						host._mtalBookingForm.querySelectorAll('#form-field-mtal_qty, input[name*="mtal_qty"]').forEach((input) => {
+							input.setAttribute('min', '1');
+							input.setAttribute('max', String(maxGuests));
+						});
+					}
+
+					cal.clear({ notify: false });
+					cal.updateRules(rules);
+					cal.setGuestsCount(baseCapacity, { notify: false });
+
+					syncItem.storageKey = storageKey;
+					syncItem.guestsStorageKey = guestsStorageKey;
+					if (!instancesByKey.has(groupKey)) instancesByKey.set(groupKey, []);
+					instancesByKey.get(groupKey).push(syncItem);
+					calendarEntry.postId = postId;
+					calendarEntry.maxGuests = maxGuests;
+					calendarEntry.groupKey = groupKey;
+					syncAllHiddenFormFields(host, cal, cal.buildPayload(null, null));
+					return true;
+				}
+			};
+			calendarEntry.groupKey = groupKey;
+			calendarEntries.push(calendarEntry);
 
 			if (!instancesByKey.has(groupKey)) {
 				instancesByKey.set(groupKey, []);
 			}
-			instancesByKey.get(groupKey).push({ cal, targetSelector, storageKey, guestsStorageKey, host });
+			instancesByKey.get(groupKey).push(syncItem);
 
 			// Keep the active booking's dates and guest count visible until its deadline/status ends.
 			try {
@@ -1136,6 +1197,102 @@
 			}
 		});
 	}
+
+	window.MTALBookingBridge = {
+		connectDisplayCalendar(options = {}) {
+			const referenceId = parsePositiveInt(options.postId, 0);
+			const displayCal = options.calendar;
+			if (!referenceId || !displayCal || !options.rules) return false;
+
+			const candidates = calendarEntries.filter((entry) => entry.host && entry.host.isConnected);
+			let target = null;
+			if (options.targetSelector) {
+				try {
+					target = candidates.find((entry) =>
+						entry.host.matches(options.targetSelector) || entry.host.closest(options.targetSelector)
+					) || null;
+				} catch (error) {
+					return false;
+				}
+			} else {
+				target = candidates[0] || null;
+			}
+			if (!target || !target.host._mtalBookingForm || target.host._mtalBookingForm._mtalBookingSubmitted) return false;
+			if (Number(target.postId) !== referenceId) {
+				if (!target.switchSuite(referenceId, options.rules)) return false;
+				target.cal.clear({ notify: false });
+			}
+
+			const oldKey = displayCal._mtalBookingSyncGroupKey;
+			if (oldKey && oldKey !== target.groupKey) {
+				const oldGroup = instancesByKey.get(oldKey) || [];
+				const oldIndex = oldGroup.findIndex((item) => item.cal === displayCal);
+				if (oldIndex >= 0) oldGroup.splice(oldIndex, 1);
+				if (!oldGroup.length) instancesByKey.delete(oldKey);
+			}
+			const group = instancesByKey.get(target.groupKey) || [];
+			let displayItem = group.find((item) => item.cal === displayCal);
+			if (!displayItem) {
+				displayItem = {
+					cal: displayCal,
+					targetSelector: target.syncItem.targetSelector,
+					storageKey: target.syncItem.storageKey,
+					guestsStorageKey: target.syncItem.guestsStorageKey,
+					host: null,
+					onSync: options.onSync
+				};
+				group.push(displayItem);
+				instancesByKey.set(target.groupKey, group);
+			}
+			displayItem.onSync = options.onSync;
+			displayCal._mtalBookingSyncGroupKey = target.groupKey;
+			return { target, displayItem };
+		},
+		syncDisplayRange(options = {}) {
+			const connected = this.connectDisplayCalendar(options);
+			if (!connected) return false;
+			const target = connected.target;
+			const payload = options.payload;
+			if (payload && payload.checkIn) {
+				target.cal.setRange(payload.checkIn, payload.checkOut, { notify: true, syncDraft: true });
+			} else {
+				target.cal.clear({ notify: true });
+			}
+			return true;
+		},
+		startFromDisplay(options = {}) {
+			const referenceId = parsePositiveInt(options.postId, 0);
+			const checkIn = options.checkIn;
+			const checkOut = options.checkOut;
+			if (!referenceId || !checkIn || !checkOut || !options.rules) return false;
+
+			const candidates = calendarEntries.filter((entry) => entry.host && entry.host.isConnected);
+			let target = null;
+			if (options.targetSelector) {
+				try {
+					target = candidates.find((entry) => entry.host.matches(options.targetSelector) || entry.host.closest(options.targetSelector)) || null;
+				} catch (error) {
+					return false;
+				}
+				if (!target) return false;
+			} else {
+				target = candidates[0] || null;
+			}
+			if (!target || !target.host._mtalBookingForm) return false;
+			if (target.host._mtalBookingForm._mtalBookingSubmitted) return false;
+			if (!target.switchSuite(referenceId, options.rules)) return false;
+
+			target.cal.setRange(checkIn, checkOut, { notify: true, syncDraft: true });
+			target.host.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			window.setTimeout(() => {
+				openGuestModalForHost(target.host, target.cal, target.maxGuests, (selectedCount) => {
+					target.cal.setGuestsCount(selectedCount, { notify: true });
+					syncHostCounterDisplay(target.host, selectedCount);
+				});
+			}, 550);
+			return true;
+		}
+	};
 
 	function initAdminHosts(root = document) {
 		const adminHosts = root.querySelectorAll('.mtal-admin-cal-host:not([data-mtal-admin-init="1"])');

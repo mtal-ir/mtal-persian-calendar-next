@@ -220,8 +220,9 @@
 
 	class MTALPersianCalendar {
 		constructor(options = {}) {
-			const validModes = ['inline', 'inline_2col', 'modal_3months'];
+			const validModes = ['inline', 'inline_2col', 'inline_responsive', 'modal_3months'];
 			this.mode = validModes.includes(options.mode) ? options.mode : 'inline';
+			this.responsiveDesktop = this.mode === 'inline_responsive' && window.matchMedia('(min-width: 1025px)').matches;
 			this.mountEl = options.mountEl || null;
 			this.triggerLabel = options.triggerLabel || 'انتخاب تاریخ سفر';
 			this.maxMonths = Math.max(1, Math.min(3, parseInt(options.maxMonths || 3, 10)));
@@ -266,6 +267,15 @@
 			this.triggerBtnEl = null;
 
 			this.build();
+			if (this.mode === 'inline_responsive') {
+				window.addEventListener('resize', () => {
+					const desktop = window.matchMedia('(min-width: 1025px)').matches;
+					if (desktop !== this.responsiveDesktop) {
+						this.responsiveDesktop = desktop;
+						this.render();
+					}
+				});
+			}
 			this.render();
 		}
 
@@ -516,6 +526,8 @@
 				checkOutSlash: hasValidRange ? formatSlash(end) : '',
 				checkInShort: start ? formatShortPersian(start) : '',
 				checkOutShort: hasValidRange ? formatShortPersian(end) : '',
+				checkInDisplay: start ? formatFullPersian(start).replace(/\s+[۰-۹\d]{4}$/, '') : '',
+				checkOutDisplay: hasValidRange ? formatFullPersian(end).replace(/\s+[۰-۹\d]{4}$/, '') : '',
 				nights: pricing.nights,
 				guestsCount: this.guestsCount,
 				extraGuests: pricing.extraGuests,
@@ -762,7 +774,7 @@
 
 				const modalTitle = document.createElement('div');
 				modalTitle.className = 'mtal-cal-modal-title';
-				modalTitle.textContent = 'انتخاب تاریخ ورود و خروج';
+				modalTitle.textContent = 'انتخاب تاریخ';
 
 				const closeBtn = document.createElement('button');
 				closeBtn.type = 'button';
@@ -816,7 +828,7 @@
 			const minMonthIndex = this.minDate.jy * 12 + (this.minDate.jm - 1);
 			const maxMonthIndex = this.maxDate.jy * 12 + (this.maxDate.jm - 1);
 			const currMonthIndex = this.viewYear * 12 + (this.viewMonth - 1);
-			const visibleSpan = this.mode === 'inline_2col' ? 2 : 1;
+			const visibleSpan = this.mode === 'inline_2col' || (this.mode === 'inline_responsive' && window.matchMedia('(min-width: 1025px)').matches) ? 2 : 1;
 			const lastVisibleMonthIndex = currMonthIndex + (visibleSpan - 1);
 
 			if (showNext) {
@@ -1056,7 +1068,7 @@
 			const note = document.createElement('div');
 			note.className = 'mtal-cal-handover-note';
 			note.innerHTML =
-				'تحویل اقامتگاه تا ساعت <strong>۱۲ ظهر</strong> و تحویل‌گیری مجدد از ساعت <strong>۱۴ (۲ بعدازظهر)</strong> انجام می‌شود؛ خروج در روز مسدود مجاز است اما انتخاب بازه‌ای که روز مسدود بینش باشد امکان‌پذیر نیست.';
+				'ورود از ساعت <strong>۱۴</strong> و خروج تا ساعت <strong>۱۲</strong>؛ انتخاب بازه شامل روز مسدود مجاز نیست.';
 			return note;
 		}
 
@@ -1066,11 +1078,52 @@
 
 			if (this.mode === 'modal_3months') {
 				this.renderModalMode();
+			} else if (this.mode === 'inline_responsive') {
+				this.renderInlineResponsiveMode();
 			} else if (this.mode === 'inline_2col') {
 				this.renderInlineTwoColMode();
 			} else {
 				this.renderInlineMode();
 			}
+		}
+
+		renderInlineResponsiveMode() {
+			this.panelEl.innerHTML = '';
+
+			const monthsContainer = document.createElement('div');
+			monthsContainer.className = 'mtal-cal-months-grid is-responsive';
+			const secondMonth = addMonthsJalali(this.viewYear, this.viewMonth, 1);
+
+			const firstBlock = this.renderMonthBlock(
+				this.viewYear,
+				this.viewMonth,
+				this.startDate,
+				this.endDate,
+				{ showPrev: true, showNext: !this.responsiveDesktop, showBadge: true }
+			);
+			const secondBlock = this.renderMonthBlock(
+				secondMonth.jy,
+				secondMonth.jm,
+				this.startDate,
+				this.endDate,
+				{ showPrev: false, showNext: this.responsiveDesktop, showBadge: false }
+			);
+
+			monthsContainer.appendChild(firstBlock);
+			monthsContainer.appendChild(secondBlock);
+			this.panelEl.appendChild(monthsContainer);
+
+			const footer = document.createElement('div');
+			footer.className = 'mtal-cal-footer mtal-cal-footer-display';
+			footer.appendChild(this.createLegendBar());
+			footer.appendChild(this.createHandoverNoteBox());
+			if (this.warningMessage) {
+				const warning = document.createElement('div');
+				warning.className = 'mtal-cal-warning';
+				warning.textContent = this.warningMessage;
+				footer.appendChild(warning);
+			}
+			this.panelEl.appendChild(footer);
 		}
 
 		renderInlineMode() {
@@ -1203,6 +1256,8 @@
 
 			if (this.modalFooterEl) {
 				this.modalFooterEl.innerHTML = '';
+
+				// Keep the modal focused on date selection while retaining the clear action.
 				this.modalFooterEl.appendChild(this.createLegendBar());
 				this.modalFooterEl.appendChild(this.createHandoverNoteBox());
 
@@ -1213,29 +1268,15 @@
 					this.modalFooterEl.appendChild(warnEl);
 				}
 
-				this.modalFooterEl.appendChild(this.createSummaryBoxes(this.draftStart, this.draftEnd));
-
-				const modalBreakdownBox = this.createPricingBreakdownBox(this.draftStart, this.draftEnd);
-				if (modalBreakdownBox) {
-					this.modalFooterEl.appendChild(modalBreakdownBox);
-				}
-
-				const actionsRow = document.createElement('div');
-				actionsRow.className = 'mtal-cal-modal-actions';
-
+				const actions = document.createElement('div');
+				actions.className = 'mtal-cal-modal-actions';
 				const clearBtn = document.createElement('button');
 				clearBtn.type = 'button';
 				clearBtn.className = 'mtal-cal-clear-btn';
 				clearBtn.textContent = 'پاک کردن';
-				clearBtn.addEventListener('click', () => {
-					this.draftStart = null;
-					this.draftEnd = null;
-					this.clear({ notify: true });
-				});
-
-				actionsRow.appendChild(clearBtn);
-
-				this.modalFooterEl.appendChild(actionsRow);
+				clearBtn.addEventListener('click', () => this.clear({ notify: true }));
+				actions.appendChild(clearBtn);
+				this.modalFooterEl.appendChild(actions);
 			}
 		}
 	}

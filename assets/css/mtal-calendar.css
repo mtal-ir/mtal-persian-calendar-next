@@ -439,7 +439,8 @@ html.mtal-modal-open {
 }
 
 .mtal-legend-item .dot.is-red {
-	background: var(--mtal-red);
+	/* The legend sits in the modal footer, outside .mtal-cal-panel where --mtal-red is scoped. */
+	background: #dc2626;
 }
 
 .mtal-legend-item .dot.is-blocked {
@@ -1317,3 +1318,746 @@ html.mtal-modal-open {
 	}
 }
 
+
+
+/* Mobile booking modal: full-height sheet anchored to the top of the viewport. */
+@media (max-width: 480px) {
+	.mtal-cal-modal-backdrop {
+		align-items: flex-start;
+		justify-content: flex-start;
+		padding: 0;
+	}
+
+	.mtal-cal-modal-sheet {
+		width: 100%;
+		max-width: 100%;
+		height: 100vh;
+		height: 100dvh;
+		max-height: 100vh;
+		max-height: 100dvh;
+		border-radius: 0;
+	}
+
+	.mtal-cal-modal-header {
+		padding: 8px 12px;
+		flex: 0 0 auto;
+	}
+
+	.mtal-cal-modal-title {
+		font-size: 13px;
+	}
+
+	.mtal-cal-modal-body {
+		min-height: 0;
+		padding: 8px;
+	}
+
+	.mtal-cal-panel-stacked {
+		padding: 4px;
+	}
+
+	.mtal-cal-modal-footer {
+		padding: 8px 12px;
+		gap: 6px;
+		flex: 0 0 auto;
+	}
+
+	.mtal-cal-modal-footer .mtal-cal-legend {
+		gap: 8px;
+		font-size: 10px;
+	}
+
+	.mtal-cal-modal-footer .mtal-cal-handover-note {
+		margin: 0;
+		padding: 5px 8px;
+		font-size: 10px;
+		line-height: 1.5;
+	}
+}
+
+
+/* Keep the guest-count dialog centered and compact on mobile; only the calendar dialog is full-screen. */
+@media (max-width: 480px) {
+	.mtal-cal-modal-backdrop:has(.mtal-guest-modal-sheet) {
+		align-items: center;
+		justify-content: center;
+		padding: 14px;
+	}
+
+	.mtal-cal-modal-backdrop:has(.mtal-guest-modal-sheet) .mtal-cal-modal-sheet {
+		width: 100%;
+		max-width: 390px;
+		height: auto;
+		max-height: 90vh;
+		max-height: 90dvh;
+		border-radius: 16px;
+	}
+}
+
+
+/* Customer-facing calendar display widget. */
+.mtal-cal-display-host {
+	width: 100%;
+	min-width: 0;
+	direction: rtl;
+}
+.mtal-cal-display-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 14px;
+}
+.mtal-cal-display-room-label {
+	flex: 0 0 auto;
+	font-weight: 700;
+	color: #374151;
+}
+.mtal-cal-display-room {
+	flex: 1 1 auto;
+	width: 100%;
+	min-width: 0;
+	min-height: 44px;
+	padding: 8px 12px;
+	border: 1px solid #d1d5db;
+	border-radius: 10px;
+	background: #fff;
+	color: #111827;
+}
+.mtal-cal-display-calendar[hidden],
+.mtal-cal-display-pricing[hidden] {
+	display: none !important;
+}
+.mtal-cal-display-calendar .mtal-cal-panel {
+	box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+.mtal-cal-mode-inline_responsive .mtal-cal-months-grid.is-responsive {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 18px;
+}
+.mtal-cal-display-actions {
+	display: flex;
+	align-items: stretch;
+	gap: 10px;
+	margin-top: 14px;
+}
+.mtal-cal-display-actions > button {
+	flex: 1 1 0;
+	min-height: 46px;
+}
+.mtal-cal-display-book:disabled {
+	opacity: .5;
+	cursor: not-allowed;
+}
+.mtal-cal-display-message {
+	margin: 10px 0 0;
+	color: #64748b;
+	font-size: 13px;
+	line-height: 1.8;
+}
+.mtal-cal-display-message:empty {
+	display: none;
+}
+.mtal-cal-display-pricing {
+	margin-top: 14px;
+}
+.mtal-cal-display-pricing .mtal-pricing-breakdown {
+	margin-top: 0;
+}
+@media (min-width: 1025px) {
+	.mtal-cal-mode-inline_responsive .mtal-cal-months-grid.is-responsive {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 24px;
+		align-items: start;
+	}
+	.mtal-cal-mode-inline_responsive .mtal-cal-months-grid.is-responsive .mtal-cal-month-block + .mtal-cal-month-block {
+		padding-inline-start: 20px;
+		border-inline-start: 1px dashed #e2e8f0;
+	}
+}
+@media (max-width: 1024px) {
+	.mtal-cal-mode-inline_responsive .mtal-cal-months-grid.is-responsive .mtal-cal-month-block:nth-child(2) {
+		display: none;
+	}
+	.mtal-cal-display-toolbar {
+		align-items: stretch;
+		flex-direction: column;
+		gap: 6px;
+	}
+}
+@media (max-width: 480px) {
+	.mtal-cal-display-actions {
+		gap: 8px;
+	}
+	.mtal-cal-display-actions > button {
+		min-height: 44px;
+		padding-inline: 10px;
+	}
+}
+
+
+/* Stabilize the display widget width when the price preview appears. */
+.mtal-cal-display-host,
+.mtal-cal-display-calendar,
+.mtal-cal-display-mount,
+.mtal-cal-display-pricing {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	box-sizing: border-box;
+}
+.mtal-cal-display-host {
+	overflow-x: clip;
+}
+.mtal-cal-display-host *,
+.mtal-cal-display-host *::before,
+.mtal-cal-display-host *::after {
+	box-sizing: border-box;
+}
+.mtal-cal-display-calendar .mtal-cal-panel,
+.mtal-cal-display-calendar .mtal-cal-months-grid,
+.mtal-cal-display-calendar .mtal-cal-month-block,
+.mtal-cal-display-pricing .mtal-pricing-breakdown {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+}
+.mtal-cal-display-pricing {
+	overflow-wrap: anywhere;
+}
+.mtal-cal-display-actions .mtal-cal-display-book {
+	background: #b7e4c7 !important;
+	background-color: #b7e4c7 !important;
+	color: #174b2b !important;
+	border: 1px solid #95d5a8 !important;
+	border-radius: 10px !important;
+	font-weight: 700 !important;
+	box-shadow: 0 2px 6px rgba(22, 101, 52, .12);
+	opacity: 1;
+}
+.mtal-cal-display-actions .mtal-cal-display-book:hover:not(:disabled) {
+	background: #a3d9b5 !important;
+	background-color: #a3d9b5 !important;
+	border-color: #7fc995 !important;
+}
+.mtal-cal-display-actions .mtal-cal-display-book:disabled {
+	background: #d1d5db !important;
+	background-color: #d1d5db !important;
+	color: #4b5563 !important;
+	border-color: #cbd5e1 !important;
+	opacity: .8;
+}
+
+/* Keep the Elementor widget itself constrained on desktop, not just its inner calendar.
+   The price preview must not increase the widget's intrinsic/flex width after selection. */
+@media (min-width: 768px) {
+	.elementor-widget-mtal_calendar_display,
+	.elementor-widget-mtal_calendar_display > .elementor-widget-container,
+	.mtal-cal-display-host,
+	.mtal-cal-display-calendar,
+	.mtal-cal-display-mount,
+	.mtal-cal-display-pricing {
+		width: 100% !important;
+		max-width: 100% !important;
+		min-width: 0 !important;
+		box-sizing: border-box;
+	}
+	.elementor-widget-mtal_calendar_display {
+		flex: 1 1 100%;
+		align-self: stretch;
+	}
+	.elementor-widget-mtal_calendar_display > .elementor-widget-container {
+		overflow-x: clip;
+	}
+}
+.mtal-cal-display-actions .mtal-cal-display-clear {
+	background: #ffffff !important;
+	color: #334155 !important;
+	border: 1px solid #cbd5e1 !important;
+	border-radius: 10px !important;
+	font-weight: 700 !important;
+}
+
+
+/* Public availability estimate guest selector and explanatory notes. */
+.mtal-cal-display-guests {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0 0 12px;
+}
+.mtal-cal-display-guests[hidden] {
+	display: none !important;
+}
+.mtal-cal-display-guests label {
+	flex: 0 0 auto;
+	font-weight: 700;
+	color: #374151;
+}
+.mtal-cal-display-guest-count {
+	min-width: 110px;
+	min-height: 42px;
+	padding: 7px 12px;
+	border: 1px solid #d1d5db;
+	border-radius: 10px;
+	background: #fff;
+	color: #111827;
+}
+.mtal-cal-display-guide {
+	margin: 0 0 14px;
+	padding: 10px 12px;
+	border: 1px solid #dbeafe;
+	border-radius: 10px;
+	background: #f8fbff;
+	color: #334155;
+}
+.mtal-cal-display-estimate-note {
+	margin: 10px 0 0;
+	padding: 9px 11px;
+	border-radius: 8px;
+	background: #f8fafc;
+	color: #475569;
+	font-size: 13px;
+	line-height: 1.8;
+}
+@media (max-width: 480px) {
+	.mtal-cal-display-guests {
+		align-items: stretch;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.mtal-cal-display-guest-count {
+		width: 100%;
+	}
+}
+
+
+/* Compact horizontally scrollable suite chips and +/- guest stepper. */
+.mtal-cal-display-toolbar {
+	display: block;
+	margin-bottom: 14px;
+}
+.mtal-cal-display-room {
+	position: absolute !important;
+	width: 1px !important;
+	height: 1px !important;
+	padding: 0 !important;
+	margin: -1px !important;
+	overflow: hidden !important;
+	clip: rect(0, 0, 0, 0) !important;
+	white-space: nowrap !important;
+	border: 0 !important;
+}
+.mtal-cal-display-room-label {
+	display: block;
+	margin-bottom: 9px;
+}
+.mtal-cal-display-suite-list {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	max-width: 100%;
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding: 3px 2px 9px;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: thin;
+}
+.mtal-cal-display-suite-option {
+	flex: 0 0 auto;
+	min-width: max-content;
+	min-height: 42px;
+	padding: 8px 17px;
+	border: 1px solid #c5e3cc !important;
+	border-radius: 10px !important;
+	background: #e8f5e9 !important;
+	color: #245b35 !important;
+	font-weight: 700 !important;
+	white-space: nowrap;
+	cursor: pointer;
+	transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+.mtal-cal-display-suite-option:hover:not(:disabled) {
+	background: #d8efdd !important;
+	border-color: #9dccaa !important;
+}
+.mtal-cal-display-suite-option.is-active {
+	background: #b7e4c7 !important;
+	border-color: #82c99a !important;
+	color: #174b2b !important;
+	box-shadow: inset 0 0 0 1px rgba(23, 75, 43, .08);
+}
+.mtal-cal-display-suite-option:disabled {
+	cursor: default;
+	opacity: 1;
+}
+.mtal-cal-display-guests {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 14px;
+	margin: 0 0 14px;
+}
+.mtal-cal-display-guest-count {
+	position: absolute !important;
+	width: 1px !important;
+	height: 1px !important;
+	padding: 0 !important;
+	margin: -1px !important;
+	overflow: hidden !important;
+	clip: rect(0, 0, 0, 0) !important;
+	white-space: nowrap !important;
+	border: 0 !important;
+}
+.mtal-cal-display-guest-stepper {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	padding: 4px;
+	border: 1px solid #cfe4d3;
+	border-radius: 12px;
+	background: #f1f8f2;
+}
+.mtal-cal-display-guest-stepper button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	padding: 0;
+	border: 1px solid #b7d9bf !important;
+	border-radius: 9px !important;
+	background: #dff0e3 !important;
+	color: #205b32 !important;
+	font-size: 22px !important;
+	font-weight: 700 !important;
+	line-height: 1;
+	cursor: pointer;
+}
+.mtal-cal-display-guest-stepper button:hover:not(:disabled) {
+	background: #cce8d3 !important;
+}
+.mtal-cal-display-guest-stepper button:disabled {
+	opacity: .4;
+	cursor: not-allowed;
+}
+.mtal-cal-display-guest-value {
+	min-width: 76px;
+	color: #245b35;
+	font-size: 14px;
+	font-weight: 700;
+	text-align: center;
+}
+@media (max-width: 480px) {
+	.mtal-cal-display-guests {
+		flex-direction: row;
+		align-items: center;
+		justify-content: flex-start;
+	}
+	.mtal-cal-display-suite-option {
+		min-height: 40px;
+		padding-inline: 14px;
+	}
+}
+
+
+/* Homepage hero availability search */
+.mtal-availability-search {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	direction: rtl;
+}
+.mtal-availability-search [hidden] {
+	display: none !important;
+}
+.mtal-availability-search-fields {
+	display: flex;
+	flex-flow: row nowrap;
+	align-items: stretch;
+	gap: 8px;
+	width: 100%;
+	min-width: 0;
+}
+.mtal-availability-date-field {
+	position: relative;
+	display: flex;
+	flex: 1 1 0;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
+	gap: 4px;
+	min-width: 0;
+	min-height: 58px;
+	padding: 8px 12px;
+	border: 1px solid #dce7df !important;
+	border-radius: 12px !important;
+	background: #fff !important;
+	color: #244b32 !important;
+	text-align: right;
+	cursor: pointer;
+	box-shadow: 0 2px 8px rgba(24, 55, 35, .05);
+}
+.mtal-availability-date-field:hover,
+.mtal-availability-date-field:focus-visible {
+	border-color: #9ac9a7 !important;
+	outline: none;
+}
+.mtal-availability-date-label {
+	color: #718078;
+	font-size: 11px;
+	line-height: 1.3;
+}
+.mtal-availability-date-value {
+	max-width: calc(100% - 22px);
+	overflow: hidden;
+	color: #203d2a;
+	font-size: 13px;
+	font-weight: 700;
+	line-height: 1.4;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.mtal-availability-date-icon {
+	position: absolute;
+	top: 50%;
+	left: 11px;
+	transform: translateY(-50%);
+	color: #659574;
+	font-size: 20px;
+	line-height: 1;
+}
+.mtal-availability-search-button {
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	min-width: 82px;
+	min-height: 58px;
+	padding: 8px 16px;
+	border: 1px solid #9ac9a7 !important;
+	border-radius: 12px !important;
+	background: #b7e4c7 !important;
+	color: #174b2b !important;
+	font-size: 14px !important;
+	font-weight: 700 !important;
+	cursor: pointer;
+	white-space: nowrap;
+}
+.mtal-availability-search-button:hover:not(:disabled) {
+	background: #a4d9b7 !important;
+}
+.mtal-availability-search-button:disabled {
+	opacity: .65;
+	cursor: wait;
+}
+.mtal-availability-search-status {
+	margin-top: 12px;
+	color: #52665a;
+	font-size: 13px;
+	text-align: center;
+}
+.mtal-availability-search-results {
+	width: 100%;
+	min-width: 0;
+	margin-top: 14px;
+}
+.mtal-availability-search-results.is-empty {
+	padding: 12px 14px;
+	border: 1px solid #f0d7d4;
+	border-radius: 10px;
+	background: #fff8f7;
+	color: #9b3931;
+	font-size: 14px;
+	text-align: center;
+}
+.mtal-availability-suite-list {
+	display: flex;
+	flex-flow: row nowrap;
+	align-items: flex-start;
+	gap: 18px;
+	width: 100%;
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding: 3px 2px 10px;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: thin;
+}
+.mtal-availability-suite {
+	display: flex;
+	flex: 0 0 94px;
+	flex-direction: column;
+	align-items: center;
+	gap: 5px;
+	min-width: 0;
+	color: #254c32 !important;
+	text-decoration: none !important;
+	text-align: center;
+}
+.mtal-availability-suite-image {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 88px;
+	height: 66px;
+	overflow: hidden;
+	border: 2px solid #d7eadc;
+	border-radius: 12px;
+	background: #edf6ef;
+	color: #558364;
+	font-size: 26px;
+}
+.mtal-availability-suite-image img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	border-radius: 10px;
+}
+.mtal-availability-suite-title {
+	max-width: 100%;
+	color: #244b32;
+	font-size: 13px;
+	font-weight: 700;
+	line-height: 1.45;
+}
+.mtal-availability-suite-capacity {
+	color: #718078;
+	font-size: 11px;
+	line-height: 1.4;
+	white-space: nowrap;
+}
+.mtal-availability-calendar-source {
+	position: absolute !important;
+	width: 1px !important;
+	height: 1px !important;
+	overflow: hidden !important;
+	clip: rect(0, 0, 0, 0) !important;
+	white-space: nowrap !important;
+}
+@media (max-width: 480px) {
+	.mtal-availability-search-fields {
+		gap: 5px;
+	}
+	.mtal-availability-date-field {
+		min-height: 54px;
+		padding: 7px 8px;
+		border-radius: 10px !important;
+	}
+	.mtal-availability-date-value {
+		font-size: 11px;
+	}
+	.mtal-availability-date-icon {
+		left: 7px;
+		font-size: 17px;
+	}
+	.mtal-availability-search-button {
+		min-width: 58px;
+		min-height: 54px;
+		padding: 6px 9px;
+		border-radius: 10px !important;
+		font-size: 12px !important;
+	}
+	.mtal-availability-suite-list {
+		gap: 12px;
+	}
+}
+
+
+/* Availability results: soft glass surface on every screen size. */
+.mtal-availability-search-results:not(.is-empty) {
+	padding: 14px 18px 10px;
+	border: 1px solid rgba(255, 255, 255, .78);
+	border-radius: 16px;
+	background: rgba(255, 255, 255, .78);
+	-webkit-backdrop-filter: blur(12px) saturate(115%);
+	backdrop-filter: blur(12px) saturate(115%);
+	box-shadow: 0 8px 26px rgba(99, 116, 38, .12);
+}
+.mtal-availability-search-results:not(.is-empty) .mtal-availability-suite-list {
+	justify-content: flex-start;
+	width: 100%;
+	max-width: 100%;
+	overflow-x: auto;
+}
+
+/* Center the suite row only when there is enough desktop space. */
+@media (min-width: 768px) {
+	.mtal-availability-search-results:not(.is-empty) .mtal-availability-suite-list {
+		justify-content: center;
+	}
+}
+
+/* Keep the first mobile card fully visible; scrolling starts from the row edge. */
+@media (max-width: 767px) {
+	.mtal-availability-search-results:not(.is-empty) .mtal-availability-suite-list {
+		justify-content: flex-start;
+		padding-inline: 8px;
+		scroll-padding-inline: 8px;
+	}
+	.mtal-availability-search-results:not(.is-empty) .mtal-availability-suite {
+		flex: 0 0 94px;
+	}
+}
+.mtal-availability-search-summary {
+	margin-top: 8px;
+	color: #637426;
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1.6;
+	text-align: center;
+}
+.mtal-availability-suite-image {
+	border-color: rgba(99, 116, 38, .28);
+	background: #f3f5e9;
+	color: #637426;
+}
+.mtal-availability-suite-title {
+	color: #637426;
+}
+.mtal-availability-suite {
+	color: #637426 !important;
+}
+.mtal-availability-search-button {
+	border-color: #637426 !important;
+	background: #637426 !important;
+	color: #fff !important;
+}
+.mtal-availability-search-button:hover:not(:disabled) {
+	background: #53621f !important;
+}
+
+
+/* Refined entrance for available suite cards. */
+@keyframes mtal-suite-reveal {
+	from {
+		opacity: 0;
+		transform: translate3d(0, 10px, 0);
+	}
+	to {
+		opacity: 1;
+		transform: translate3d(0, 0, 0);
+	}
+}
+.mtal-availability-search-results:not([hidden]):not(.is-empty) .mtal-availability-suite {
+	animation: mtal-suite-reveal 520ms cubic-bezier(.2, .75, .25, 1) both;
+}
+.mtal-availability-search-results:not([hidden]):not(.is-empty) .mtal-availability-suite:nth-child(2) {
+	animation-delay: 65ms;
+}
+.mtal-availability-search-results:not([hidden]):not(.is-empty) .mtal-availability-suite:nth-child(3) {
+	animation-delay: 130ms;
+}
+.mtal-availability-search-results:not([hidden]):not(.is-empty) .mtal-availability-suite:nth-child(4) {
+	animation-delay: 195ms;
+}
+.mtal-availability-search-results:not([hidden]):not(.is-empty) .mtal-availability-suite:nth-child(5) {
+	animation-delay: 260ms;
+}
+@media (prefers-reduced-motion: reduce) {
+	.mtal-availability-search-results:not([hidden]):not(.is-empty) .mtal-availability-suite {
+		animation: none !important;
+	}
+}

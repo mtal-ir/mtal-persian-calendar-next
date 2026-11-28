@@ -2,9 +2,9 @@ name: Plugin syntax checks
 
 on:
   pull_request:
-    branches: [main, fix/calendar-form-sync-performance]
+    branches: [main, fix/calendar-form-sync-performance, fix/mobile-calendar-modal-layout]
   push:
-    branches: [main, feature/booking-approval-30m-workflow, feature/booking-management-dashboard]
+    branches: [main, feature/booking-approval-30m-workflow, feature/booking-management-dashboard, fix/mobile-calendar-modal-layout]
 
 jobs:
   lint:
@@ -24,3 +24,5 @@ jobs:
         run: |
           node --check assets/js/datepicker-init.js
           node --check assets/js/persian-calendar-standalone.js
+          node --check assets/js/calendar-display-widget.js
+          node --check assets/js/availability-search-widget.js

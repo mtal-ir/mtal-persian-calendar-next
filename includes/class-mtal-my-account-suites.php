@@ -228,14 +228,14 @@ final class MTAL_My_Account_Suites {
 				echo '<article class="mtal-account-suites__card">';
 				echo '<div class="mtal-account-suites__identity">' . $image . '<div class="mtal-account-suites__identity-text"><h3>' . esc_html( $display['title'] ) . '</h3><span>شناسه مستقل MTAL: #' . absint( $suite->ID ) . '</span><span class="mtal-account-suites__status">' . esc_html( $status_label ) . '</span></div></div>';
 				echo '<div class="mtal-account-suites__details">';
-				echo '<div><span>ظرفیت پایه</span><strong>' . esc_html( number_format_i18n( $base ) ) . ' نفر</strong></div>';
-				echo '<div><span>حداکثر گنجایش</span><strong>' . esc_html( number_format_i18n( $max ) ) . ' نفر</strong></div>';
 				echo '<div><span>قیمت عادی هر شب</span><strong>' . esc_html( number_format_i18n( $regular ) ) . '</strong></div>';
 				echo '<div><span>قیمت آخر هفته</span><strong>' . esc_html( number_format_i18n( $weekend ) ) . '</strong></div>';
 				echo '<div><span>هزینه نفر اضافه</span><strong>' . esc_html( number_format_i18n( $extra ) ) . '</strong></div>';
-				echo '</div>';
+				echo '<div><span>ظرفیت پایه</span><strong>' . esc_html( number_format_i18n( $base ) ) . ' نفر</strong></div>';
+				echo '<div><span>حداکثر گنجایش</span><strong>' . esc_html( number_format_i18n( $max ) ) . ' نفر</strong></div>';
 				echo '<div class="mtal-account-suites__source"><span>نوشته منبع</span><strong>' . ( $source ? esc_html( get_the_title( $source ) ) . ' (#' . absint( $source->ID ) . ')' : 'بدون اتصال' ) . '</strong></div>';
-				echo '<div class="mtal-account-suites__actions"><a href="' . esc_url( self::get_suite_editor_url( $suite->ID ) ) . '">ویرایش سوئیت</a><a href="' . esc_url( self::get_suite_calendar_url( $suite->ID ) ) . '">مدیریت تقویم</a></div>';
+				echo '</div>';
+				echo '<div class="mtal-account-suites__actions"><a href="' . esc_url( self::get_suite_editor_url( $suite->ID ) ) . '">ویرایش</a><a href="' . esc_url( self::get_suite_calendar_url( $suite->ID ) ) . '">تقویم</a></div>';
 				if ( ! $source ) {
 					echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="mtal-account-suites__hide-form">';
 					wp_nonce_field( 'mtal_suite_hidden_' . $suite->ID . '_hide' );
