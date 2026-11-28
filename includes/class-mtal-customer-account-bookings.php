@@ -133,6 +133,26 @@ final class MTAL_Customer_Account_Bookings {
 		echo '<tr><th scope="row">' . esc_html( $label ) . '</th><td>' . wp_kses_post( $value ) . '</td></tr>';
 	}
 
+	private static function format_booking_date_with_weekday( $date ) {
+		$date = (string) $date;
+		if ( '' === $date || ! class_exists( 'MTAL_Persian_Calendar' ) ) {
+			return $date;
+		}
+
+		$normalized = MTAL_Persian_Calendar::normalize_booking_date( $date );
+		if ( ! is_array( $normalized ) || ! isset( $normalized['jdn'] ) ) {
+			return $date;
+		}
+
+		$weekdays = array( 'شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه' );
+		$weekday_index = ( (int) $normalized['jdn'] + 2 ) % 7;
+		if ( $weekday_index < 0 ) {
+			$weekday_index += 7;
+		}
+
+		return $date . ' (' . $weekdays[ $weekday_index ] . ')';
+	}
+
 	private static function render_status( $order ) {
 		return esc_html( wc_get_order_status_name( $order->get_status() ) );
 	}
@@ -250,8 +270,8 @@ final class MTAL_Customer_Account_Bookings {
 			echo '</div>';
 
 			echo '<div class="mtal-customer-booking-card__body">';
-			echo '<div class="mtal-customer-booking-card__item"><span class="mtal-customer-booking-card__label">تاریخ ورود</span><span class="mtal-customer-booking-card__value">' . ( $check_in ? esc_html( $check_in ) : '—' ) . '</span></div>';
-			echo '<div class="mtal-customer-booking-card__item"><span class="mtal-customer-booking-card__label">تاریخ خروج</span><span class="mtal-customer-booking-card__value">' . ( $check_out ? esc_html( $check_out ) : '—' ) . '</span></div>';
+			echo '<div class="mtal-customer-booking-card__item"><span class="mtal-customer-booking-card__label">تاریخ ورود</span><span class="mtal-customer-booking-card__value">' . ( $check_in ? esc_html( self::format_booking_date_with_weekday( $check_in ) ) : '—' ) . '</span></div>';
+			echo '<div class="mtal-customer-booking-card__item"><span class="mtal-customer-booking-card__label">تاریخ خروج</span><span class="mtal-customer-booking-card__value">' . ( $check_out ? esc_html( self::format_booking_date_with_weekday( $check_out ) ) : '—' ) . '</span></div>';
 			echo '<div class="mtal-customer-booking-card__item"><span class="mtal-customer-booking-card__label">تعداد مسافران</span><span class="mtal-customer-booking-card__value">' . esc_html( number_format_i18n( $guests ) ) . ' نفر</span></div>';
 			echo '<div class="mtal-customer-booking-card__item"><span class="mtal-customer-booking-card__label">مبلغ کل</span><span class="mtal-customer-booking-card__value">' . wp_kses_post( wc_price( $order->get_total(), array( 'currency' => $order->get_currency() ) ) ) . '</span></div>';
 			echo '</div>';
