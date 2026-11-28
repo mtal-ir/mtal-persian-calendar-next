@@ -1209,18 +1209,19 @@
 			if (options.targetSelector) {
 				try {
 					target = candidates.find((entry) =>
-						(entry.host.matches(options.targetSelector) || entry.host.closest(options.targetSelector)) &&
-						(entry.postId === referenceId || Number(entry.host.getAttribute('data-mtal-post-id')) === referenceId)
+						entry.host.matches(options.targetSelector) || entry.host.closest(options.targetSelector)
 					) || null;
 				} catch (error) {
 					return false;
 				}
 			} else {
-				target = candidates.find((entry) =>
-					entry.postId === referenceId || Number(entry.host.getAttribute('data-mtal-post-id')) === referenceId
-				) || null;
+				target = candidates[0] || null;
 			}
 			if (!target || !target.host._mtalBookingForm || target.host._mtalBookingForm._mtalBookingSubmitted) return false;
+			if (Number(target.postId) !== referenceId) {
+				if (!target.switchSuite(referenceId, options.rules)) return false;
+				target.cal.clear({ notify: false });
+			}
 
 			const oldKey = displayCal._mtalBookingSyncGroupKey;
 			if (oldKey && oldKey !== target.groupKey) {
