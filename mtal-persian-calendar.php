@@ -2,7 +2,7 @@
 /**
  * Plugin Name: MTAL Booking
  * Description: افزونه مستقل تقویم جلالی برای انتخاب بازه دو تاریخی، مدیریت روزهای بسته/تعطیلات و قیمت‌گذاری در المنتور.
- * Version: 0.6.1
+ * Version: 0.6.2
  * Author: MTAL
  * Text Domain: mtal-persian-calendar
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MTAL_PC_VERSION', '0.6.1' );
+define( 'MTAL_PC_VERSION', '0.6.2' );
 define( 'MTAL_PC_PATH', plugin_dir_path( __FILE__ ) );
 define( 'MTAL_PC_URL', plugin_dir_url( __FILE__ ) );
 
@@ -215,6 +215,14 @@ final class MTAL_Persian_Calendar {
 			'mtal-persian-calendar-init',
 			MTAL_PC_URL . 'assets/js/datepicker-init.js',
 			array( 'mtal-persian-calendar-engine' ),
+			MTAL_PC_VERSION,
+			true
+		);
+
+		wp_register_script(
+			'mtal-persian-calendar-display',
+			MTAL_PC_URL . 'assets/js/calendar-display-widget.js',
+			array( 'mtal-persian-calendar-init' ),
 			MTAL_PC_VERSION,
 			true
 		);
@@ -577,8 +585,15 @@ final class MTAL_Persian_Calendar {
 			}
 		}
 
-		// Legacy Elementor admin settings widget intentionally disabled to keep one source of truth.
+		$display_widget_file = MTAL_PC_PATH . 'includes/class-mtal-calendar-display-widget.php';
+		if ( file_exists( $display_widget_file ) ) {
+			require_once $display_widget_file;
+			if ( class_exists( '\\MTAL_Calendar_Display_Widget' ) ) {
+				$widgets_manager->register( new \\MTAL_Calendar_Display_Widget() );
+			}
+		}
 
+		// Legacy Elementor admin settings widget intentionally removed; WordPress admin is the single settings source.
 	}
 
 	public function register_elementor_form_field( $form_fields_registrar ) {
