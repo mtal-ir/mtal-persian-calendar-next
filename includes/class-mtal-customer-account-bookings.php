@@ -174,9 +174,14 @@ final class MTAL_Customer_Account_Bookings {
 		$review_id = MTAL_Suite_Reviews::get_review_id_for_order( $order->get_id() );
 		if ( $review_id ) {
 			$review = get_comment( $review_id );
-			$status = $review && '1' === (string) $review->comment_approved
-				? 'نظر شما برای این اقامت منتشر شده است.'
-				: 'نظر شما برای این اقامت ثبت شده و در انتظار بررسی مدیر است.';
+			$rejected = $review && '1' === (string) get_comment_meta( $review_id, '_mtal_review_rejected', true );
+			if ( $rejected ) {
+				$status = 'نظر شما رد شده است؛ برای ویرایش و ارسال دوباره به بخش «نظرات من» بروید.';
+			} elseif ( $review && '1' === (string) $review->comment_approved ) {
+				$status = 'نظر شما برای این اقامت منتشر شده است.';
+			} else {
+				$status = 'نظر شما برای این اقامت ثبت شده و در انتظار بررسی مدیر است.';
+			}
 			echo '<div class="woocommerce-info mtal-suite-review-notice">' . esc_html( $status ) . '</div>';
 			return;
 		}
