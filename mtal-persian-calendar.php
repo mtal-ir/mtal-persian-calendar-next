@@ -2,7 +2,7 @@
 /**
  * Plugin Name: MTAL Booking
  * Description: افزونه مستقل تقویم جلالی برای انتخاب بازه دو تاریخی، مدیریت روزهای بسته/تعطیلات و قیمت‌گذاری در المنتور.
- * Version: 0.6.5
+ * Version: 0.6.6
  * Author: MTAL
  * Text Domain: mtal-persian-calendar
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MTAL_PC_VERSION', '0.6.5' );
+define( 'MTAL_PC_VERSION', '0.6.6' );
 define( 'MTAL_PC_PATH', plugin_dir_path( __FILE__ ) );
 define( 'MTAL_PC_URL', plugin_dir_url( __FILE__ ) );
 
@@ -36,6 +36,8 @@ final class MTAL_Persian_Calendar {
 		add_action( 'wp_ajax_nopriv_mtal_get_suite_calendar_rules', array( $this, 'ajax_get_suite_calendar_rules' ) );
 		add_action( 'wp_ajax_mtal_calculate_suite_price', array( $this, 'ajax_calculate_suite_price' ) );
 		add_action( 'wp_ajax_nopriv_mtal_calculate_suite_price', array( $this, 'ajax_calculate_suite_price' ) );
+		add_action( 'wp_ajax_mtal_search_available_suites', array( $this, 'ajax_search_available_suites' ) );
+		add_action( 'wp_ajax_nopriv_mtal_search_available_suites', array( $this, 'ajax_search_available_suites' ) );
 	}
 
 	public static function normalize_date_list( $raw ) {
@@ -215,6 +217,14 @@ final class MTAL_Persian_Calendar {
 			'mtal-persian-calendar-init',
 			MTAL_PC_URL . 'assets/js/datepicker-init.js',
 			array( 'mtal-persian-calendar-engine' ),
+			MTAL_PC_VERSION,
+			true
+		);
+
+		wp_register_script(
+			'mtal-availability-search',
+			MTAL_PC_URL . 'assets/js/availability-search-widget.js',
+			array( 'mtal-persian-calendar-engine', 'mtal-persian-calendar-init' ),
 			MTAL_PC_VERSION,
 			true
 		);
@@ -541,6 +551,86 @@ final class MTAL_Persian_Calendar {
 		wp_send_json_success( $data );
 	}
 
+	/**
+	 * Search all visible suites against the authoritative booking calculation.
+	 * The checkout date is exclusive, matching the booking workflow's night loop.
+	 */
+	public function ajax_search_available_suites() {
+		check_ajax_referer( 'mtal_calendar_rules_nonce', 'nonce' );
+
+		$check_in  = self::normalize_jalali_input( isset( $_POST['check_in'] ) ? wp_unslash( $_POST['check_in'] ) : '' );
+		$check_out = self::normalize_jalali_input( isset( $_POST['check_out'] ) ? wp_unslash( $_POST['check_out'] ) : '' );
+		if ( ! $check_in || ! $check_out || $check_out['jdn'] <= $check_in['jdn'] || ( $check_out['jdn'] - $check_in['jdn'] ) > 94 ) {
+			wp_send_json_error( array( 'message' => 'تاریخ ورود و خروج معتبر نیست.' ), 400 );
+		}
+
+		if ( ! class_exists( 'MTAL_Suite_Registry' ) ) {
+			wp_send_json_success( array( 'suites' => array() ) );
+		}
+
+		$query = new WP_Query(
+			array(
+				'post_type'              => MTAL_Suite_Registry::POST_TYPE,
+				'post_status'            => 'publish',
+				'posts_per_page'         => -1,
+				'orderby'                => 'ID',
+				'order'                  => 'ASC',
+				'fields'                 => 'ids',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => true,
+				'update_post_term_cache' => false,
+			)
+		);
+
+		$available = array();
+		$date_error = null;
+		foreach ( $query->posts as $suite_id ) {
+			$suite_id = absint( $suite_id );
+			if ( MTAL_Suite_Registry::is_hidden( $suite_id ) ) {
+				continue;
+			}
+
+			$source = MTAL_Suite_Registry::get_source_post( $suite_id );
+			if ( ! $source || 'publish' !== $source->post_status ) {
+				continue;
+			}
+
+			// Reuse the same server-side validation as an actual booking attempt.
+			$availability = self::calculate_stay_price( $source->ID, $check_in['slash'], $check_out['slash'], 1 );
+			if ( is_wp_error( $availability ) ) {
+				if ( in_array( $availability->get_error_code(), array( 'mtal_invalid_dates', 'mtal_dates_outside_horizon' ), true ) && ! $date_error ) {
+					$date_error = $availability;
+				}
+				continue;
+			}
+
+			$display = MTAL_Suite_Registry::get_display_data( $suite_id );
+			if ( ! $display ) {
+				continue;
+			}
+			$suite_data = self::get_suite_calendar_data( $source->ID );
+			$available[] = array(
+				'title'       => $display['title'],
+				'imageUrl'    => $display['imageUrl'],
+				'url'         => get_permalink( $source->ID ),
+				'maxCapacity' => (int) $suite_data['maxCapacity'],
+				'suiteId'     => $suite_id,
+			);
+		}
+
+		if ( empty( $available ) && $date_error ) {
+			wp_send_json_error( array( 'message' => $date_error->get_error_message() ), 400 );
+		}
+
+		usort(
+			$available,
+			static function ( $a, $b ) {
+				return absint( $a['suiteId'] ) <=> absint( $b['suiteId'] );
+			}
+		);
+		wp_send_json_success( array( 'suites' => $available ) );
+	}
+
 	public function ajax_save_suite_calendar_rules() {
 		check_ajax_referer( 'mtal_calendar_rules_nonce', 'nonce' );
 
@@ -590,6 +680,14 @@ final class MTAL_Persian_Calendar {
 			require_once $display_widget_file;
 			if ( class_exists( '\\MTAL_Calendar_Display_Widget' ) ) {
 				$widgets_manager->register( new \MTAL_Calendar_Display_Widget() );
+			}
+		}
+
+		$search_widget_file = MTAL_PC_PATH . 'includes/class-mtal-availability-search-widget.php';
+		if ( file_exists( $search_widget_file ) ) {
+			require_once $search_widget_file;
+			if ( class_exists( '\\MTAL_Availability_Search_Widget' ) ) {
+				$widgets_manager->register( new \\MTAL_Availability_Search_Widget() );
 			}
 		}
 
