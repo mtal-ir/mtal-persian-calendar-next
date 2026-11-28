@@ -1977,10 +1977,29 @@ html.mtal-modal-open {
 	box-shadow: 0 8px 26px rgba(99, 116, 38, .12);
 }
 .mtal-availability-search-results:not(.is-empty) .mtal-availability-suite-list {
-	justify-content: center;
+	justify-content: flex-start;
 	width: 100%;
 	max-width: 100%;
 	overflow-x: auto;
+}
+
+/* Center the suite row only when there is enough desktop space. */
+@media (min-width: 768px) {
+	.mtal-availability-search-results:not(.is-empty) .mtal-availability-suite-list {
+		justify-content: center;
+	}
+}
+
+/* Keep the first mobile card fully visible; scrolling starts from the row edge. */
+@media (max-width: 767px) {
+	.mtal-availability-search-results:not(.is-empty) .mtal-availability-suite-list {
+		justify-content: flex-start;
+		padding-inline: 8px;
+		scroll-padding-inline: 8px;
+	}
+	.mtal-availability-search-results:not(.is-empty) .mtal-availability-suite {
+		flex: 0 0 94px;
+	}
 }
 .mtal-availability-search-summary {
 	margin-top: 8px;
