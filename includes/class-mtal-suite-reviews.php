@@ -408,10 +408,7 @@ final class MTAL_Suite_Reviews {
 			return false;
 		}
 
-		// The current accommodation-manager role has site-wide suite-editing
-		// capabilities and no per-suite assignment map. Until that relation is
-		// implemented, do not expose private review details to managers broadly.
-		return current_user_can( 'manage_options' );
+		return MTAL_Suite_Registry::current_user_can_manage_suite( $suite_id );
 	}
 
 	/**
