@@ -160,9 +160,12 @@ class MTAL_Calendar_Display_Widget extends Widget_Base {
 						<option value="<?php echo esc_attr( $suite['referenceId'] ); ?>" data-suite-url="<?php echo esc_url( $suite['url'] ); ?>" <?php selected( $locked ? $selected_suite['referenceId'] : 0, $suite['referenceId'] ); ?>>
 							<?php echo esc_html( $suite['title'] ); ?>
 						</option>
-					<?php endforeach; ?>
+						<?php endforeach; ?>
 				</select>
 			</div>
+			<?php if ( ! $locked ) : ?>
+				<p class="mtal-cal-display-message mtal-cal-display-guide" role="note">این تقویم برای مشاهده روزهای باز و بسته و برآورد قیمت اقامت است. برای ثبت رزرو، پس از انتخاب سوئیت وارد صفحه اختصاصی آن شوید و تاریخ ورود و خروج را مجدداً در تقویم همان صفحه انتخاب کنید.</p>
+			<?php endif; ?>
 			<?php if ( empty( $display_suites ) ) : ?>
 				<p class="mtal-cal-display-message" role="status">در حال حاضر سوئیت قابل رزروی برای نمایش وجود ندارد.</p>
 			<?php endif; ?>
